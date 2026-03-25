@@ -911,28 +911,16 @@ namespace Xiuxian.Scripts.Game
             int idx = FindFrontMonsterIndex();
             if (idx < 0 || idx >= _monsterMoveInputThreshold.Count || idx >= _monsterMoveInputPending.Count)
             {
-                return "调试-移动：前排怪 无目标";
+                return ExploreProgressDebugRules.BuildMoveDebugStatus(-1, 0, 0, "unknown");
             }
 
-            int threshold = Mathf.Max(1, _monsterMoveInputThreshold[idx]);
-            int pending = Mathf.Clamp(_monsterMoveInputPending[idx], 0, threshold);
-            int remaining = Mathf.Max(0, threshold - pending);
             string monsterId = idx < _monsterMarkerIds.Count ? _monsterMarkerIds[idx] : "unknown";
-            return $"调试-移动：前排#{idx + 1} [{monsterId}] 还需 {remaining} 步 ({pending}/{threshold})";
+            return ExploreProgressDebugRules.BuildMoveDebugStatus(idx, Mathf.Max(1, _monsterMoveInputThreshold[idx]), _monsterMoveInputPending[idx], monsterId);
         }
 
         private string BuildBattleDebugStatus()
         {
-            if (!_inBattle)
-            {
-                return "调试-战斗：未接敌";
-            }
-
-            int threshold = Mathf.Max(1, _inputsPerBattleRoundRuntime);
-            int pending = Mathf.Clamp(_pendingBattleInputEvents, 0, threshold);
-            int remaining = Mathf.Max(0, threshold - pending);
-            int roundsToKill = Mathf.CeilToInt(Mathf.Max(0, _enemyHp) / (float)Mathf.Max(1, _playerAttackPerRoundRuntime));
-            return $"调试-战斗：回合 {_battleRoundCounter}，下回合剩 {remaining} 输入 ({pending}/{threshold})，预计 {roundsToKill} 回合结束";
+            return ExploreProgressDebugRules.BuildBattleDebugStatus(_inBattle, _battleRoundCounter, _inputsPerBattleRoundRuntime, _pendingBattleInputEvents, _enemyHp, _playerAttackPerRoundRuntime);
         }
 
         private string BuildInputSourceDebugStatus()
@@ -1899,30 +1887,20 @@ namespace Xiuxian.Scripts.Game
                 return;
             }
 
-            var sb = new StringBuilder();
             string actionMode = _actionState?.ActionId ?? (HasDungeonCapability() ? PlayerActionState.ActionDungeon : PlayerActionState.ActionCultivation);
-            sb.Append($"[F8] debug | zone={_currentZone}");
-            sb.Append($" | mode={actionMode}");
-            sb.Append($" | target={_actionState?.ActionTargetId ?? ""}");
-            sb.Append($" | progress={_exploreProgress:0.0}%");
-            sb.Append($" | monster={_battleMonsterName}({_battleMonsterId})");
-            sb.Append($"\nSimFilter level={(string.IsNullOrEmpty(_simulationLevelFilterId) ? "active" : _simulationLevelFilterId)}");
-            sb.Append($" | monster={(string.IsNullOrEmpty(_simulationMonsterFilterId) ? "auto" : _simulationMonsterFilterId)}");
-
-            if (_levelConfigLoader != null)
-            {
-                sb.Append('\n');
-                sb.Append(_levelConfigLoader.BuildDebugSummary());
-                sb.Append('\n');
-                sb.Append(_levelConfigLoader.BuildValidationSummary(6));
-                sb.Append('\n');
-                sb.Append(_levelConfigLoader.BuildLevelPreviewSummary(8));
-            }
-
-            sb.Append("\n[F4] toggle main action  [F5] switch unlocked level  [F6] sim-level  [F7] sim-monster  [F9] sim200  [F10] sim1000  [F11] scope  [F12] active-level");
-            sb.Append($"\nSim: {_lastSimulationSummary}");
-
-            _debugPanelLabel.Text = sb.ToString();
+            _debugPanelLabel.Text = ExploreProgressDebugRules.BuildDebugPanelText(
+                _currentZone,
+                actionMode,
+                _actionState?.ActionTargetId ?? "",
+                _exploreProgress,
+                _battleMonsterName,
+                _battleMonsterId,
+                _simulationLevelFilterId,
+                _simulationMonsterFilterId,
+                _levelConfigLoader?.BuildDebugSummary() ?? string.Empty,
+                _levelConfigLoader?.BuildValidationSummary(6) ?? string.Empty,
+                _levelConfigLoader?.BuildLevelPreviewSummary(8) ?? string.Empty,
+                _lastSimulationSummary);
         }
 
         private bool HasDungeonCapability()
@@ -1954,10 +1932,7 @@ namespace Xiuxian.Scripts.Game
                 return;
             }
 
-            bool completedBatch = _alchemyState.AdvanceProgress(inputEvents);
-            float percent = _alchemyState.RequiredProgress > 0.0f
-                ? _alchemyState.CurrentProgress / _alchemyState.RequiredProgress * 100.0f
-                : 0.0f;
+            bool completedBatch = CraftingProgressionService.AdvanceAlchemy(_alchemyState, inputEvents, out float percent);
             _progressBar.Value = percent;
             _roundInfoLabel.Text = BuildAlchemyProgressText();
 
@@ -1975,33 +1950,20 @@ namespace Xiuxian.Scripts.Game
 
         private bool TryCompleteAlchemyBatch()
         {
-            if (_alchemyState == null || _backpackState == null || _resourceWalletState == null || string.IsNullOrEmpty(_alchemyState.SelectedRecipeId))
+            bool completed = CraftingProgressionService.TryCompleteAlchemyBatch(
+                _alchemyState,
+                _backpackState,
+                _resourceWalletState,
+                _playerProgressState,
+                _potionInventoryState,
+                out string rewardText);
+            if (completed)
             {
-                return false;
+                _battleInfoLabel.Text = rewardText;
+                _battleInfoLabel.Visible = true;
             }
 
-            if (!AlchemyRules.CanStartRecipe(_alchemyState.SelectedRecipeId, _resourceWalletState.Lingqi, _backpackState.GetItemEntries(), _playerProgressState?.HasUnlockedAdvancedAlchemyStudy ?? false))
-            {
-                return false;
-            }
-
-            AlchemyRules.AlchemyCompletionResult result = AlchemyRules.CompleteRecipe(_alchemyState.SelectedRecipeId);
-            if (string.IsNullOrEmpty(result.PotionItemId) || !_backpackState.RemoveItem(result.MaterialItemId, result.MaterialCount))
-            {
-                return false;
-            }
-
-            if (!_resourceWalletState.SpendLingqi(result.LingqiCost))
-            {
-                _backpackState.AddItem(result.MaterialItemId, result.MaterialCount);
-                return false;
-            }
-
-            PotionInventoryState? potions = GetNodeOrNull<PotionInventoryState>("/root/PotionInventoryState");
-            potions?.AddPotion(result.PotionItemId, result.PotionCount);
-            _battleInfoLabel.Text = $"炼丹完成，获得 {UiText.BackpackItemName(result.PotionItemId)} x{result.PotionCount}";
-            _battleInfoLabel.Visible = true;
-            return true;
+            return completed;
         }
 
         private void AdvanceSmithingByInput(int inputEvents)
@@ -2018,8 +1980,7 @@ namespace Xiuxian.Scripts.Game
                 return;
             }
 
-            bool completed = _smithingState.AdvanceProgress(inputEvents);
-            float percent = _smithingState.RequiredProgress > 0.0f ? _smithingState.CurrentProgress / _smithingState.RequiredProgress * 100.0f : 0.0f;
+            bool completed = CraftingProgressionService.AdvanceSmithing(_smithingState, inputEvents, out float percent);
             _progressBar.Value = percent;
             _roundInfoLabel.Text = BuildSmithingProgressText(targetProfile);
             if (!completed)
@@ -2036,53 +1997,23 @@ namespace Xiuxian.Scripts.Game
 
         private bool TryCompleteSmithingBatch(EquipmentStatProfile targetProfile)
         {
-            if (_equippedItemsState == null || _backpackState == null || _resourceWalletState == null || _smithingState == null)
+            bool completed = CraftingProgressionService.TryCompleteSmithingBatch(
+                _smithingState,
+                _equippedItemsState,
+                _backpackState,
+                _resourceWalletState,
+                targetProfile,
+                out EquipmentStatProfile enhanced,
+                out string rewardText);
+            if (completed)
             {
-                return false;
-            }
-
-            if (!SmithingRules.CanEnhance(targetProfile, _backpackState, _resourceWalletState))
-            {
-                return false;
-            }
-
-            SmithingCost cost = SmithingRules.GetCost(targetProfile.EnhanceLevel);
-            if (!_backpackState.RemoveItem("lingqi_shard", cost.Shards))
-            {
-                return false;
-            }
-
-            if (cost.Talismans > 0 && !_backpackState.RemoveItem("broken_talisman", cost.Talismans))
-            {
-                _backpackState.AddItem("lingqi_shard", cost.Shards);
-                return false;
-            }
-
-            if (!_resourceWalletState.SpendLingqi(cost.Lingqi))
-            {
-                _backpackState.AddItem("lingqi_shard", cost.Shards);
-                if (cost.Talismans > 0)
-                {
-                    _backpackState.AddItem("broken_talisman", cost.Talismans);
-                }
-                return false;
-            }
-
-            if (!_equippedItemsState.TryEnhanceEquippedProfile(targetProfile.EquipmentId))
-            {
-                return false;
-            }
-
-            if (_equippedItemsState.TryGetEquippedProfileById(targetProfile.EquipmentId, out EquipmentStatProfile enhanced))
-            {
-                _smithingState.SelectTarget(enhanced.EquipmentId, enhanced.EnhanceLevel);
-                _battleInfoLabel.Text = $"强化完成，{enhanced.DisplayName} +{enhanced.EnhanceLevel}";
+                _battleInfoLabel.Text = rewardText;
                 _battleInfoLabel.Visible = true;
                 ApplyLevelConfig();
                 UpdateHpLabels();
             }
 
-            return true;
+            return completed;
         }
 
         private int GetActionModeSelectedIndex()
@@ -2284,35 +2215,18 @@ namespace Xiuxian.Scripts.Game
         private string BuildValidationFilterSummary()
         {
             string scope = ValidationScopeFilters[Mathf.Clamp(_validationScopeFilterIndex, 0, ValidationScopeFilters.Length - 1)];
-            string levelScope = _validationOnlyActiveLevel ? "active-level" : "all-levels";
-            return $"{scope}, {levelScope}";
+            return ExploreProgressDebugRules.BuildValidationFilterSummary(scope, _validationOnlyActiveLevel);
         }
 
         private Godot.Collections.Array<Godot.Collections.Dictionary<string, Variant>> FilterValidationEntries(
             Godot.Collections.Array<Godot.Collections.Dictionary<string, Variant>> entries)
         {
-            var result = new Godot.Collections.Array<Godot.Collections.Dictionary<string, Variant>>();
             string scopeFilter = ValidationScopeFilters[Mathf.Clamp(_validationScopeFilterIndex, 0, ValidationScopeFilters.Length - 1)];
             string activeLevelId = _levelConfigLoader?.ActiveLevelId ?? "";
-
-            foreach (var entry in entries)
+            var filtered = ExploreProgressDebugRules.FilterValidationEntries(entries, scopeFilter, _validationOnlyActiveLevel, activeLevelId);
+            var result = new Godot.Collections.Array<Godot.Collections.Dictionary<string, Variant>>();
+            foreach (Godot.Collections.Dictionary<string, Variant> entry in filtered)
             {
-                string scope = entry.ContainsKey("scope") ? entry["scope"].AsString() : "config";
-                string levelId = entry.ContainsKey("level_id") ? entry["level_id"].AsString() : "";
-
-                if (scopeFilter != "all" && scope != scopeFilter)
-                {
-                    continue;
-                }
-
-                if (_validationOnlyActiveLevel && !string.IsNullOrEmpty(activeLevelId))
-                {
-                    if (string.IsNullOrEmpty(levelId) || levelId != activeLevelId)
-                    {
-                        continue;
-                    }
-                }
-
                 result.Add(entry);
             }
 
