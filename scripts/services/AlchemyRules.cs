@@ -30,7 +30,7 @@ namespace Xiuxian.Scripts.Services
         private static readonly RecipeSpec[] Recipes =
         {
             new("recipe_huiqi_dan", "回气丹", "spirit_herb", 2, 50.0, "potion_huiqi_dan", 2, 200),
-            new("recipe_juling_san", "聚灵散", "lingqi_shard", 3, 80.0, "potion_juling_san", 1, 220),
+            new("recipe_juling_san", "聚灵散", "spirit_herb", 3, 80.0, "potion_juling_san", 1, 220),
         };
 
         public static IReadOnlyList<RecipeSpec> GetRecipes() => Recipes;

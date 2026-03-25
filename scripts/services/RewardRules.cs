@@ -1,3 +1,5 @@
+using System;
+
 namespace Xiuxian.Scripts.Services
 {
     public static class RewardRules
@@ -16,8 +18,9 @@ namespace Xiuxian.Scripts.Services
             return $"灵气+{lingqi:0} 悟性+{insight:0} 灵石+{spiritStones} 掉落:{itemPart}";
         }
 
-        public static int CalculateBattleSpiritStoneReward(string moveCategory, bool isBoss)
+        public static int CalculateBattleSpiritStoneReward(string moveCategory, bool isBoss, int zoneIndex = 0)
         {
+            int dangerLevel = Math.Max(1, zoneIndex + 1);
             if (isBoss)
             {
                 return 15;
@@ -25,8 +28,8 @@ namespace Xiuxian.Scripts.Services
 
             return moveCategory switch
             {
-                "elite" => 8,
-                _ => 0,
+                "elite" => 3 + dangerLevel * 2 + 2,
+                _ => 3 + dangerLevel * 2,
             };
         }
 

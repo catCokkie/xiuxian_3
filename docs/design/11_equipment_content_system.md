@@ -518,7 +518,7 @@
 - `output_template_id`
 - `output_rarity_tier`
 - `output_slot`
-- `cost_items`
+- `cost_spirit_stones`
 - `unlock_condition`: 如 `first_clear` / `boss_clear` / `level_unlocked`
 - `notes`
 
@@ -531,10 +531,7 @@
   "output_template_id": "eq_weapon_qi_outer_moss_blade",
   "output_rarity_tier": "artifact",
   "output_slot": "weapon",
-  "cost_items": [
-    { "item_id": "spirit_herb", "qty": 6 },
-    { "item_id": "lingqi_shard", "qty": 12 }
-  ],
+  "cost_spirit_stones": 80,
   "unlock_condition": "first_clear",
   "notes": "首区武器兜底配方。"
 }

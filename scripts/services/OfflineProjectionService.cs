@@ -9,7 +9,7 @@ namespace Xiuxian.Scripts.Services
         public delegate bool TryGetMonsterStatProfileDelegate(string monsterId, out MonsterStatProfile profile);
         public delegate bool TryGetMonsterDelegate(string monsterId, out Godot.Collections.Dictionary<string, Variant> monster);
         public delegate bool TryGetDropTableDelegate(string dropTableId, out Godot.Collections.Dictionary<string, Variant> dropTable);
-        public delegate string ResolveDropTableDelegate(string monsterId, string configuredDropTableId);
+        public delegate string ResolveDropTableDelegate(string levelId, string monsterId, string configuredDropTableId);
         public delegate List<EquipmentDropResolutionRules.DropEntrySpec> BuildDropEntrySpecsDelegate(Godot.Collections.Array<Variant> entries);
         public delegate bool TryFindLevelIndexDelegate(string levelId, out int levelIndex);
 
@@ -90,19 +90,20 @@ namespace Xiuxian.Scripts.Services
                     averageInsight = (insightMin + insightMax) / 2.0;
                 }
 
+                string resolvedLevelId = LevelConfigProvider.GetString(level, "level_id", "");
                 result.Add(new DungeonOfflineProjectionRules.MonsterSettlementSpec(
                     weight,
                     monsterProfile,
                     averageLingqi,
                     averageInsight,
-                    BuildOfflineAverageItemDrops(monsterId),
-                    BuildOfflineAverageEquipmentDrops(monsterId)));
+                    BuildOfflineAverageItemDrops(resolvedLevelId, monsterId),
+                    BuildOfflineAverageEquipmentDrops(resolvedLevelId, monsterId)));
             }
 
             return result;
         }
 
-        private Dictionary<string, double> BuildOfflineAverageItemDrops(string monsterId)
+        private Dictionary<string, double> BuildOfflineAverageItemDrops(string levelId, string monsterId)
         {
             var result = new Dictionary<string, double>();
             if (!_tryGetMonster(monsterId, out var monster) || !LevelConfigProvider.TryGetChildDictionary(monster, "drops", out var drops))
@@ -111,7 +112,7 @@ namespace Xiuxian.Scripts.Services
             }
 
             string configuredDropTableId = LevelConfigProvider.GetString(drops, "drop_table_id", "");
-            string dropTableId = _resolveDropTableForActiveLevel(monsterId, configuredDropTableId);
+            string dropTableId = _resolveDropTableForActiveLevel(levelId, monsterId, configuredDropTableId);
             int dropRollCount = Math.Max(0, drops.ContainsKey("drop_roll_count") ? drops["drop_roll_count"].AsInt32() : 1);
             if (!string.IsNullOrEmpty(dropTableId) && _tryGetDropTable(dropTableId, out var table) && table.ContainsKey("entries") && table["entries"].VariantType == Variant.Type.Array)
             {
@@ -162,7 +163,7 @@ namespace Xiuxian.Scripts.Services
             return result;
         }
 
-        private double BuildOfflineAverageEquipmentDrops(string monsterId)
+        private double BuildOfflineAverageEquipmentDrops(string levelId, string monsterId)
         {
             if (!_tryGetMonster(monsterId, out var monster) || !LevelConfigProvider.TryGetChildDictionary(monster, "drops", out var drops))
             {
@@ -170,7 +171,7 @@ namespace Xiuxian.Scripts.Services
             }
 
             string configuredDropTableId = LevelConfigProvider.GetString(drops, "drop_table_id", "");
-            string dropTableId = _resolveDropTableForActiveLevel(monsterId, configuredDropTableId);
+            string dropTableId = _resolveDropTableForActiveLevel(levelId, monsterId, configuredDropTableId);
             int dropRollCount = Math.Max(0, drops.ContainsKey("drop_roll_count") ? drops["drop_roll_count"].AsInt32() : 1);
             if (string.IsNullOrEmpty(dropTableId) || !_tryGetDropTable(dropTableId, out var table) || !table.ContainsKey("entries") || table["entries"].VariantType != Variant.Type.Array)
             {

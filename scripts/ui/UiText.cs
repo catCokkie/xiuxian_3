@@ -66,8 +66,9 @@ public static class UiText
     public const string CultivationUnavailable = "当前无法读取修炼进度。";
     public const string CultivationUnavailableTooltip = "修炼进度未加载。";
     public const string CultivationBreakthroughReadyTooltip = "可突破，点击提升境界。";
-    public const string BossWeaknessInsightReadyTooltip = "消耗50悟性，令当前Boss挑战属性下降10%。";
-    public const string BossWeaknessInsightLockedTooltip = "仅可在Boss挑战中使用，且需要至少50悟性。";
+    public const string BossWeaknessInsightReadyTooltip = "消耗{0}悟性，令当前Boss挑战属性下降10%。";
+    public const string BossWeaknessInsightLockedTooltip = "仅可在Boss挑战中使用，且需要足够悟性(30-80)。";
+    public static string BossWeaknessInsightReadyTooltipFor(int cost) => string.Format(BossWeaknessInsightReadyTooltip, cost);
     public const string AdvancedAlchemyStudyTooltip = "消耗20悟性，解锁一次高阶炼丹参悟资格。";
     public const string AdvancedAlchemyStudyUnlockedTooltip = "已完成高阶炼丹参悟。";
     public const string BackpackEquipWeapon = "装备背包武器";

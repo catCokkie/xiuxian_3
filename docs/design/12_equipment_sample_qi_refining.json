@@ -110,12 +110,9 @@
       "output_template_id": "eq_weapon_qi_outer_moss_blade",
       "output_rarity_tier": "artifact",
       "output_slot": "weapon",
-      "cost_items": [
-        { "item_id": "spirit_herb", "qty": 6 },
-        { "item_id": "lingqi_shard", "qty": 12 }
-      ],
+      "cost_spirit_stones": 80,
       "unlock_condition": "first_clear",
-      "notes": "首区武器兜底配方。"
+      "notes": "首区武器兜底配方。灵石消耗 80。"
     },
     {
       "recipe_id": "recipe_qi_outer_armor_01",
@@ -123,12 +120,9 @@
       "output_template_id": "eq_armor_qi_outer_moss_robe",
       "output_rarity_tier": "artifact",
       "output_slot": "armor",
-      "cost_items": [
-        { "item_id": "spirit_herb", "qty": 8 },
-        { "item_id": "broken_talisman", "qty": 4 }
-      ],
+      "cost_spirit_stones": 100,
       "unlock_condition": "first_clear",
-      "notes": "首区护具兜底配方。"
+      "notes": "首区护具兜底配方。灵石消耗 100。"
     }
   ],
   "drop_table_equipment_examples": [

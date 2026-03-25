@@ -695,11 +695,17 @@ public sealed class CoreRegressionRulesTests
     }
 
     [Fact]
-    public void CalculateBattleSpiritStoneReward_BonusesEliteAndBossMonsters()
+    public void CalculateBattleSpiritStoneReward_ScalesByZoneAndCategory()
     {
-        Assert.Equal(0, RewardRules.CalculateBattleSpiritStoneReward(moveCategory: "normal", isBoss: false));
-        Assert.Equal(8, RewardRules.CalculateBattleSpiritStoneReward(moveCategory: "elite", isBoss: false));
-        Assert.Equal(15, RewardRules.CalculateBattleSpiritStoneReward(moveCategory: "elite", isBoss: true));
+        // Zone 0 (danger 1): normal=5, elite=7, boss=15
+        Assert.Equal(5, RewardRules.CalculateBattleSpiritStoneReward(moveCategory: "normal", isBoss: false, zoneIndex: 0));
+        Assert.Equal(7, RewardRules.CalculateBattleSpiritStoneReward(moveCategory: "elite", isBoss: false, zoneIndex: 0));
+        Assert.Equal(15, RewardRules.CalculateBattleSpiritStoneReward(moveCategory: "elite", isBoss: true, zoneIndex: 0));
+
+        // Zone 4 (danger 5): normal=13, elite=15, boss=15
+        Assert.Equal(13, RewardRules.CalculateBattleSpiritStoneReward(moveCategory: "normal", isBoss: false, zoneIndex: 4));
+        Assert.Equal(15, RewardRules.CalculateBattleSpiritStoneReward(moveCategory: "elite", isBoss: false, zoneIndex: 4));
+        Assert.Equal(15, RewardRules.CalculateBattleSpiritStoneReward(moveCategory: "elite", isBoss: true, zoneIndex: 4));
     }
 
     [Fact]

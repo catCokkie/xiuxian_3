@@ -50,11 +50,11 @@ namespace Xiuxian.Scripts.Services
                 isBoss: true);
         }
 
-        public static bool CanApplyWeaknessInsight(bool isBossBattle, bool alreadyApplied, double currentInsight)
+        public static bool CanApplyWeaknessInsight(bool isBossBattle, bool alreadyApplied, double currentInsight, int zoneIndex = 0)
         {
             return isBossBattle
                 && !alreadyApplied
-                && InsightSpendRules.CanAfford(currentInsight, InsightSpendRules.BossWeaknessInsightCost);
+                && InsightSpendRules.CanAfford(currentInsight, InsightSpendRules.GetBossWeaknessInsightCost(zoneIndex));
         }
     }
 }

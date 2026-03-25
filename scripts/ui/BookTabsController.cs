@@ -624,7 +624,7 @@ public partial class BookTabsController : Control
             && _exploreProgressController.CanApplyBossWeaknessInsight(_resourceWalletState.Insight);
         _cultivationBossInsightButton.Disabled = !canProbeBoss;
         _cultivationBossInsightButton.TooltipText = canProbeBoss
-            ? UiText.BossWeaknessInsightReadyTooltip
+            ? UiText.BossWeaknessInsightReadyTooltipFor((int)InsightSpendRules.GetBossWeaknessInsightCost(_levelConfigLoader?.ActiveLevelIndex ?? 0))
             : UiText.BossWeaknessInsightLockedTooltip;
 
         bool canStudyAlchemy = _resourceWalletState != null
@@ -738,7 +738,7 @@ public partial class BookTabsController : Control
             return;
         }
 
-        if (!_resourceWalletState.SpendInsight(InsightSpendRules.BossWeaknessInsightCost))
+        if (!_resourceWalletState.SpendInsight(InsightSpendRules.GetBossWeaknessInsightCost(_levelConfigLoader?.ActiveLevelIndex ?? 0)))
         {
             RefreshCultivationPanelContent();
             return;

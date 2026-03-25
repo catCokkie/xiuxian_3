@@ -99,19 +99,21 @@ xiuxian_4/
 按批次执行，同批次内可并行：
 
 ```
-批次 1（基础）:    TASK-06, TASK-03, TASK-01
-批次 2（核心）:    TASK-04, TASK-05, TASK-02
+批次 1（基础）:    TASK-06（待验收）, TASK-03✅, TASK-01（部分进展）
+批次 2（核心）:    TASK-04✅, TASK-05✅, TASK-02
 批次 3（测试）:    TASK-07, TASK-08, TASK-09, TASK-10
 批次 4（补充）:    TASK-11, TASK-12, TASK-13
 批次 5（优化）:    TASK-14, TASK-15✅, TASK-16, TASK-17, TASK-18
-批次 6（Melvor）:  TASK-19, TASK-22
-批次 7（依赖19）:  TASK-20, TASK-21
-批次 8（依赖20）:  TASK-23
-批次 9（审计修复）: TASK-24, TASK-25, TASK-26, TASK-28, TASK-29
+批次 6（Melvor）:  TASK-19✅, TASK-22✅
+批次 7（依赖19）:  TASK-20✅, TASK-21✅
+批次 8（依赖20）:  TASK-23✅
+批次 9（审计修复）: TASK-24✅, TASK-25✅, TASK-26✅, TASK-28, TASK-29✅
 ```
 
-TASK-03✅ 和 TASK-15✅ 已完成，跳过。
-TASK-27 已取消，跳过。
+已完成任务：TASK-03, 04, 05, 15, 19, 20, 21, 22, 23, 24, 25, 26, 29。
+TASK-27 已取消。
+TASK-06 代码已修复，待 Godot 编辑器人工验收。
+TASK-01 部分进展（ActiveLevelManager 已拆出）。
 
 ## 每个任务的执行流程
 
