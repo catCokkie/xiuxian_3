@@ -1,14 +1,15 @@
 using Godot;
 using System;
+using System.Collections.Generic;
 
 namespace Xiuxian.Scripts.Services
 {
     public static class EquipmentProfileCodec
     {
-        public static Godot.Collections.Dictionary<string, Variant> ToDictionary(EquipmentStatProfile profile)
+        public static Dictionary<string, object> ToPlainDictionary(EquipmentStatProfile profile)
         {
             EquipmentProfilePersistenceData data = EquipmentProfilePersistenceRules.ToData(profile);
-            return new Godot.Collections.Dictionary<string, Variant>
+            return new Dictionary<string, object>
             {
                 ["equipment_id"] = data.EquipmentId,
                 ["display_name"] = data.DisplayName,
@@ -17,26 +18,36 @@ namespace Xiuxian.Scripts.Services
                 ["rarity"] = data.Rarity,
                 ["enhance_level"] = data.EnhanceLevel,
                 ["is_equipped"] = data.IsEquipped,
-                ["modifier"] = ModifierToDictionary(profile.Modifier),
+                ["modifier"] = ModifierToPlainDictionary(profile.Modifier),
             };
+        }
+
+        public static Godot.Collections.Dictionary<string, Variant> ToDictionary(EquipmentStatProfile profile)
+        {
+            return SaveValueConversionRules.ToVariantDictionary(ToPlainDictionary(profile));
         }
 
         public static EquipmentStatProfile FromDictionary(Godot.Collections.Dictionary<string, Variant> data)
         {
+            return FromPlainDictionary(SaveValueConversionRules.ToPlainDictionary(data));
+        }
+
+        public static EquipmentStatProfile FromPlainDictionary(IDictionary<string, object> data)
+        {
             CharacterStatModifier modifier = default;
-            if (data.ContainsKey("modifier") && data["modifier"].VariantType == Variant.Type.Dictionary)
+            if (data.TryGetValue("modifier", out object rawModifier) && rawModifier is IDictionary<string, object> modifierData)
             {
-                modifier = ModifierFromDictionary((Godot.Collections.Dictionary<string, Variant>)data["modifier"]);
+                modifier = ModifierFromPlainDictionary(modifierData);
             }
 
             return EquipmentProfilePersistenceRules.FromData(new EquipmentProfilePersistenceData(
-                data.ContainsKey("equipment_id") ? data["equipment_id"].AsString() : "",
-                data.ContainsKey("display_name") ? data["display_name"].AsString() : "",
-                data.ContainsKey("slot") ? data["slot"].AsString() : EquipmentSlotType.Weapon.ToString(),
-                data.ContainsKey("set_tag") ? data["set_tag"].AsString() : "",
-                data.ContainsKey("rarity") ? data["rarity"].AsInt32() : 1,
-                data.ContainsKey("enhance_level") ? data["enhance_level"].AsInt32() : 0,
-                !data.ContainsKey("is_equipped") || data["is_equipped"].AsBool(),
+                SaveValueConversionRules.GetString(data, "equipment_id", ""),
+                SaveValueConversionRules.GetString(data, "display_name", ""),
+                SaveValueConversionRules.GetString(data, "slot", EquipmentSlotType.Weapon.ToString()),
+                SaveValueConversionRules.GetString(data, "set_tag", ""),
+                SaveValueConversionRules.GetInt(data, "rarity", 1),
+                SaveValueConversionRules.GetInt(data, "enhance_level", 0),
+                !data.ContainsKey("is_equipped") || SaveValueConversionRules.GetBool(data, "is_equipped", true),
                 modifier.MaxHpFlat,
                 modifier.AttackFlat,
                 modifier.DefenseFlat,
@@ -49,9 +60,9 @@ namespace Xiuxian.Scripts.Services
                 modifier.CritDamageDelta));
         }
 
-        private static Godot.Collections.Dictionary<string, Variant> ModifierToDictionary(CharacterStatModifier modifier)
+        private static Dictionary<string, object> ModifierToPlainDictionary(CharacterStatModifier modifier)
         {
-            return new Godot.Collections.Dictionary<string, Variant>
+            return new Dictionary<string, object>
             {
                 ["max_hp_flat"] = modifier.MaxHpFlat,
                 ["attack_flat"] = modifier.AttackFlat,
@@ -66,19 +77,29 @@ namespace Xiuxian.Scripts.Services
             };
         }
 
+        private static Godot.Collections.Dictionary<string, Variant> ModifierToDictionary(CharacterStatModifier modifier)
+        {
+            return SaveValueConversionRules.ToVariantDictionary(ModifierToPlainDictionary(modifier));
+        }
+
         private static CharacterStatModifier ModifierFromDictionary(Godot.Collections.Dictionary<string, Variant> data)
         {
+            return ModifierFromPlainDictionary(SaveValueConversionRules.ToPlainDictionary(data));
+        }
+
+        private static CharacterStatModifier ModifierFromPlainDictionary(IDictionary<string, object> data)
+        {
             return new CharacterStatModifier(
-                MaxHpFlat: data.ContainsKey("max_hp_flat") ? data["max_hp_flat"].AsInt32() : 0,
-                AttackFlat: data.ContainsKey("attack_flat") ? data["attack_flat"].AsInt32() : 0,
-                DefenseFlat: data.ContainsKey("defense_flat") ? data["defense_flat"].AsInt32() : 0,
-                SpeedFlat: data.ContainsKey("speed_flat") ? data["speed_flat"].AsInt32() : 0,
-                MaxHpRate: data.ContainsKey("max_hp_rate") ? data["max_hp_rate"].AsDouble() : 0.0,
-                AttackRate: data.ContainsKey("attack_rate") ? data["attack_rate"].AsDouble() : 0.0,
-                DefenseRate: data.ContainsKey("defense_rate") ? data["defense_rate"].AsDouble() : 0.0,
-                SpeedRate: data.ContainsKey("speed_rate") ? data["speed_rate"].AsDouble() : 0.0,
-                CritChanceDelta: data.ContainsKey("crit_chance_delta") ? data["crit_chance_delta"].AsDouble() : 0.0,
-                CritDamageDelta: data.ContainsKey("crit_damage_delta") ? data["crit_damage_delta"].AsDouble() : 0.0);
+                MaxHpFlat: SaveValueConversionRules.GetInt(data, "max_hp_flat", 0),
+                AttackFlat: SaveValueConversionRules.GetInt(data, "attack_flat", 0),
+                DefenseFlat: SaveValueConversionRules.GetInt(data, "defense_flat", 0),
+                SpeedFlat: SaveValueConversionRules.GetInt(data, "speed_flat", 0),
+                MaxHpRate: SaveValueConversionRules.GetDouble(data, "max_hp_rate", 0.0),
+                AttackRate: SaveValueConversionRules.GetDouble(data, "attack_rate", 0.0),
+                DefenseRate: SaveValueConversionRules.GetDouble(data, "defense_rate", 0.0),
+                SpeedRate: SaveValueConversionRules.GetDouble(data, "speed_rate", 0.0),
+                CritChanceDelta: SaveValueConversionRules.GetDouble(data, "crit_chance_delta", 0.0),
+                CritDamageDelta: SaveValueConversionRules.GetDouble(data, "crit_damage_delta", 0.0));
         }
     }
 }

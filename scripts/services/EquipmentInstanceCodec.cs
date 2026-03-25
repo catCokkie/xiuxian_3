@@ -5,20 +5,20 @@ namespace Xiuxian.Scripts.Services
 {
     public static class EquipmentInstanceCodec
     {
-        public static Godot.Collections.Dictionary<string, Variant> ToDictionary(EquipmentInstanceData instance)
+        public static Dictionary<string, object> ToPlainDictionary(EquipmentInstanceData instance)
         {
-            var subStats = new Godot.Collections.Array<Variant>();
+            var subStats = new List<object>();
             IReadOnlyList<EquipmentSubStatData> items = instance.SubStats ?? System.Array.Empty<EquipmentSubStatData>();
             for (int i = 0; i < items.Count; i++)
             {
-                subStats.Add(new Godot.Collections.Dictionary<string, Variant>
+                subStats.Add(new Dictionary<string, object>
                 {
                     ["stat"] = items[i].Stat,
                     ["value"] = items[i].Value,
                 });
             }
 
-            return new Godot.Collections.Dictionary<string, Variant>
+            return new Dictionary<string, object>
             {
                 ["equipment_id"] = instance.EquipmentId,
                 ["equipment_template_id"] = instance.EquipmentTemplateId,
@@ -38,42 +38,47 @@ namespace Xiuxian.Scripts.Services
             };
         }
 
+        public static Godot.Collections.Dictionary<string, Variant> ToDictionary(EquipmentInstanceData instance)
+        {
+            return SaveValueConversionRules.ToVariantDictionary(ToPlainDictionary(instance));
+        }
+
         public static EquipmentInstanceData FromDictionary(Godot.Collections.Dictionary<string, Variant> data)
         {
-            var subStats = new List<EquipmentSubStatData>();
-            if (data.ContainsKey("sub_stats") && data["sub_stats"].VariantType == Variant.Type.Array)
-            {
-                var array = (Godot.Collections.Array<Variant>)data["sub_stats"];
-                foreach (Variant item in array)
-                {
-                    if (item.VariantType != Variant.Type.Dictionary)
-                    {
-                        continue;
-                    }
+            return FromPlainDictionary(SaveValueConversionRules.ToPlainDictionary(data));
+        }
 
-                    var dict = (Godot.Collections.Dictionary<string, Variant>)item;
-                    subStats.Add(new EquipmentSubStatData(
-                        dict.ContainsKey("stat") ? dict["stat"].AsString() : string.Empty,
-                        dict.ContainsKey("value") ? dict["value"].AsDouble() : 0.0));
+        public static EquipmentInstanceData FromPlainDictionary(IDictionary<string, object> data)
+        {
+            var subStats = new List<EquipmentSubStatData>();
+            foreach (object item in SaveValueConversionRules.GetList(data, "sub_stats"))
+            {
+                if (item is not IDictionary<string, object> dict)
+                {
+                    continue;
                 }
+
+                subStats.Add(new EquipmentSubStatData(
+                    SaveValueConversionRules.GetString(dict, "stat", string.Empty),
+                    SaveValueConversionRules.GetDouble(dict, "value", 0.0)));
             }
 
             return new EquipmentInstanceData(
-                EquipmentId: data.ContainsKey("equipment_id") ? data["equipment_id"].AsString() : string.Empty,
-                EquipmentTemplateId: data.ContainsKey("equipment_template_id") ? data["equipment_template_id"].AsString() : string.Empty,
-                DisplayName: data.ContainsKey("display_name") ? data["display_name"].AsString() : string.Empty,
-                Slot: ParseSlot(data.ContainsKey("slot") ? data["slot"].AsString() : string.Empty),
-                SeriesId: data.ContainsKey("series_id") ? data["series_id"].AsString() : string.Empty,
-                RarityTier: ParseRarity(data.ContainsKey("rarity_tier") ? data["rarity_tier"].AsString() : string.Empty),
-                SourceStage: ParseSourceStage(data.ContainsKey("source_stage") ? data["source_stage"].AsString() : string.Empty),
-                SourceLevelId: data.ContainsKey("source_level_id") ? data["source_level_id"].AsString() : string.Empty,
-                MainStatKey: data.ContainsKey("main_stat_key") ? data["main_stat_key"].AsString() : string.Empty,
-                MainStatValue: data.ContainsKey("main_stat_value") ? data["main_stat_value"].AsDouble() : 0.0,
+                EquipmentId: SaveValueConversionRules.GetString(data, "equipment_id", string.Empty),
+                EquipmentTemplateId: SaveValueConversionRules.GetString(data, "equipment_template_id", string.Empty),
+                DisplayName: SaveValueConversionRules.GetString(data, "display_name", string.Empty),
+                Slot: ParseSlot(SaveValueConversionRules.GetString(data, "slot", string.Empty)),
+                SeriesId: SaveValueConversionRules.GetString(data, "series_id", string.Empty),
+                RarityTier: ParseRarity(SaveValueConversionRules.GetString(data, "rarity_tier", string.Empty)),
+                SourceStage: ParseSourceStage(SaveValueConversionRules.GetString(data, "source_stage", string.Empty)),
+                SourceLevelId: SaveValueConversionRules.GetString(data, "source_level_id", string.Empty),
+                MainStatKey: SaveValueConversionRules.GetString(data, "main_stat_key", string.Empty),
+                MainStatValue: SaveValueConversionRules.GetDouble(data, "main_stat_value", 0.0),
                 SubStats: subStats,
-                EnhanceLevel: data.ContainsKey("enhance_level") ? data["enhance_level"].AsInt32() : 0,
-                PowerBudget: data.ContainsKey("power_budget") ? data["power_budget"].AsInt32() : 0,
-                ObtainedUnix: data.ContainsKey("obtained_unix") ? data["obtained_unix"].AsInt64() : 0,
-                IsEquipped: data.ContainsKey("is_equipped") && data["is_equipped"].AsBool());
+                EnhanceLevel: SaveValueConversionRules.GetInt(data, "enhance_level", 0),
+                PowerBudget: SaveValueConversionRules.GetInt(data, "power_budget", 0),
+                ObtainedUnix: SaveValueConversionRules.GetLong(data, "obtained_unix", 0L),
+                IsEquipped: SaveValueConversionRules.GetBool(data, "is_equipped"));
         }
 
         private static EquipmentSlotType ParseSlot(string slot)

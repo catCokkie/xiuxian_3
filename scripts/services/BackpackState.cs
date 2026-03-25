@@ -146,70 +146,34 @@ namespace Xiuxian.Scripts.Services
 
         public Godot.Collections.Dictionary<string, Variant> ToDictionary()
         {
-            var result = new Godot.Collections.Dictionary<string, Variant>(_items);
-            var equipment = new Godot.Collections.Array<Variant>();
-            foreach (EquipmentStatProfile profile in _equipmentProfiles.Values)
-            {
-                equipment.Add(EquipmentProfileCodec.ToDictionary(profile));
-            }
-
-            var equipmentInstances = new Godot.Collections.Array<Variant>();
-            foreach (EquipmentInstanceData instance in _equipmentInstances.Values)
-            {
-                equipmentInstances.Add(EquipmentInstanceCodec.ToDictionary(instance));
-            }
-
-            result["__equipment_profiles"] = equipment;
-            result["__equipment_instances"] = equipmentInstances;
-            return result;
+            BackpackPersistenceRules.BackpackSnapshot snapshot = new(
+                GetItemEntries(),
+                GetEquipmentProfiles(),
+                GetEquipmentInstances());
+            return SaveValueConversionRules.ToVariantDictionary(BackpackPersistenceRules.ToPlainDictionary(snapshot));
         }
 
         public void FromDictionary(Godot.Collections.Dictionary<string, Variant> data)
         {
+            BackpackPersistenceRules.BackpackSnapshot snapshot = BackpackPersistenceRules.FromPlainDictionary(
+                SaveValueConversionRules.ToPlainDictionary(data));
             _items.Clear();
             _equipmentProfiles.Clear();
             _equipmentInstances.Clear();
-            foreach (string key in data.Keys)
+
+            foreach (KeyValuePair<string, int> kv in snapshot.Items)
             {
-                if (key == "__equipment_profiles")
-                {
-                    continue;
-                }
-                if (key == "__equipment_instances")
-                {
-                    continue;
-                }
-                _items[key] = data[key].AsInt32();
+                _items[kv.Key] = kv.Value;
             }
 
-            if (data.ContainsKey("__equipment_profiles") && data["__equipment_profiles"].VariantType == Variant.Type.Array)
+            foreach (EquipmentStatProfile profile in snapshot.EquipmentProfiles)
             {
-                var equipment = (Godot.Collections.Array<Variant>)data["__equipment_profiles"];
-                foreach (Variant item in equipment)
-                {
-                    if (item.VariantType != Variant.Type.Dictionary)
-                    {
-                        continue;
-                    }
-
-                    EquipmentStatProfile profile = EquipmentProfileCodec.FromDictionary((Godot.Collections.Dictionary<string, Variant>)item) with { IsEquipped = false };
-                    _equipmentProfiles[profile.EquipmentId] = profile;
-                }
+                _equipmentProfiles[profile.EquipmentId] = profile with { IsEquipped = false };
             }
 
-            if (data.ContainsKey("__equipment_instances") && data["__equipment_instances"].VariantType == Variant.Type.Array)
+            foreach (EquipmentInstanceData instance in snapshot.EquipmentInstances)
             {
-                var equipmentInstances = (Godot.Collections.Array<Variant>)data["__equipment_instances"];
-                foreach (Variant item in equipmentInstances)
-                {
-                    if (item.VariantType != Variant.Type.Dictionary)
-                    {
-                        continue;
-                    }
-
-                    EquipmentInstanceData instance = EquipmentInstanceCodec.FromDictionary((Godot.Collections.Dictionary<string, Variant>)item) with { IsEquipped = false };
-                    BackpackEquipmentInstanceRules.StoreInstance(_equipmentInstances, _equipmentProfiles, instance);
-                }
+                BackpackEquipmentInstanceRules.StoreInstance(_equipmentInstances, _equipmentProfiles, instance);
             }
         }
     }

@@ -120,7 +120,7 @@ namespace Xiuxian.Scripts.Services
 
         public Godot.Collections.Dictionary<string, Variant> ToDictionary()
         {
-            return ResourceWalletPersistenceRules.ToDictionary(new ResourceWalletPersistenceRules.WalletSnapshot(
+            ResourceWalletPersistenceRules.WalletSnapshot snapshot = new(
                 Lingqi,
                 Insight,
                 PetAffinity,
@@ -128,12 +128,14 @@ namespace Xiuxian.Scripts.Services
                 TotalEarnedLingqi,
                 TotalEarnedInsight,
                 TotalEarnedPetAffinity,
-                TotalEarnedSpiritStones));
+                TotalEarnedSpiritStones);
+            return SaveValueConversionRules.ToVariantDictionary(ResourceWalletPersistenceRules.ToPlainDictionary(snapshot));
         }
 
         public void FromDictionary(Godot.Collections.Dictionary<string, Variant> data)
         {
-            ResourceWalletPersistenceRules.WalletSnapshot snapshot = ResourceWalletPersistenceRules.FromDictionary(data);
+            ResourceWalletPersistenceRules.WalletSnapshot snapshot = ResourceWalletPersistenceRules.FromPlainDictionary(
+                SaveValueConversionRules.ToPlainDictionary(data));
             Lingqi = snapshot.Lingqi;
             Insight = snapshot.Insight;
             PetAffinity = snapshot.PetAffinity;

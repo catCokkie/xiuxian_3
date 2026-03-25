@@ -128,23 +128,24 @@ namespace Xiuxian.Scripts.Services
 
         public Godot.Collections.Dictionary<string, Variant> ToDictionary()
         {
-            return new Godot.Collections.Dictionary<string, Variant>
-            {
-                ["realm_level"] = RealmLevel,
-                ["realm_exp"] = RealmExp,
-                ["pet_mood"] = PetMood,
-                ["advanced_alchemy_study_unlocked"] = HasUnlockedAdvancedAlchemyStudy,
-                ["current_realm_active_seconds"] = CurrentRealmActiveSeconds
-            };
+            PlayerProgressPersistenceRules.PlayerProgressSnapshot snapshot = new(
+                RealmLevel,
+                RealmExp,
+                PetMood,
+                HasUnlockedAdvancedAlchemyStudy,
+                CurrentRealmActiveSeconds);
+            return SaveValueConversionRules.ToVariantDictionary(PlayerProgressPersistenceRules.ToPlainDictionary(snapshot));
         }
 
         public void FromDictionary(Godot.Collections.Dictionary<string, Variant> data)
         {
-            RealmLevel = data.ContainsKey("realm_level") ? Math.Max(1, data["realm_level"].AsInt32()) : 1;
-            RealmExp = data.ContainsKey("realm_exp") ? Math.Max(0.0, data["realm_exp"].AsDouble()) : 0.0;
-            PetMood = data.ContainsKey("pet_mood") ? Math.Clamp(data["pet_mood"].AsInt32(), 0, 100) : 60;
-            HasUnlockedAdvancedAlchemyStudy = data.ContainsKey("advanced_alchemy_study_unlocked") && data["advanced_alchemy_study_unlocked"].AsBool();
-            CurrentRealmActiveSeconds = data.ContainsKey("current_realm_active_seconds") ? Math.Max(0.0, data["current_realm_active_seconds"].AsDouble()) : 0.0;
+            PlayerProgressPersistenceRules.PlayerProgressSnapshot snapshot = PlayerProgressPersistenceRules.FromPlainDictionary(
+                SaveValueConversionRules.ToPlainDictionary(data));
+            RealmLevel = snapshot.RealmLevel;
+            RealmExp = snapshot.RealmExp;
+            PetMood = snapshot.PetMood;
+            HasUnlockedAdvancedAlchemyStudy = snapshot.AdvancedAlchemyStudyUnlocked;
+            CurrentRealmActiveSeconds = snapshot.CurrentRealmActiveSeconds;
             EmitSignal(SignalName.RealmProgressChanged, RealmLevel, RealmExp, RealmExpRequired);
         }
     }

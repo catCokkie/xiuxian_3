@@ -5,22 +5,67 @@
 > 每个任务标记了优先级(P0/P1/P2)、依赖和验收标准。
 > 约定：修改后必须通过 `dotnet test tests/Xiuxian2.Tests/Xiuxian2.Tests.csproj` 零失败。
 
-## 当前进度记录（更新：2026-03-24）
+## 当前进度记录（更新：2026-03-25）
 
 ### 已完成
-- `TASK-03 存档版本迁移框架`
-  - 已新增 `scripts/services/SaveMigrationRules.cs`
+- `TASK-03 存档版本迁移框架` ✅
+  - 已新增 `scripts/services/SaveMigrationRules.cs`（当前 LatestVersion = 6）
   - 已接入 `PrototypeRootController.LoadUnifiedState()`
   - 已补充 `tests/Xiuxian2.Tests/SaveMigrationRulesTests.cs`
   - 已新增文档 `docs/design/14_save_migration.md`
-- `TASK-15 隐藏未实现的设置项`
+- `TASK-04 离线结算集成实现` ✅
+  - `ApplyOfflineSettlementIfNeeded()` 已在 `PrototypeRootController.LoadAllState()` 中调用
+  - 修炼/副本双路径离线结算已完整接入
+- `TASK-05 装备正式内容闭环（Phase A）` ✅
+  - 装备模板 JSON 已有 4 个模板覆盖 3 槽位
+  - `BuildEquipmentOverviewText()` / `BuildBackpackOverviewText()` 已实现
+  - `EquipFromBackpack()` 一键装备已可用
+- `TASK-15 隐藏未实现的设置项` ✅
   - 已在设置页隐藏 `taskbar_icon`、`show_control_markers`、`milestone_tips`
   - 保留存档键，避免影响旧存档兼容
+- `TASK-19 活动模式扩展（4 模式）` ✅
+  - `PlayerActionState` 新增 `ModeAlchemy` / `ModeSmithing`，`ToggleMode()` 支持 4 模式循环
+  - `PlayerActionCapabilityRules` 已覆盖 alchemy/smithing 分支
+- `TASK-20 炼丹系统实现` ✅
+  - `AlchemyRules.cs`（配方：回气丹=灵草×2, 聚灵散=灵草×3）+ `AlchemyState.cs` 已实现
+  - `PotionInventoryState.cs` 丹药背包已接入；`CraftingProgressionService.cs` 统管进度推进
+  - `AlchemyRulesTests.cs` 测试已覆盖
+- `TASK-21 炼器/强化系统实现` ✅
+  - `SmithingRules.cs` + `SmithingState.cs` 已实现，强化公式 `1.08^lv`
+- `TASK-22 Boss 挑战系统` ✅
+  - `BossEncounterRules.cs` 已实现（BossProfile 生成、超时判负、弱点领悟）
+  - `BossEncounterRulesTests.cs` 含 4 个测试
+- `TASK-23 战斗消耗品（丹药自动使用）` ✅
+  - `ConsumableUsageRules.cs` 已实现（回气丹 HP<50%、聚灵散战斗开始时）
+- `TASK-24 灵石经济接入代码` ✅
+  - `ResourceWalletState.SpiritStones` + `AddSpiritStones()` 已实现
+  - `RewardRules.CalculateBattleSpiritStoneReward()` 按区域缩放（Normal=3+danger×2, Elite+2, Boss=15）
+- `TASK-25 战斗失败规则 + 副本循环` ✅
+  - `BattleDefeatDecision.ShouldResetExploreProgress`：Boss 失败=true，普通/精英=false
+  - `BattleLifecycleRules.DetermineDefeatReset()` 已正确实现；区域解锁 `unlocked_zone_ids` 已接入
+- `TASK-26 悟性新消耗路径` ✅
+  - `InsightSpendRules.cs` 实现 3 路径：境界突破、Boss 弱点领悟（30-80 按区域）、高阶炼丹（20/批）
+  - `BossEncounterRules.CanApplyWeaknessInsight()` 已集成
+- `TASK-29 存档 v5→v6 迁移代码` ✅
+  - `SaveMigrationRules.LatestVersion = 6`，`MigrateV5ToV6()` 已实现
+- `TASK-07 测试补全 — 战斗数学与结算` ✅
+  - 已新增 `tests/Xiuxian2.Tests/BattleRulesTests.cs`
+  - 已覆盖战斗伤害、缩放伤害、回合胜负与战斗流程分支
+- `TASK-08 测试补全 — 存档往返` ✅
+  - 已新增 `tests/Xiuxian2.Tests/SaveRoundTripTests.cs`
+  - 已补充 `Backpack/Wallet/PlayerProgress/EquippedItems` 纯持久化规则，运行时 State 已统一委托到规则层
 
 ### 已落地的补充修复（待办外）
-- 已补上子菜单中的“突破”按钮
+- 已补上子菜单中的"突破"按钮
 - 已接入背包页基础入口与装备/背包展示线路
 - 已默认隐藏主条状态栏，缓解主形象区域与状态栏重叠问题
+- `ActiveLevelManager.cs` 已从 LevelConfigLoader 拆出（TASK-01 部分进展）
+- 文档审计修复（2026-03-25）：
+  - `06_bottom_exploration_battle.md` §3a/§5 Boss 失败规则统一为"进度归零"
+  - `03_progression_and_balance.md` 炼丹材料名统一为灵草、聚灵散输入 300→220、Boss 领悟消耗 50→30-80
+  - `12_equipment_sample_qi_refining.json` 兑换配方 cost_items→cost_spirit_stones
+  - `11_equipment_content_system.md` 兑换字段 cost_items→cost_spirit_stones
+  - `14_save_migration.md` 当前版本 v5→v6、"预写迁移"→"已实现迁移"
 
 ### 已处理但仍需人工验收
 - `TASK-06 场景文件 UTF-8 编码修复`
@@ -121,7 +166,7 @@
    ```
    public static class SaveMigrationRules
    {
-       public static int LatestVersion => 5;
+       public static int LatestVersion => 6;
        // 未来新增: MigrateV5ToV6(ConfigFile cfg), MigrateV6ToV7(ConfigFile cfg)...
        public static bool NeedsMigration(int savedVersion) => savedVersion < LatestVersion;
        public static void MigrateToLatest(ConfigFile cfg, int fromVersion);
@@ -129,11 +174,11 @@
    ```
 2. `MigrateToLatest()` 循环调用 `MigrateVxToVy()` 升级链，每步更新 `meta.version`。
 3. 在 `PrototypeRootController.LoadUnifiedState()` 中，读取 version 后调用 `SaveMigrationRules.MigrateToLatest()` 再继续加载。
-4. 新增测试 `SaveMigrationRulesTests.cs`：验证 `NeedsMigration(4)` 返回 true, `NeedsMigration(5)` 返回 false。
+4. 新增测试 `SaveMigrationRulesTests.cs`：验证 `NeedsMigration(5)` 返回 true, `NeedsMigration(6)` 返回 false。
 5. 在 `docs/design/` 中新增 `14_save_migration.md` 文档化迁移规约。
 
 **验收标准**:
-- 旧版本(4)存档可被自动升级到 v5
+- 旧版本(5)存档可被自动升级到 v6
 - `SaveMigrationRules.MigrateToLatest()` 对已是最新版本的存档无操作
 - 新增测试通过
 - 存档路径 `user://save_state.cfg` 读写正常
@@ -141,6 +186,7 @@
 ---
 
 ### TASK-04: 离线结算集成实现
+**状态**: 已完成（2026-03-25）
 **依赖**: 无（Rules 层已测试就绪）
 **背景**: 4 个 Rules 类已完整实现并有测试覆盖（`OfflineSettlementRules`, `DungeonOfflineSettlementRules`, `DungeonOfflineProjectionRules`, `OfflineSummaryPresentationRules`）。`PrototypeRootController.ApplyOfflineSettlementIfNeeded()` 方法已存在但需验证完整调用链。
 
@@ -172,6 +218,7 @@
 ---
 
 ### TASK-05: 装备正式内容闭环（Phase A）
+**状态**: 已完成（2026-03-25）
 **依赖**: 无
 **背景**: 当前装备系统仅有：初始装备(`EquipmentStarterLoadout`)、首通固定奖励(`FirstClearEquipmentRewardRules`)、手动装备。缺少完整的装备模板 JSON、普通/精英掉落生成、装备 UI 对比。设计文档 `docs/design/11_equipment_content_system.md` 定义了 Stage A 范围：3 槽位(武器/护甲/饰品)、4 品级(俗器/法器/灵器/宝器)。
 
@@ -234,6 +281,7 @@
 ## Phase 2: P1 — 体验与健壮性
 
 ### TASK-07: 测试补全 — 战斗数学与结算
+**状态**: 已完成（2026-03-25）
 **依赖**: TASK-02（`ExploreGameLogic` 拆出后更易测试）
 **背景**: 现有 20 个测试文件覆盖 Rules 层，但缺少 `BattleRules` 核心战斗数学测试。
 
@@ -260,11 +308,16 @@
 ---
 
 ### TASK-08: 测试补全 — 存档往返
+**状态**: 已完成（2026-03-25）
 **依赖**: TASK-03（迁移框架就绪后测试更有意义）
 **背景**: 缺少存档 Save → Load 往返测试，无法保证格式变更不破坏。
 
 **涉及文件**:
 - 新建 `tests/Xiuxian2.Tests/SaveRoundTripTests.cs`
+- 新建 `scripts/services/BackpackPersistenceRules.cs`
+- 新建 `scripts/services/PlayerProgressPersistenceRules.cs`
+- 新建 `scripts/services/EquippedItemsPersistenceRules.cs`
+- 新建 `scripts/services/SaveValueConversionRules.cs`
 - `scripts/services/BackpackState.cs` — `ToDictionary()`, `FromDictionary()`
 - `scripts/services/ResourceWalletState.cs` — `ToDictionary()`, `FromDictionary()`
 - `scripts/services/PlayerProgressState.cs` — `ToDictionary()`, `FromDictionary()`
@@ -533,11 +586,11 @@
 ## 任务依赖图
 
 ```
-TASK-06 (UTF-8)           ─── 独立
-TASK-03 (存档迁移)        ─── 独立
-TASK-04 (离线结算)        ─── 独立
-TASK-05 (装备闭环)        ─── 独立
-TASK-01 (拆 ConfigLoader) ─── 独立
+TASK-06 (UTF-8)           ─── 独立（待人工验收）
+TASK-03 (存档迁移)        ─── ✅ 已完成
+TASK-04 (离线结算)        ─── ✅ 已完成
+TASK-05 (装备闭环)        ─── ✅ 已完成
+TASK-01 (拆 ConfigLoader) ─── 独立（ActiveLevelManager 已拆出，其余未完成）
   └→ TASK-02 (拆 ExploreCtrl)
       └→ TASK-07 (战斗测试)
   └→ TASK-09 (服务定位器)
@@ -547,7 +600,7 @@ TASK-04 → TASK-13 (离线×上限)
 TASK-10 (统计概览)        ─── 独立
 TASK-11 (宠物亲密度)      ─── 独立
 TASK-12 (UI 自适应)       ─── 独立
-TASK-15 (隐藏设置)        ─── 独立
+TASK-15 (隐藏设置)        ─── ✅ 已完成
 TASK-16 (Cloud 抽象)      ─── 独立
 TASK-17 (反挂机)          ─── 独立
 TASK-18 (遭遇率缩放)      ─── 独立
@@ -555,11 +608,11 @@ TASK-18 (遭遇率缩放)      ─── 独立
 
 ## 推荐执行顺序
 
-**批次 1（可并行）**: TASK-06, TASK-03, TASK-01
-**批次 2（可并行）**: TASK-04, TASK-05, TASK-02
+**批次 1（可并行）**: TASK-06（待验收）, TASK-03 ✅, TASK-01（部分进展）
+**批次 2（可并行）**: TASK-04 ✅, TASK-05 ✅, TASK-02
 **批次 3（可并行）**: TASK-07, TASK-08, TASK-09, TASK-10
 **批次 4（可并行）**: TASK-11, TASK-12, TASK-13
-**批次 5（可并行）**: TASK-14, TASK-15, TASK-16, TASK-17, TASK-18
+**批次 5（可并行）**: TASK-14, TASK-15 ✅, TASK-16, TASK-17, TASK-18
 
 ---
 
@@ -567,6 +620,7 @@ TASK-18 (遭遇率缩放)      ─── 独立
 ## Phase 4: Melvor-Inspired 系统扩展
 
 ### TASK-19: 活动模式扩展 — 从 2 模式到 4 模式
+**状态**: 已完成（2026-03-25）
 **依赖**: 无（可独立实施，但建议在 TASK-01/02 之后以获得更好架构）
 **背景**: 当前 `PlayerActionState` 仅支持 `ModeDungeon` / `ModeCultivation` 两种硬编码模式，`ToggleMode()` 为二元切换。参考 Melvor Idle 多活动设计，需扩展为 4 模式。
 
@@ -592,6 +646,7 @@ TASK-18 (遭遇率缩放)      ─── 独立
 ---
 
 ### TASK-20: 炼丹系统实现
+**状态**: 已完成（2026-03-25）
 **依赖**: TASK-19（需要 alchemy 模式可切换）
 **背景**: 当前副本掉落的灵草类材料无消费出口。参考 Melvor Idle Herblore，实现配方驱动的炼丹系统。
 
@@ -625,6 +680,7 @@ TASK-18 (遭遇率缩放)      ─── 独立
 ---
 
 ### TASK-21: 炼器 / 强化系统实现
+**状态**: 已完成（2026-03-25）
 **依赖**: TASK-19（需要 smithing 模式可切换）
 **背景**: `EquipmentInstanceData.EnhanceLevel` 字段已存在但未消费。参考 Melvor Idle Smithing，实现装备强化系统。
 
@@ -654,6 +710,7 @@ TASK-18 (遭遇率缩放)      ─── 独立
 ---
 
 ### TASK-22: Boss 挑战系统
+**状态**: 已完成（2026-03-25）
 **依赖**: 无
 **背景**: 当前区域探索 100% 后直接切换下一区域，缺乏里程碑感。参考 Melvor 但采用进度+Boss 模型。
 
@@ -684,6 +741,7 @@ TASK-18 (遭遇率缩放)      ─── 独立
 ---
 
 ### TASK-23: 战斗消耗品（丹药自动使用）
+**状态**: 已完成（2026-03-25）
 **依赖**: TASK-20（需要丹药系统就绪）
 **背景**: 丹药需在战斗中自动消耗以完成资源循环闭环。
 
@@ -715,20 +773,20 @@ TASK-18 (遭遇率缩放)      ─── 独立
 ```
 （原有依赖关系不变）
 
-TASK-19 (4 模式扩展)     ─── 独立（建议在 TASK-01/02 后）
-  └→ TASK-20 (炼丹系统)
-      └→ TASK-23 (战斗消耗品)
-  └→ TASK-21 (炼器/强化)
-TASK-22 (Boss 挑战)      ─── 独立
+TASK-19 (4 模式扩展)     ─── ✅ 已完成
+  └→ TASK-20 (炼丹系统)    ─── ✅ 已完成
+      └→ TASK-23 (战斗消耗品)  ─── ✅ 已完成
+  └→ TASK-21 (炼器/强化)    ─── ✅ 已完成
+TASK-22 (Boss 挑战)      ─── ✅ 已完成
 ```
 
 ## 更新后的推荐执行顺序
 
 **批次 1-5**: （保持不变）
-**批次 6（Melvor 扩展，可并行）**: TASK-19, TASK-22
-**批次 7（依赖 TASK-19）**: TASK-20, TASK-21
-**批次 8（依赖 TASK-20）**: TASK-23
-**批次 9（Review-Fix 实施，可并行）**: TASK-24, TASK-25, TASK-26, TASK-27, TASK-28, TASK-29
+**批次 6（Melvor 扩展）**: TASK-19 ✅, TASK-22 ✅
+**批次 7（依赖 TASK-19）**: TASK-20 ✅, TASK-21 ✅
+**批次 8（依赖 TASK-20）**: TASK-23 ✅
+**批次 9（审计修复）**: TASK-24 ✅, TASK-25 ✅, TASK-26 ✅, TASK-28, TASK-29 ✅
 
 ---
 
@@ -736,6 +794,7 @@ TASK-22 (Boss 挑战)      ─── 独立
 ## Phase 5: Review-Fix — 文档审计修复实施
 
 ### TASK-24: 灵石经济接入代码 (P1)
+**状态**: 已完成（2026-03-25）
 **依赖**: TASK-19
 **背景**: `ResourceWalletState` 中缺少 `SpiritStones` 字段，但设计已定义灵石产出/消耗闭环（见 `02_systems.md` §11）。
 **涉及文件**:
@@ -747,6 +806,7 @@ TASK-22 (Boss 挑战)      ─── 独立
 - Boss 首杀奖励包含灵石。
 
 ### TASK-25: 战斗失败规则 + 副本循环实施 (P1)
+**状态**: 已完成（2026-03-25）
 **依赖**: 无
 **背景**: `BattleDefeatDecision` 已有 `ShouldResetExploreProgress` 和 `ShouldResetLevel` 字段。副本采用循环刷取模型：Boss 胜利/失败后进度均归零，普通/精英怪失败不归零（见 `06_bottom_exploration_battle.md` §3a + §4）。
 **涉及文件**:
@@ -761,6 +821,7 @@ TASK-22 (Boss 挑战)      ─── 独立
 - 新增单元测试覆盖 3 种失败场景 + 循环归零场景。
 
 ### TASK-26: 悟性新消耗路径 (P1)
+**状态**: 已完成（2026-03-25）
 **依赖**: TASK-20, TASK-22
 **背景**: 悟性当前仅用于境界突破，产消比 ~0.96:1 但未来系统扩展后将过剩。设计新增 3 个消耗场景（见 `03_progression_and_balance.md`）。
 **涉及文件**:
@@ -786,6 +847,7 @@ TASK-22 (Boss 挑战)      ─── 独立
 - JSON 可被 `LevelConfigLoader` 正常解析。
 
 ### TASK-29: 存档 v5→v6 迁移代码 (P1)
+**状态**: 已完成（2026-03-25）
 **依赖**: TASK-24
 **背景**: 迁移规格已预写在 `14_save_migration.md`，需在 `SaveMigrationRules.cs` 中实现。
 **涉及文件**:

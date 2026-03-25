@@ -98,31 +98,18 @@ namespace Xiuxian.Scripts.Services
 
         public Godot.Collections.Dictionary<string, Variant> ToDictionary()
         {
-            var result = new Godot.Collections.Dictionary<string, Variant>();
-            foreach ((EquipmentSlotType slot, EquipmentStatProfile profile) in _equippedBySlot)
-            {
-                result[slot.ToString()] = EquipmentProfileCodec.ToDictionary(profile);
-            }
-            return result;
+            return SaveValueConversionRules.ToVariantDictionary(
+                EquippedItemsPersistenceRules.ToPlainDictionary(_equippedBySlot));
         }
 
         public void FromDictionary(Godot.Collections.Dictionary<string, Variant> data)
         {
             _equippedBySlot.Clear();
-            foreach (string key in data.Keys)
+            Dictionary<EquipmentSlotType, EquipmentStatProfile> restored = EquippedItemsPersistenceRules.FromPlainDictionary(
+                SaveValueConversionRules.ToPlainDictionary(data));
+            foreach ((EquipmentSlotType slot, EquipmentStatProfile profile) in restored)
             {
-                if (data[key].VariantType != Variant.Type.Dictionary)
-                {
-                    continue;
-                }
-
-                if (!System.Enum.TryParse(key, out EquipmentSlotType slot))
-                {
-                    continue;
-                }
-
-                EquipmentStatProfile profile = EquipmentProfileCodec.FromDictionary((Godot.Collections.Dictionary<string, Variant>)data[key]);
-                _equippedBySlot[slot] = profile with { Slot = slot, IsEquipped = true };
+                _equippedBySlot[slot] = profile;
             }
 
             EmitSignal(SignalName.EquippedItemsChanged);
