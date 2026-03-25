@@ -17,11 +17,14 @@ namespace Xiuxian.Scripts.Services
 
         public bool LoadConfigFromText(string text)
         {
+            RootData = new Godot.Collections.Dictionary<string, Variant>();
+            Levels.Clear();
             MonsterById.Clear();
             DropTableById.Clear();
             EquipmentSeriesById.Clear();
             EquipmentTemplateById.Clear();
             EquipmentExchangeRecipesByLevelId.Clear();
+            LastLoadedConfigText = string.Empty;
 
             Variant parsed = Json.ParseString(text);
             if (parsed.VariantType != Variant.Type.Dictionary)
@@ -94,6 +97,68 @@ namespace Xiuxian.Scripts.Services
             }
 
             return string.Empty;
+        }
+
+        public bool TryFindLevelIndex(string levelId, out int levelIndex)
+        {
+            levelIndex = -1;
+            if (string.IsNullOrEmpty(levelId))
+            {
+                return false;
+            }
+
+            for (int i = 0; i < Levels.Count; i++)
+            {
+                string id = GetString(Levels[i], "level_id", "");
+                if (id == levelId)
+                {
+                    levelIndex = i;
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        public bool TryGetLevelAtIndex(int levelIndex, out Godot.Collections.Dictionary<string, Variant> levelData)
+        {
+            levelData = new Godot.Collections.Dictionary<string, Variant>();
+            if (levelIndex < 0 || levelIndex >= Levels.Count)
+            {
+                return false;
+            }
+
+            levelData = Levels[levelIndex];
+            return true;
+        }
+
+        public bool TryGetLevel(string levelId, out Godot.Collections.Dictionary<string, Variant> levelData)
+        {
+            levelData = new Godot.Collections.Dictionary<string, Variant>();
+            return TryFindLevelIndex(levelId, out int levelIndex) && TryGetLevelAtIndex(levelIndex, out levelData);
+        }
+
+        public string GetNextLevelId(string levelId)
+        {
+            if (!TryFindLevelIndex(levelId, out int index))
+            {
+                return string.Empty;
+            }
+
+            int next = index + 1;
+            if (next < 0 || next >= Levels.Count)
+            {
+                return string.Empty;
+            }
+
+            return GetString(Levels[next], "level_id", "");
+        }
+
+        public string GetConfiguredNextLevelId(string levelId)
+        {
+            return TryGetLevel(levelId, out var level)
+                ? GetString(level, "unlock_next_level_id", "")
+                : string.Empty;
         }
 
         public Godot.Collections.Array<string> GetEquipmentSeriesIds()
@@ -365,6 +430,30 @@ namespace Xiuxian.Scripts.Services
             }
 
             return fallback;
+        }
+
+        public static string GetLevelBossMonsterId(Godot.Collections.Dictionary<string, Variant> level)
+        {
+            string configured = GetString(level, "boss_monster_id", "");
+            if (!string.IsNullOrEmpty(configured))
+            {
+                return configured;
+            }
+
+            if (level.ContainsKey("monster_wave") && level["monster_wave"].VariantType == Variant.Type.Array)
+            {
+                var wave = (Godot.Collections.Array<Variant>)level["monster_wave"];
+                for (int i = wave.Count - 1; i >= 0; i--)
+                {
+                    string id = wave[i].AsString();
+                    if (!string.IsNullOrEmpty(id))
+                    {
+                        return id;
+                    }
+                }
+            }
+
+            return string.Empty;
         }
     }
 }

@@ -14,8 +14,6 @@ namespace Xiuxian.Scripts.Services
 
         private readonly List<string> _validationIssues = new();
         private readonly List<Godot.Collections.Dictionary<string, Variant>> _validationEntries = new();
-        private string _lastSimulationReport = "no simulation yet";
-
         public ConfigValidationService(
             LevelConfigProvider provider,
             Func<string> getActiveLevelId,
@@ -136,16 +134,6 @@ namespace Xiuxian.Scripts.Services
             }
 
             return result;
-        }
-
-        public void SetLastSimulationReport(string report)
-        {
-            _lastSimulationReport = string.IsNullOrEmpty(report) ? "no simulation yet" : report;
-        }
-
-        public string GetLastSimulationReport()
-        {
-            return _lastSimulationReport;
         }
 
         private void ValidateEquipmentConfiguration()

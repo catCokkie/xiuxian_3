@@ -8,6 +8,10 @@
 ## 当前进度记录（更新：2026-03-25）
 
 ### 已完成
+- `TASK-01 拆分 LevelConfigLoader 上帝对象` ✅
+  - `LevelConfigLoader.cs` 已瘦身为 159 行兼容门面，保留 `/root/LevelConfigLoader` 访问路径
+  - 已拆出 `LevelConfigProvider`、`MonsterConfigService`、`LevelRuntimeStateService`、`ConfigValidationService`
+  - `dotnet test tests/Xiuxian2.Tests/Xiuxian2.Tests.csproj` 已通过（162/162）
 - `TASK-03 存档版本迁移框架` ✅
   - 已新增 `scripts/services/SaveMigrationRules.cs`（当前 LatestVersion = 6）
   - 已接入 `PrototypeRootController.LoadUnifiedState()`
@@ -59,7 +63,6 @@
 - 已补上子菜单中的"突破"按钮
 - 已接入背包页基础入口与装备/背包展示线路
 - 已默认隐藏主条状态栏，缓解主形象区域与状态栏重叠问题
-- `ActiveLevelManager.cs` 已从 LevelConfigLoader 拆出（TASK-01 部分进展）
 - 文档审计修复（2026-03-25）：
   - `06_bottom_exploration_battle.md` §3a/§5 Boss 失败规则统一为"进度归零"
   - `03_progression_and_balance.md` 炼丹材料名统一为灵草、聚灵散输入 300→220、Boss 领悟消耗 50→30-80
@@ -77,11 +80,16 @@
 ## Phase 1: P0 — 阻塞发布
 
 ### TASK-01: 拆分 LevelConfigLoader 上帝对象
+**状态**: 已完成（2026-03-25）
 **依赖**: 无 (基础重构，其他任务受益)
 **背景**: `scripts/services/LevelConfigLoader.cs` 共 1531 行、49 个公有方法、33 个私有字段，混合了 6 类职责：配置加载/索引、活跃关卡管理、怪物查询、掉落经济、校验/模拟、运行时持久化。
 
 **涉及文件**:
 - `scripts/services/LevelConfigLoader.cs` — 拆分源
+- `scripts/services/LevelConfigProvider.cs` — 配置解析与索引
+- `scripts/services/MonsterConfigService.cs` — 怪物展示/战斗参数查询
+- `scripts/services/LevelRuntimeStateService.cs` — 掉落、结算、运行时持久化与模拟
+- `scripts/services/ConfigValidationService.cs` — 配置校验摘要
 - `project.godot` — autoload 注册需更新
 - `scripts/game/PrototypeRootController.cs` — GetNode 路径 `"/root/LevelConfigLoader"`
 - `scripts/game/ExploreProgressController.cs` — GetNode 路径 `"/root/LevelConfigLoader"`
@@ -115,6 +123,10 @@
 - 三个新类职责单一，无交叉依赖
 - `dotnet test` 全部通过
 - 游戏启动后关卡加载、切换、战斗、校验功能正常
+
+**完成说明**:
+- 当前实现保留 `LevelConfigLoader` 作为兼容门面，`project.godot` 与现有 `/root/LevelConfigLoader` 调用点无需同步改名
+- 除规划中的 `LevelConfigProvider` / `ConfigValidationService` / `ActiveLevelManager` 外，额外拆出了 `MonsterConfigService` 与 `LevelRuntimeStateService`，进一步隔离怪物查询与运行时结算职责
 
 ---
 
@@ -590,7 +602,7 @@ TASK-06 (UTF-8)           ─── 独立（待人工验收）
 TASK-03 (存档迁移)        ─── ✅ 已完成
 TASK-04 (离线结算)        ─── ✅ 已完成
 TASK-05 (装备闭环)        ─── ✅ 已完成
-TASK-01 (拆 ConfigLoader) ─── 独立（ActiveLevelManager 已拆出，其余未完成）
+TASK-01 (拆 ConfigLoader) ─── ✅ 已完成
   └→ TASK-02 (拆 ExploreCtrl)
       └→ TASK-07 (战斗测试)
   └→ TASK-09 (服务定位器)
@@ -608,11 +620,10 @@ TASK-18 (遭遇率缩放)      ─── 独立
 
 ## 推荐执行顺序
 
-**批次 1（可并行）**: TASK-06（待验收）, TASK-03 ✅, TASK-01（部分进展）
-**批次 2（可并行）**: TASK-04 ✅, TASK-05 ✅, TASK-02
-**批次 3（可并行）**: TASK-07, TASK-08, TASK-09, TASK-10
-**批次 4（可并行）**: TASK-11, TASK-12, TASK-13
-**批次 5（可并行）**: TASK-14, TASK-15 ✅, TASK-16, TASK-17, TASK-18
+**批次 1（可并行）**: TASK-06（待验收）, TASK-02
+**批次 2（可并行）**: TASK-09, TASK-10, TASK-11
+**批次 3（可并行）**: TASK-12, TASK-13, TASK-14
+**批次 4（可并行）**: TASK-16, TASK-17, TASK-18
 
 ---
 
