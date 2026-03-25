@@ -1,0 +1,25 @@
+# Godot 4+ specific ignores
+.godot/
+.mono/
+/android/
+
+# .NET build outputs
+bin/
+obj/
+TestResults/
+
+# IDEs and editors
+.vs/
+.vscode/
+.idea/
+*.suo
+*.user
+*.userprefs
+
+# Environment-specific files
+.env
+.env.*
+
+# OS files
+.DS_Store
+Thumbs.db

@@ -1,0 +1,676 @@
+﻿{
+  "levels": [
+    {
+      "level_id": "lv_qi_001",
+      "level_name": "Youquan Cave Outer",
+      "realm_recommend": "Qi 1-3",
+      "zone_speed_factor": 1.0,
+      "danger_level": 1,
+      "theme_tags": ["cave", "wet", "yin-cold"],
+      "explore": {
+        "progress_per_100_inputs": 2.0,
+        "encounter_check_interval_progress": 20.0,
+        "base_encounter_rate": 0.18,
+        "battle_pause_factor": 0.0,
+        "move_inputs_by_category": {
+          "default": 4,
+          "normal": 4,
+          "flying": 4,
+          "elite": 4
+        }
+      },
+      "battle_runtime": {
+        "player_base_hp": 36,
+        "player_attack_per_round": 4,
+        "enemy_damage_divider": 4,
+        "enemy_min_damage_per_round": 1
+      },
+      "spawn_table": [
+        { "monster_id": "monster_slime_moss", "weight": 60, "min_count": 1, "max_count": 2 },
+        { "monster_id": "monster_bat_shadow", "weight": 30, "min_count": 1, "max_count": 2 },
+        { "monster_id": "monster_spider_cave", "weight": 10, "min_count": 1, "max_count": 1 }
+      ],
+      "monster_wave": [
+        "monster_slime_moss",
+        "monster_bat_shadow",
+        "monster_slime_moss",
+        "monster_spider_cave"
+      ],
+      "boss_monster_id": "monster_spider_cave_queen",
+      "unlock_next_level_id": "lv_qi_002",
+      "rewards": {
+        "first_clear": {
+          "lingqi": 120,
+          "insight": 20,
+          "spirit_stones": 60,
+          "items": [],
+          "equipment_templates": [
+            {
+              "equipment_template_id": "eq_accessory_qi_shadow_ring",
+              "rarity_tier": "spirit",
+              "qty": 1
+            }
+          ]
+        },
+        "repeat_clear": {
+          "lingqi_min": 40,
+          "lingqi_max": 80,
+          "insight_min": 6,
+          "insight_max": 12
+        },
+        "exp_bonus_factor": 1.0
+      }
+    },
+    {
+      "level_id": "lv_qi_002",
+      "level_name": "Youquan Cave Inner",
+      "realm_recommend": "Qi 3-5",
+      "zone_speed_factor": 1.08,
+      "danger_level": 2,
+      "theme_tags": ["cave", "deep", "poison-mist"],
+      "explore": {
+        "progress_per_100_inputs": 2.4,
+        "encounter_check_interval_progress": 20.0,
+        "base_encounter_rate": 0.22,
+        "battle_pause_factor": 0.0,
+        "move_inputs_by_category": {
+          "default": 4,
+          "normal": 4,
+          "flying": 4,
+          "elite": 4
+        }
+      },
+      "battle_runtime": {
+        "player_base_hp": 42,
+        "player_attack_per_round": 5,
+        "enemy_damage_divider": 4,
+        "enemy_min_damage_per_round": 1
+      },
+      "spawn_table": [
+        { "monster_id": "monster_slime_moss", "weight": 35, "min_count": 1, "max_count": 2 },
+        { "monster_id": "monster_bat_shadow", "weight": 40, "min_count": 1, "max_count": 2 },
+        { "monster_id": "monster_spider_cave", "weight": 25, "min_count": 1, "max_count": 1 }
+      ],
+      "monster_wave": [
+        "monster_bat_shadow",
+        "monster_slime_moss",
+        "monster_bat_shadow",
+        "monster_spider_cave"
+      ],
+      "boss_monster_id": "monster_spider_cave",
+      "unlock_next_level_id": "lv_qi_003",
+      "rewards": {
+        "first_clear": {
+          "lingqi": 180,
+          "insight": 28,
+          "spirit_stones": 90,
+          "items": []
+        },
+        "repeat_clear": {
+          "lingqi_min": 60,
+          "lingqi_max": 110,
+          "insight_min": 8,
+          "insight_max": 15
+        },
+        "exp_bonus_factor": 1.12
+      }
+    },
+    {
+      "level_id": "lv_qi_003",
+      "level_name": "Yin Tide Rift",
+      "realm_recommend": "Qi 5-7",
+      "zone_speed_factor": 1.15,
+      "danger_level": 3,
+      "theme_tags": ["rift", "yin", "storm"],
+      "explore": {
+        "progress_per_100_inputs": 2.8,
+        "encounter_check_interval_progress": 18.0,
+        "base_encounter_rate": 0.24,
+        "battle_pause_factor": 0.0,
+        "move_inputs_by_category": {
+          "default": 4,
+          "normal": 4,
+          "flying": 3,
+          "elite": 5
+        }
+      },
+      "battle_runtime": {
+        "player_base_hp": 48,
+        "player_attack_per_round": 6,
+        "enemy_damage_divider": 4,
+        "enemy_min_damage_per_round": 2
+      },
+      "spawn_table": [
+        { "monster_id": "monster_slime_moss", "weight": 20, "min_count": 1, "max_count": 2 },
+        { "monster_id": "monster_bat_shadow", "weight": 50, "min_count": 1, "max_count": 2 },
+        { "monster_id": "monster_spider_cave", "weight": 30, "min_count": 1, "max_count": 1 }
+      ],
+      "monster_wave": [
+        "monster_bat_shadow",
+        "monster_bat_shadow",
+        "monster_slime_moss",
+        "monster_spider_cave"
+      ],
+      "boss_monster_id": "monster_spider_cave",
+      "unlock_next_level_id": "lv_qi_004",
+      "rewards": {
+        "first_clear": {
+          "lingqi": 250,
+          "insight": 38,
+          "spirit_stones": 130,
+          "items": []
+        },
+        "repeat_clear": {
+          "lingqi_min": 85,
+          "lingqi_max": 145,
+          "insight_min": 12,
+          "insight_max": 20
+        },
+        "exp_bonus_factor": 1.2
+      }
+    },
+    {
+      "level_id": "lv_qi_004",
+      "level_name": "Abyss Fungus Pit",
+      "realm_recommend": "Qi 7-9",
+      "zone_speed_factor": 1.22,
+      "danger_level": 4,
+      "theme_tags": ["abyss", "fungus", "poison"],
+      "explore": {
+        "progress_per_100_inputs": 3.1,
+        "encounter_check_interval_progress": 16.0,
+        "base_encounter_rate": 0.26,
+        "battle_pause_factor": 0.0,
+        "move_inputs_by_category": {
+          "default": 4,
+          "normal": 4,
+          "flying": 3,
+          "elite": 6
+        }
+      },
+      "battle_runtime": {
+        "player_base_hp": 54,
+        "player_attack_per_round": 7,
+        "enemy_damage_divider": 3,
+        "enemy_min_damage_per_round": 2
+      },
+      "spawn_table": [
+        { "monster_id": "monster_slime_moss", "weight": 25, "min_count": 1, "max_count": 2 },
+        { "monster_id": "monster_bat_shadow", "weight": 25, "min_count": 1, "max_count": 2 },
+        { "monster_id": "monster_spider_cave", "weight": 50, "min_count": 1, "max_count": 1 }
+      ],
+      "monster_wave": [
+        "monster_spider_cave",
+        "monster_slime_moss",
+        "monster_bat_shadow",
+        "monster_spider_cave"
+      ],
+      "boss_monster_id": "monster_spider_cave",
+      "unlock_next_level_id": "lv_qi_005",
+      "rewards": {
+        "first_clear": {
+          "lingqi": 320,
+          "insight": 50,
+          "spirit_stones": 180,
+          "items": []
+        },
+        "repeat_clear": {
+          "lingqi_min": 110,
+          "lingqi_max": 180,
+          "insight_min": 16,
+          "insight_max": 25
+        },
+        "exp_bonus_factor": 1.28
+      }
+    },
+    {
+      "level_id": "lv_qi_005",
+      "level_name": "Nether Bone Hall",
+      "realm_recommend": "Qi 9-11",
+      "zone_speed_factor": 1.3,
+      "danger_level": 5,
+      "theme_tags": ["nether", "bones", "cold-fire"],
+      "explore": {
+        "progress_per_100_inputs": 3.5,
+        "encounter_check_interval_progress": 15.0,
+        "base_encounter_rate": 0.28,
+        "battle_pause_factor": 0.0,
+        "move_inputs_by_category": {
+          "default": 4,
+          "normal": 4,
+          "flying": 3,
+          "elite": 6
+        }
+      },
+      "battle_runtime": {
+        "player_base_hp": 62,
+        "player_attack_per_round": 8,
+        "enemy_damage_divider": 3,
+        "enemy_min_damage_per_round": 3
+      },
+      "spawn_table": [
+        { "monster_id": "monster_slime_moss", "weight": 15, "min_count": 1, "max_count": 2 },
+        { "monster_id": "monster_bat_shadow", "weight": 35, "min_count": 1, "max_count": 2 },
+        { "monster_id": "monster_spider_cave", "weight": 50, "min_count": 1, "max_count": 1 }
+      ],
+      "monster_wave": [
+        "monster_bat_shadow",
+        "monster_spider_cave",
+        "monster_bat_shadow",
+        "monster_spider_cave"
+      ],
+      "boss_monster_id": "monster_spider_cave",
+      "rewards": {
+        "first_clear": {
+          "lingqi": 420,
+          "insight": 65,
+          "spirit_stones": 250,
+          "items": []
+        },
+        "repeat_clear": {
+          "lingqi_min": 150,
+          "lingqi_max": 230,
+          "insight_min": 22,
+          "insight_max": 34
+        },
+        "exp_bonus_factor": 1.38
+      }
+    }
+  ],
+  "monsters": [
+    {
+      "monster_id": "monster_slime_moss",
+      "monster_name": "Moss Slime",
+      "rarity": "normal",
+      "move_category": "normal",
+      "realm_recommend": "Qi 1",
+      "tags": ["yao", "slime"],
+      "combat": {
+        "hp": 22,
+        "attack": 4,
+        "defense": 1,
+        "inputs_per_round": 18,
+        "speed_factor": 1.0
+      },
+      "behavior": {
+        "skill_list": ["sticky_slow_10pct_1round"],
+        "phase_rules": [],
+        "anti_afk_rule": "player_damage_minus_10pct_if_low_input_for_3_rounds"
+      },
+      "visual": {
+        "portrait": "res://assets/ui/actor_placeholder.svg",
+        "animation": "hover",
+        "anim_speed": 2.2,
+        "anim_amplitude": 2.0,
+        "tint": [0.72, 0.96, 0.70, 1.0]
+      },
+      "drops": {
+        "drop_table_id": "drop_qi_outer_normal",
+        "drop_roll_count": 1,
+        "guaranteed_drop": [{ "item_id": "lingqi_shard", "qty": 1 }]
+      },
+      "settlement_reward": {
+        "lingqi_min": 18,
+        "lingqi_max": 30,
+        "insight_min": 2,
+        "insight_max": 4
+      }
+    },
+    {
+      "monster_id": "monster_bat_shadow",
+      "monster_name": "Shadow Bat",
+      "rarity": "normal",
+      "move_category": "flying",
+      "realm_recommend": "Qi 2",
+      "tags": ["yao", "flying"],
+      "combat": {
+        "hp": 26,
+        "attack": 5,
+        "defense": 2,
+        "inputs_per_round": 17,
+        "speed_factor": 1.05
+      },
+      "behavior": {
+        "skill_list": ["first_strike_plus_15pct"],
+        "phase_rules": ["attack_speed_plus_10pct_below_30hp"],
+        "anti_afk_rule": ""
+      },
+      "visual": {
+        "portrait": "res://assets/ui/actor_placeholder.svg",
+        "animation": "pulse",
+        "anim_speed": 4.8,
+        "anim_amplitude": 0.06,
+        "tint": [0.78, 0.82, 1.0, 1.0]
+      },
+      "drops": {
+        "drop_table_id": "drop_qi_outer_normal",
+        "drop_roll_count": 1,
+        "guaranteed_drop": []
+      },
+      "settlement_reward": {
+        "lingqi_min": 22,
+        "lingqi_max": 36,
+        "insight_min": 3,
+        "insight_max": 5
+      }
+    },
+    {
+      "monster_id": "monster_spider_cave",
+      "monster_name": "Cave Brood Spider",
+      "rarity": "elite",
+      "move_category": "elite",
+      "realm_recommend": "Qi 3",
+      "tags": ["yao", "elite"],
+      "combat": {
+        "hp": 42,
+        "attack": 8,
+        "defense": 4,
+        "inputs_per_round": 20,
+        "speed_factor": 0.95
+      },
+      "behavior": {
+        "skill_list": ["silk_debuff_minus_20pct_damage_next_round"],
+        "phase_rules": ["summon_spiderling_every_2_rounds_below_50hp"],
+        "anti_afk_rule": "silk_trigger_plus_20pct_if_low_input"
+      },
+      "visual": {
+        "portrait": "res://assets/ui/actor_placeholder.svg",
+        "animation": "hover",
+        "anim_speed": 1.8,
+        "anim_amplitude": 3.0,
+        "tint": [1.0, 0.72, 0.72, 1.0]
+      },
+      "drops": {
+        "drop_table_id": "drop_qi_outer_elite",
+        "drop_roll_count": 2,
+        "guaranteed_drop": [{ "item_id": "spirit_herb", "qty": 1 }]
+      },
+      "settlement_reward": {
+        "lingqi_min": 45,
+        "lingqi_max": 70,
+        "insight_min": 6,
+        "insight_max": 10
+      }
+    },
+    {
+      "monster_id": "monster_spider_cave_queen",
+      "monster_name": "Cave Spider Queen",
+      "rarity": "boss",
+      "move_category": "boss",
+      "realm_recommend": "Qi 3",
+      "tags": ["yao", "boss", "poison"],
+      "combat": {
+        "hp": 108,
+        "attack": 14,
+        "defense": 6,
+        "inputs_per_round": 20,
+        "speed_factor": 0.92
+      },
+      "behavior": {
+        "skill_list": ["venom_bite_plus_1_stack", "silk_prison_reduce_damage_25pct"],
+        "phase_rules": ["summon_spiderling_every_3_rounds_below_70hp", "attack_plus_20pct_below_35hp"],
+        "anti_afk_rule": "boss_enrage_plus_30pct_if_low_input"
+      },
+      "visual": {
+        "portrait": "res://assets/ui/actor_placeholder.svg",
+        "animation": "hover",
+        "anim_speed": 1.4,
+        "anim_amplitude": 4.0,
+        "tint": [0.95, 0.60, 0.68, 1.0]
+      },
+      "drops": {
+        "drop_table_id": "drop_qi_outer_boss",
+        "drop_roll_count": 3,
+        "guaranteed_drop": [
+          { "item_id": "spirit_herb", "qty": 2 },
+          { "item_id": "lingqi_core_fragment", "qty": 1 }
+        ]
+      },
+      "settlement_reward": {
+        "lingqi_min": 110,
+        "lingqi_max": 150,
+        "insight_min": 16,
+        "insight_max": 24
+      }
+    }
+  ],
+  "drop_tables": [
+    {
+      "drop_table_id": "drop_qi_outer_normal",
+      "bind_level_id": "lv_qi_001",
+      "bind_monster_ids": ["monster_slime_moss", "monster_bat_shadow"],
+      "entries": [
+        { "item_id": "lingqi_shard", "weight": 55, "min_qty": 1, "max_qty": 3 },
+        { "item_id": "spirit_herb", "weight": 30, "min_qty": 1, "max_qty": 1 },
+        { "item_id": "broken_talisman", "weight": 15, "min_qty": 1, "max_qty": 2 }
+      ],
+      "pity": {
+        "counter_key": "pity_qi_outer_normal",
+        "threshold": 8,
+        "item_id": "spirit_herb",
+        "qty": 1
+      },
+      "economy": {
+        "repeat_decay_factor": 0.95,
+        "daily_cap_rolls": 120,
+        "hourly_soft_cap_rolls": 20,
+        "anti_abuse_flag": true
+      }
+    },
+    {
+      "drop_table_id": "drop_qi_outer_elite",
+      "bind_level_id": "lv_qi_001",
+      "bind_monster_ids": ["monster_spider_cave"],
+      "entries": [
+        { "item_id": "spirit_herb", "weight": 55, "min_qty": 1, "max_qty": 2 },
+        { "item_id": "lingqi_core_fragment", "weight": 45, "min_qty": 1, "max_qty": 2 }
+      ],
+      "pity": {
+        "counter_key": "pity_qi_outer_elite",
+        "threshold": 5,
+        "item_id": "spirit_herb",
+        "qty": 2
+      },
+      "economy": {
+        "repeat_decay_factor": 0.98,
+        "daily_cap_rolls": 40,
+        "hourly_soft_cap_rolls": 8,
+        "anti_abuse_flag": true
+      }
+    },
+    {
+      "drop_table_id": "drop_qi_outer_boss",
+      "bind_level_id": "lv_qi_001",
+      "bind_monster_ids": ["monster_spider_cave_queen"],
+      "entries": [
+        { "item_id": "spirit_herb", "weight": 40, "min_qty": 2, "max_qty": 3 },
+        { "item_id": "lingqi_core_fragment", "weight": 35, "min_qty": 1, "max_qty": 2 },
+        { "item_id": "broken_talisman", "weight": 25, "min_qty": 2, "max_qty": 4 }
+      ],
+      "pity": {
+        "counter_key": "pity_qi_outer_boss",
+        "threshold": 2,
+        "item_id": "lingqi_core_fragment",
+        "qty": 2
+      },
+      "economy": {
+        "repeat_decay_factor": 1.0,
+        "daily_cap_rolls": 20,
+        "hourly_soft_cap_rolls": 4,
+        "anti_abuse_flag": true
+      }
+    },
+    {
+      "drop_table_id": "drop_qi_inner_normal",
+      "bind_level_id": "lv_qi_002",
+      "bind_monster_ids": ["monster_slime_moss", "monster_bat_shadow"],
+      "entries": [
+        { "item_id": "lingqi_shard", "weight": 45, "min_qty": 2, "max_qty": 4 },
+        { "item_id": "spirit_herb", "weight": 35, "min_qty": 1, "max_qty": 2 },
+        { "item_id": "broken_talisman", "weight": 20, "min_qty": 2, "max_qty": 3 }
+      ],
+      "pity": {
+        "counter_key": "pity_qi_inner_normal",
+        "threshold": 7,
+        "item_id": "spirit_herb",
+        "qty": 2
+      },
+      "economy": {
+        "repeat_decay_factor": 0.96,
+        "daily_cap_rolls": 140,
+        "hourly_soft_cap_rolls": 24,
+        "anti_abuse_flag": true
+      }
+    },
+    {
+      "drop_table_id": "drop_qi_inner_elite",
+      "bind_level_id": "lv_qi_002",
+      "bind_monster_ids": ["monster_spider_cave"],
+      "entries": [
+        { "item_id": "spirit_herb", "weight": 50, "min_qty": 2, "max_qty": 3 },
+        { "item_id": "lingqi_core_fragment", "weight": 50, "min_qty": 2, "max_qty": 3 }
+      ],
+      "pity": {
+        "counter_key": "pity_qi_inner_elite",
+        "threshold": 4,
+        "item_id": "spirit_herb",
+        "qty": 2
+      },
+      "economy": {
+        "repeat_decay_factor": 0.99,
+        "daily_cap_rolls": 50,
+        "hourly_soft_cap_rolls": 10,
+        "anti_abuse_flag": true
+      }
+    },
+    {
+      "drop_table_id": "drop_qi_rift_normal",
+      "bind_level_id": "lv_qi_003",
+      "bind_monster_ids": ["monster_slime_moss", "monster_bat_shadow"],
+      "entries": [
+        { "item_id": "lingqi_shard", "weight": 40, "min_qty": 2, "max_qty": 5 },
+        { "item_id": "spirit_herb", "weight": 35, "min_qty": 2, "max_qty": 3 },
+        { "item_id": "broken_talisman", "weight": 25, "min_qty": 2, "max_qty": 4 }
+      ],
+      "pity": {
+        "counter_key": "pity_qi_rift_normal",
+        "threshold": 6,
+        "item_id": "spirit_herb",
+        "qty": 2
+      },
+      "economy": {
+        "repeat_decay_factor": 0.97,
+        "daily_cap_rolls": 160,
+        "hourly_soft_cap_rolls": 26,
+        "anti_abuse_flag": true
+      }
+    },
+    {
+      "drop_table_id": "drop_qi_rift_elite",
+      "bind_level_id": "lv_qi_003",
+      "bind_monster_ids": ["monster_spider_cave"],
+      "entries": [
+        { "item_id": "spirit_herb", "weight": 50, "min_qty": 2, "max_qty": 3 },
+        { "item_id": "lingqi_core_fragment", "weight": 50, "min_qty": 2, "max_qty": 4 }
+      ],
+      "pity": {
+        "counter_key": "pity_qi_rift_elite",
+        "threshold": 4,
+        "item_id": "spirit_herb",
+        "qty": 2
+      },
+      "economy": {
+        "repeat_decay_factor": 0.99,
+        "daily_cap_rolls": 60,
+        "hourly_soft_cap_rolls": 12,
+        "anti_abuse_flag": true
+      }
+    },
+    {
+      "drop_table_id": "drop_qi_abyss_normal",
+      "bind_level_id": "lv_qi_004",
+      "bind_monster_ids": ["monster_slime_moss", "monster_bat_shadow"],
+      "entries": [
+        { "item_id": "lingqi_shard", "weight": 38, "min_qty": 3, "max_qty": 6 },
+        { "item_id": "spirit_herb", "weight": 32, "min_qty": 2, "max_qty": 4 },
+        { "item_id": "broken_talisman", "weight": 30, "min_qty": 3, "max_qty": 5 }
+      ],
+      "pity": {
+        "counter_key": "pity_qi_abyss_normal",
+        "threshold": 6,
+        "item_id": "spirit_herb",
+        "qty": 3
+      },
+      "economy": {
+        "repeat_decay_factor": 0.97,
+        "daily_cap_rolls": 180,
+        "hourly_soft_cap_rolls": 30,
+        "anti_abuse_flag": true
+      }
+    },
+    {
+      "drop_table_id": "drop_qi_abyss_elite",
+      "bind_level_id": "lv_qi_004",
+      "bind_monster_ids": ["monster_spider_cave"],
+      "entries": [
+        { "item_id": "spirit_herb", "weight": 50, "min_qty": 3, "max_qty": 4 },
+        { "item_id": "lingqi_core_fragment", "weight": 50, "min_qty": 3, "max_qty": 5 }
+      ],
+      "pity": {
+        "counter_key": "pity_qi_abyss_elite",
+        "threshold": 3,
+        "item_id": "spirit_herb",
+        "qty": 2
+      },
+      "economy": {
+        "repeat_decay_factor": 0.99,
+        "daily_cap_rolls": 70,
+        "hourly_soft_cap_rolls": 14,
+        "anti_abuse_flag": true
+      }
+    },
+    {
+      "drop_table_id": "drop_qi_nether_normal",
+      "bind_level_id": "lv_qi_005",
+      "bind_monster_ids": ["monster_slime_moss", "monster_bat_shadow"],
+      "entries": [
+        { "item_id": "lingqi_shard", "weight": 35, "min_qty": 4, "max_qty": 7 },
+        { "item_id": "spirit_herb", "weight": 30, "min_qty": 3, "max_qty": 5 },
+        { "item_id": "broken_talisman", "weight": 35, "min_qty": 4, "max_qty": 6 }
+      ],
+      "pity": {
+        "counter_key": "pity_qi_nether_normal",
+        "threshold": 5,
+        "item_id": "spirit_herb",
+        "qty": 3
+      },
+      "economy": {
+        "repeat_decay_factor": 0.98,
+        "daily_cap_rolls": 220,
+        "hourly_soft_cap_rolls": 36,
+        "anti_abuse_flag": true
+      }
+    },
+    {
+      "drop_table_id": "drop_qi_nether_elite",
+      "bind_level_id": "lv_qi_005",
+      "bind_monster_ids": ["monster_spider_cave"],
+      "entries": [
+        { "item_id": "spirit_herb", "weight": 50, "min_qty": 4, "max_qty": 5 },
+        { "item_id": "lingqi_core_fragment", "weight": 50, "min_qty": 4, "max_qty": 6 }
+      ],
+      "pity": {
+        "counter_key": "pity_qi_nether_elite",
+        "threshold": 3,
+        "item_id": "spirit_herb",
+        "qty": 2
+      },
+      "economy": {
+        "repeat_decay_factor": 0.99,
+        "daily_cap_rolls": 90,
+        "hourly_soft_cap_rolls": 16,
+        "anti_abuse_flag": true
+      }
+    }
+  ]
+}

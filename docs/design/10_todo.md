@@ -1,0 +1,797 @@
+﻿# Codex 实施待办清单
+
+> 项目：xiuxian_4 — Godot 4.5.1 + C# (.NET 8) 桌宠修仙挂机游戏
+> 生成日期：2026-03-24
+> 每个任务标记了优先级(P0/P1/P2)、依赖和验收标准。
+> 约定：修改后必须通过 `dotnet test tests/Xiuxian2.Tests/Xiuxian2.Tests.csproj` 零失败。
+
+## 当前进度记录（更新：2026-03-24）
+
+### 已完成
+- `TASK-03 存档版本迁移框架`
+  - 已新增 `scripts/services/SaveMigrationRules.cs`
+  - 已接入 `PrototypeRootController.LoadUnifiedState()`
+  - 已补充 `tests/Xiuxian2.Tests/SaveMigrationRulesTests.cs`
+  - 已新增文档 `docs/design/14_save_migration.md`
+- `TASK-15 隐藏未实现的设置项`
+  - 已在设置页隐藏 `taskbar_icon`、`show_control_markers`、`milestone_tips`
+  - 保留存档键，避免影响旧存档兼容
+
+### 已落地的补充修复（待办外）
+- 已补上子菜单中的“突破”按钮
+- 已接入背包页基础入口与装备/背包展示线路
+- 已默认隐藏主条状态栏，缓解主形象区域与状态栏重叠问题
+
+### 已处理但仍需人工验收
+- `TASK-06 场景文件 UTF-8 编码修复`
+  - 代码侧中文文本与场景文件已修复
+  - 仍需在 Godot 编辑器内手动打开主场景，最终确认无 Parse Error
+
+---
+
+## Phase 1: P0 — 阻塞发布
+
+### TASK-01: 拆分 LevelConfigLoader 上帝对象
+**依赖**: 无 (基础重构，其他任务受益)
+**背景**: `scripts/services/LevelConfigLoader.cs` 共 1531 行、49 个公有方法、33 个私有字段，混合了 6 类职责：配置加载/索引、活跃关卡管理、怪物查询、掉落经济、校验/模拟、运行时持久化。
+
+**涉及文件**:
+- `scripts/services/LevelConfigLoader.cs` — 拆分源
+- `project.godot` — autoload 注册需更新
+- `scripts/game/PrototypeRootController.cs` — GetNode 路径 `"/root/LevelConfigLoader"`
+- `scripts/game/ExploreProgressController.cs` — GetNode 路径 `"/root/LevelConfigLoader"`
+- `scripts/ui/BookTabsController.cs` — 调用校验/模拟方法
+- `tests/Xiuxian2.Tests/` — 现有测试引用
+
+**步骤**:
+1. 新建 `scripts/services/LevelConfigProvider.cs`:
+   - 迁移所有只读配置方法：`LoadConfig()`, `LoadConfigFromText()`, `TryGetMonster()`, `TryGetDropTable()`, `TryGetMonsterStatProfile()`, `TryGetMonsterVisualConfig()`, `TryGetMonsterCombatParams()`, `TryGetMonsterMoveRule()`, `GetLevelIds()`, `GetLevelName()`, `GetSpawnMonsterIds()`, `TryGetEquipmentSeries()`, `TryGetEquipmentTemplate()`, `GetEquipmentSeriesIds()`, `GetEquipmentTemplateIds()`, `GetEquipmentExchangeLevelIds()`, `GetEquipmentExchangeRecipes()`
+   - 迁移所有索引字段：`_rootData`, `_levels`, `_monsterById`, `_dropTableById`, `_equipmentSeriesById`, `_equipmentTemplateById`, `_equipmentExchangeRecipesByLevelId`
+   - 迁移内部方法：`ParseLevelsSection()`, `IndexMonsters()`, `IndexDropTables()`, `IndexEquipmentSeries()`, `IndexEquipmentTemplates()`, `IndexEquipmentExchangeRecipes()`
+   - 保留信号 `ConfigLoaded`
+2. 新建 `scripts/services/ActiveLevelManager.cs`:
+   - 依赖注入 `LevelConfigProvider`
+   - 迁移关卡推进方法：`AdvanceToNextLevel()`, `TryAdvanceToNextUnlockedLevel()`, `TrySetActiveLevel()`, `TrySetActiveLevelIfUnlocked()`, `TrySetNextUnlockedLevelAsActive()`
+   - 迁移关卡状态字段：`_activeLevelIndex`, `_unlockedLevelIds`, `_bossClearedLevelIds`, `_activeLevelMonsterWave`, `_activeLevelWaveIndex`, `_activeMoveInputsByCategory`
+   - 迁移 Boss/解锁方法：`IsBossMonsterForLevel()`, `TryMarkBossDefeatedAndUnlockNext()`
+   - 迁移运行时持久化：`ToRuntimeDictionary()`, `FromRuntimeDictionary()`
+   - 迁移公有属性：`ActiveLevelId`, `ActiveLevelName`, `ProgressPer100Inputs`, `EncounterCheckIntervalProgress`, `BaseEncounterRate`, `BattlePauseFactor` 等
+3. 新建 `scripts/services/ConfigValidationService.cs`:
+   - 迁移校验方法：`ValidateConfiguration()`, `ValidateLevelSpawnTable()`, `ValidateMonsters()`, `ValidateDropTables()`, `ValidateEquipmentConfiguration()`
+   - 迁移模拟方法：`RunBattleSimulation()`, `RunBattleSimulationFiltered()`, `RunBattleSimulationCore()`
+   - 迁移字段：`_validationIssues`, `_validationEntries`, `_lastSimulationReport`
+4. 保留 `LevelConfigLoader.cs` 作为兼容入口或直接删除，所有外部引用指向新类。
+5. 在 `project.godot` 中将 autoload 更新为新节点名（或保留原名但内部委托）。
+6. 更新 `PrototypeRootController._Ready()`, `ExploreProgressController._Ready()`, `BookTabsController` 中所有 GetNode 调用。
+7. 确保所有现有测试通过（特别是 `CoreRegressionRulesTests`, `ConfigValidationViewFormatterTests`）。
+
+**验收标准**:
+- `LevelConfigLoader.cs` 不超过 200 行（或已删除）
+- 三个新类职责单一，无交叉依赖
+- `dotnet test` 全部通过
+- 游戏启动后关卡加载、切换、战斗、校验功能正常
+
+---
+
+### TASK-02: 拆分 ExploreProgressController
+**依赖**: TASK-01（引用 LevelConfigLoader 的部分需先稳定）
+**背景**: `scripts/game/ExploreProgressController.cs` 共 1558 行、27 个 Export、89 个私有字段，混合了探索逻辑、战斗逻辑、怪物队列 UI、战斗轨道 UI、调试面板、持久化。
+
+**涉及文件**:
+- `scripts/game/ExploreProgressController.cs` — 拆分源
+- `scenes/PrototypeRoot.tscn` — 节点结构可能需调整
+- `scripts/game/PrototypeRootController.cs` — 引用 `ExploreProgressController`
+
+**步骤**:
+1. 新建 `scripts/game/ExploreGameLogic.cs`（纯 C# 类，不继承 Node）:
+   - 迁移探索状态字段：`_exploreProgress`, `_currentZone`, `_moveFrameCounter`, `_queueMoveInputPending`
+   - 迁移战斗状态字段：`_inBattle`, `_battleRoundCounter`, `_pendingBattleInputEvents`, `_battleMonsterId`, `_battleMonsterName`, HP 系列字段
+   - 迁移业务方法：`AdvanceExploreByInput()`, `TryStartBattle()`, `ConfigureBattleMonster()`, `CompleteBattle()`, `HandleBattleDefeat()`, `ApplyBattleRewards()`, `ApplyLevelCompletionRewards()`, `AdvanceBattleByInput()`
+   - 迁移持久化：`ToRuntimeDictionary()`, `FromRuntimeDictionary()`
+   - 对外暴露状态查询属性（ExploreProgress, InBattle, PlayerHp, EnemyHp 等）和事件回调（BattleStarted, BattleEnded, ProgressChanged, LevelCompleted）
+2. 新建 `scripts/ui/BattleTrackVisualizer.cs`（Node 脚本）:
+   - 迁移所有战斗轨道 UI 字段：`_battleInfoLabel`, `_roundInfoLabel`, `_playerHpLabel`, `_enemyHpLabel`, `_playerMarker`, `_enemySlotTexture` 等
+   - 迁移怪物队列字段：`_monsterMarkers`, `_monsterMarkerIds`, `_monsterSlots`, `_monsterMoveInputPending`, `_monsterMoveInputThreshold`
+   - 迁移 UI 方法：`UpdateHpLabels()`, `RefreshActorSlots()`, `RefreshMonsterSlots()`, `ApplyEnemyVisualConfig()`, `ApplyMarkerVisual()`, `ResetTrackVisual()`, `CacheMonsterMarkers()`, `CacheMonsterSlots()`, `MoveMonsterQueueByInputs()`
+   - 迁移动画字段：`_activeEnemyVisualMonsterId`, `_enemySlotAnimType/Speed/Amplitude/BasePosition`, `_enemyVisualTime`
+3. `ExploreProgressController` 保留为薄胶水层:
+   - 持有 `ExploreGameLogic` 和 `BattleTrackVisualizer` 引用
+   - `OnInputBatchTick()` → 委托给 `ExploreGameLogic.ProcessInputBatch()`
+   - 监听 `ExploreGameLogic` 事件 → 通知 `BattleTrackVisualizer` 更新
+
+**验收标准**:
+- `ExploreProgressController.cs` 不超过 300 行
+- `ExploreGameLogic` 无 Godot UI 依赖（纯逻辑，可单元测试）
+- 新增至少 3 个测试覆盖 `ExploreGameLogic`（探索推进、战斗开始触发、战败重置）
+- 游戏运行时探索、战斗、怪物动画、进度条全部正常
+
+---
+
+### TASK-03: 存档版本迁移框架
+**状态**: 已完成（2026-03-24）
+**依赖**: 无
+**背景**: `PrototypeRootController` 中 `SaveSchemaVersion = 5`，`LoadUnifiedState()` 只检查版本号但无迁移逻辑。装备 `EquipmentInstanceData` 有 15 个字段，后续扩展会破坏旧存档。
+
+**涉及文件**:
+- `scripts/game/PrototypeRootController.cs` — `LoadUnifiedState()`, `SaveAllState()` 方法
+- 新建 `scripts/services/SaveMigrationRules.cs`
+
+**步骤**:
+1. 新建 `scripts/services/SaveMigrationRules.cs`（纯静态类）:
+   ```
+   public static class SaveMigrationRules
+   {
+       public static int LatestVersion => 5;
+       // 未来新增: MigrateV5ToV6(ConfigFile cfg), MigrateV6ToV7(ConfigFile cfg)...
+       public static bool NeedsMigration(int savedVersion) => savedVersion < LatestVersion;
+       public static void MigrateToLatest(ConfigFile cfg, int fromVersion);
+   }
+   ```
+2. `MigrateToLatest()` 循环调用 `MigrateVxToVy()` 升级链，每步更新 `meta.version`。
+3. 在 `PrototypeRootController.LoadUnifiedState()` 中，读取 version 后调用 `SaveMigrationRules.MigrateToLatest()` 再继续加载。
+4. 新增测试 `SaveMigrationRulesTests.cs`：验证 `NeedsMigration(4)` 返回 true, `NeedsMigration(5)` 返回 false。
+5. 在 `docs/design/` 中新增 `14_save_migration.md` 文档化迁移规约。
+
+**验收标准**:
+- 旧版本(4)存档可被自动升级到 v5
+- `SaveMigrationRules.MigrateToLatest()` 对已是最新版本的存档无操作
+- 新增测试通过
+- 存档路径 `user://save_state.cfg` 读写正常
+
+---
+
+### TASK-04: 离线结算集成实现
+**依赖**: 无（Rules 层已测试就绪）
+**背景**: 4 个 Rules 类已完整实现并有测试覆盖（`OfflineSettlementRules`, `DungeonOfflineSettlementRules`, `DungeonOfflineProjectionRules`, `OfflineSummaryPresentationRules`）。`PrototypeRootController.ApplyOfflineSettlementIfNeeded()` 方法已存在但需验证完整调用链。
+
+**涉及文件**:
+- `scripts/game/PrototypeRootController.cs` — `ApplyOfflineSettlementIfNeeded()`, `BuildOfflineDungeonSettlement()`
+- `scripts/game/ExploreProgressController.cs` — `ShowOfflineSummary(string title, string body)` 方法
+- `scripts/services/OfflineSettlementRules.cs` — `EvaluateOfflineSeconds()`, `BuildCultivationOfflineSettlement()`
+- `scripts/services/OfflineSummaryPresentationRules.cs` — `BuildTitle()`, `BuildBody()`
+
+**步骤**:
+1. 验证 `PrototypeRootController.ApplyOfflineSettlementIfNeeded()` 在 `LoadAllState()` 末尾被调用。
+2. 验证离线时间获取：从存档中读取上次退出时间 (`_activityState` 的最后活跃时间戳)，与当前 `Time.GetUnixTimeFromSystem()` 求差。
+3. 验证修炼路径完整：`BuildCultivationOfflineSettlement()` 结果应用到 `ResourceWalletState.AddLingqi/AddInsight/AddPetAffinity()` 和 `PlayerProgressState.AddRealmExp()`。
+4. 验证副本路径完整：`BuildOfflineDungeonSettlement()` 结果的 `ItemDrops` 应用到 `BackpackState.AddItem()`；`ExploreProgressGain` 更新到 `_exploreProgressController`。
+5. 验证 `ShowOfflineSummary()` 在 UI 中展示弹窗：检查该方法是否将标题和内容文本写入某个可见 Label 并设置 `_offlineSummaryVisible = true`。
+6. 如上述任一环节缺失，补全实现。
+7. 新增集成测试 `OfflineSettlementIntegrationTests.cs`:
+   - 修炼模式离线 1 小时 → 验证 lingqi/insight 增量正确
+   - 副本模式离线 2 小时 → 验证遭遇数、胜率加权、物品掉落
+   - 离线 0 秒 → 无结算
+   - 离线 48 小时（可疑）→ 验证 GuardMode 触发 25% 惩罚
+
+**验收标准**:
+- 关闭游戏 → 等待 30 秒 → 重启 → 出现离线结算弹窗
+- 弹窗内容格式："灵气+X | 悟性+Y | ..."
+- 结算后资源正确增加（与 `OfflineSettlementRules` 公式一致）
+- 所有新增 + 现有测试通过
+
+---
+
+### TASK-05: 装备正式内容闭环（Phase A）
+**依赖**: 无
+**背景**: 当前装备系统仅有：初始装备(`EquipmentStarterLoadout`)、首通固定奖励(`FirstClearEquipmentRewardRules`)、手动装备。缺少完整的装备模板 JSON、普通/精英掉落生成、装备 UI 对比。设计文档 `docs/design/11_equipment_content_system.md` 定义了 Stage A 范围：3 槽位(武器/护甲/饰品)、4 品级(俗器/法器/灵器/宝器)。
+
+**涉及文件**:
+- `docs/design/12_equipment_sample_qi_refining.json` — 现有炼气阶段装备样本
+- `scripts/services/EquipmentGenerationRules.cs` — `GenerateFromSpec()`, `PickWeightedEntry()`
+- `scripts/services/EquipmentDropResolutionRules.cs` — 加权掉落选择
+- `scripts/services/EquipmentDropInstanceGenerationRules.cs` — 实例化掉落
+- `scripts/services/EquipmentPresentationRules.cs` — UI 展示文本
+- `scripts/ui/BookTabsController.cs` — `BuildEquipmentOverviewText()`, `BuildBackpackOverviewText()`
+- `scripts/services/BackpackEquipmentInstanceRules.cs` — `TryTakeBySlot()`, `StoreInstance()`
+
+**步骤**:
+1. 扩充 `12_equipment_sample_qi_refining.json`：确保每个槽位(weapon/armor/accessory)至少有 2 个模板，覆盖俗器和法器两个品级。
+2. 验证 `EquipmentGenerationRules.GenerateFromSpec()` 能正确从 JSON 模板生成 `EquipmentInstanceData`（main_stat + sub_stats 按品级数量 0/1/1/2）。
+3. 在 `BookTabsController.BuildEquipmentOverviewText()` 中：
+   - 显示当前装备的属性面板（基础属性 + 装备加成 = 最终属性）
+   - 对每个已装备项显示名称、品级、主属性、副属性
+4. 在 `BookTabsController.BuildBackpackOverviewText()` 中：
+   - 对每个背包内装备实例显示：名称、品级标签（调用 `EquipmentPresentationRules.BuildRarityLabel()`）、来源标签
+   - 对比当前已装备项：调用 `EquipmentPresentationRules.BuildComparisonHint()` 显示强弱对比
+5. 实现"一键装备"交互：在背包装备条目中添加操作入口，调用 `BackpackEquipmentInstanceRules.TryTakeBySlot()` → `EquippedItemsState.TryEquipReplacing()`，旧装备返回背包。
+6. 新增测试 `EquipmentContentClosureTests.cs`：
+   - 从模板生成装备 → 验证字段完整
+   - 装备 → 卸装 → 验证背包/装备栏状态一致
+   - 对比提示 → 验证文案正确
+
+**验收标准**:
+- 打开子菜单"装备情况"Tab → 可看到 3 个槽位(武器/护甲/饰品)当前装备及属性
+- 打开子菜单"背包"Tab → 可看到装备列表，每项有品级标签和对比提示
+- 点击背包中装备可替换当前槽位，旧装备返回背包
+- 存档 → 重载 → 装备状态不丢失
+
+---
+
+### TASK-06: 场景文件 UTF-8 编码修复
+**状态**: 代码修复完成，待 Godot 编辑器人工验收
+**依赖**: 无
+**背景**: `scenes/ui/MainBarWindow.tscn` 中包含中文乱码(mojibake)，如 "閳?" "娑?" "缁涘绶?"。项目问题复盘已记录此问题（BOM 触发 Godot 解析失败）。
+
+**涉及文件**:
+- `scenes/ui/MainBarWindow.tscn`
+- `scenes/ui/SubmenuBookWindow.tscn`
+- `scenes/PrototypeRoot.tscn`
+
+**步骤**:
+1. 用二进制编辑器检查三个 `.tscn` 文件首字节，确认无 `EF BB BF` (BOM)。
+2. 搜索 `MainBarWindow.tscn` 中所有 `text = "..."` 行，将乱码文本替换为 `scripts/ui/UiText.cs` 中定义的对应常量值（中文）。
+3. 确认所有中文字符串使用 UTF-8 编码正确显示。
+4. 保存时确保编辑器设置为 "UTF-8 without BOM"。
+5. 启动 Godot 编辑器，打开 `scenes/PrototypeRoot.tscn`，确认无 Parse Error。
+
+**验收标准**:
+- 三个 `.tscn` 文件无 BOM 前缀
+- `MainBarWindow.tscn` 中所有 `text = "..."` 行的中文正确显示
+- Godot 编辑器可正常打开主场景，无 Parse Error
+
+---
+
+## Phase 2: P1 — 体验与健壮性
+
+### TASK-07: 测试补全 — 战斗数学与结算
+**依赖**: TASK-02（`ExploreGameLogic` 拆出后更易测试）
+**背景**: 现有 20 个测试文件覆盖 Rules 层，但缺少 `BattleRules` 核心战斗数学测试。
+
+**涉及文件**:
+- 新建 `tests/Xiuxian2.Tests/BattleRulesTests.cs`
+- `scripts/services/BattleRules.cs` — `ConsumeBattleInputs()`, `CalculateAttackDamage()`, `CalculateScaledDamage()`, `ResolvePlayerVsMonsterRound()`, `DetermineBattleFlow()`
+
+**步骤**:
+1. 新建 `BattleRulesTests.cs`，遵循项目现有模式（xUnit `[Fact]`, 单断言）。
+2. 编写测试用例：
+   - `CalculateAttackDamage_AttackMinusDefense_MinimumOne`: attack=5, defense=8 → 1
+   - `CalculateAttackDamage_NormalDamage`: attack=10, defense=3 → 7
+   - `CalculateScaledDamage_DividerApplied`: attack=12, divider=4 → 3
+   - `CalculateScaledDamage_MinDamageFloor`: attack=2, divider=10, min=1 → 1
+   - `ResolvePlayerVsMonsterRound_PlayerWins`: player HP > 0, monster HP ≤ 0 → PlayerWon
+   - `ResolvePlayerVsMonsterRound_MonsterWins`: player HP ≤ 0, monster HP > 0 → MonsterWon
+   - `ResolvePlayerVsMonsterRound_DoubleKO`: both HP ≤ 0 → DoubleKnockout
+   - `DetermineBattleFlow_VictoryAction`: round result PlayerWon → Victory flow action
+
+**验收标准**:
+- 新增 ≥ 8 个测试
+- `dotnet test` 全部通过
+
+---
+
+### TASK-08: 测试补全 — 存档往返
+**依赖**: TASK-03（迁移框架就绪后测试更有意义）
+**背景**: 缺少存档 Save → Load 往返测试，无法保证格式变更不破坏。
+
+**涉及文件**:
+- 新建 `tests/Xiuxian2.Tests/SaveRoundTripTests.cs`
+- `scripts/services/BackpackState.cs` — `ToDictionary()`, `FromDictionary()`
+- `scripts/services/ResourceWalletState.cs` — `ToDictionary()`, `FromDictionary()`
+- `scripts/services/PlayerProgressState.cs` — `ToDictionary()`, `FromDictionary()`
+- `scripts/services/EquippedItemsState.cs` — `ToDictionary()`, `FromDictionary()`
+- `scripts/services/EquipmentInstanceCodec.cs` — `ToDictionary()`, `FromDictionary()`
+
+**步骤**:
+1. 对每个 State 类编写往返测试：构造状态 → `ToDictionary()` → `FromDictionary()` → 断言与原始一致。
+2. 对 `EquipmentInstanceCodec` 编写：构造 `EquipmentInstanceData` → `ToDictionary()` → `FromDictionary()` → 断言 15 个字段全等。
+3. 对 `EquipmentProfileCodec` 编写同上。
+
+**验收标准**:
+- 新增 ≥ 5 个往返测试
+- 覆盖 BackpackState, ResourceWalletState, PlayerProgressState, EquipmentInstanceCodec, EquipmentProfileCodec
+
+---
+
+### TASK-09: 服务定位器替代硬编码路径
+**依赖**: TASK-01（新服务类就位后）
+**背景**: 项目中所有 Controller/Service 通过 `GetNodeOrNull<T>("/root/XxxState")` 硬编码字符串获取依赖，有 12 个 Autoload 节点。路径字符串分散在 `PrototypeRootController`, `ExploreProgressController`, `BookTabsController` 等多个文件中。
+
+**涉及文件**:
+- 新建 `scripts/services/ServiceLocator.cs`
+- `project.godot` — 注册 ServiceLocator 为 autoload
+- 所有使用 `GetNodeOrNull<>("/root/...")` 的文件
+
+**步骤**:
+1. 新建 `scripts/services/ServiceLocator.cs`，继承 Node：
+   ```
+   public partial class ServiceLocator : Node
+   {
+       public static ServiceLocator Instance { get; private set; }
+       public InputActivityState InputActivity => GetNode<InputActivityState>("/root/InputActivityState");
+       // 为每个 autoload 提供强类型属性（缓存在 _Ready 中）
+   }
+   ```
+2. 在 `_Ready()` 中缓存所有 12 个服务引用。
+3. 在 `project.godot` 中注册为第一个 autoload。
+4. 逐步替换各文件中的 `GetNodeOrNull<>()` 调用为 `ServiceLocator.Instance.XxxState`。
+5. 保留旧 Export NodePath 字段但标记 `[Obsolete]`，后续移除。
+
+**验收标准**:
+- 所有 `"/root/XxxState"` 硬编码路径集中到 `ServiceLocator` 一处
+- 现有功能不变，所有测试通过
+- 新增任何 Autoload 只需在 ServiceLocator 加一个属性
+
+---
+
+### TASK-10: 统计概览 Tab 内容实现
+**依赖**: 无
+**背景**: `BookTabsController` 中 "StatsTab" 已有 `BuildStatsOverviewText()` 方法，但内容仅包含输入计数。设计文档提到应有更丰富的统计。
+
+**涉及文件**:
+- `scripts/ui/BookTabsController.cs` — `BuildStatsOverviewText()`
+- `scripts/ui/UiText.cs` — 需新增统计相关文案常量
+
+**步骤**:
+1. 在 `BuildStatsOverviewText()` 中扩展以下统计项：
+   - 累计输入量（键盘/鼠标/滚轮/移动距离 — 已有 `InputActivityState` 追踪）
+   - 累计活跃时间（需在 `InputActivityState` 新增 `TotalActiveSeconds` 字段）
+   - 当前境界及在当前境界的天数
+   - 累计战斗次数和胜率（需在 `ExploreProgressController` 或 `ExploreGameLogic` 新增计数器）
+   - 累计获得灵气/悟性总量（需在 `ResourceWalletState` 新增 `TotalEarnedLingqi` 等字段）
+2. 在 `UiText.cs` 中新增对应的中文标签常量。
+3. 确保持久化：新字段在 `ToDictionary()`/`FromDictionary()` 中包含。
+
+**验收标准**:
+- 打开子菜单"统计概览"Tab → 展示至少 6 项有意义的统计数据
+- 重启后统计数据不丢失
+- 存档版本号 +1（或在 TASK-03 迁移框架内处理）
+
+---
+
+### TASK-11: 宠物亲密度最小闭环
+**依赖**: 无
+**背景**: `ResourceWalletState` 中 `pet_affinity` 字段持续累积（每 10 秒 AP * 0.03），但无消费和效果。`PlayerProgressState` 有 `petMood` 字段和 `GetMoodMultiplier()` 方法。
+
+**涉及文件**:
+- `scripts/services/ResourceWalletState.cs` — `PetAffinity` 字段
+- `scripts/services/PlayerProgressState.cs` — `petMood`, `GetMoodMultiplier()`
+- `scripts/ui/BookTabsController.cs` — 修炼概况页展示
+- `scripts/ui/UiText.cs`
+- 新建 `scripts/services/PetAffinityRules.cs`
+
+**步骤**:
+1. 新建 `scripts/services/PetAffinityRules.cs`（纯静态类）：
+   - `int GetAffinityLevel(double totalAffinity)` — 亲密度等级(1-10)：阈值 = [0, 50, 150, 350, 700, 1200, 2000, 3500, 5500, 8000]
+   - `double GetAffinityBonusMultiplier(int level)` — 全局加成：1.0 + (level - 1) * 0.02（最高 1.18）
+   - `string GetAffinityLevelName(int level)` — 等级名称（"陌生", "认识", "熟悉", "信任", "亲近", "默契", "心有灵犀", "形影不离", "灵宠一体", "至臻之契"）
+2. 在修炼概况页 (`BuildCultivationOverviewText()`) 展示当前亲密度等级和加成。
+3. 在 `ActivityConversionService` 中将亲密度等级加成应用到资源转化公式。
+4. 新增测试 `PetAffinityRulesTests.cs`。
+
+**验收标准**:
+- 修炼概况页显示"灵宠亲和 Lv.X (名称) — 加成 +Y%"
+- 亲密度随时间增长，等级提升反映到加成倍率
+- 新增测试通过
+
+---
+
+### TASK-12: UI 自适应布局修复
+**依赖**: 无
+**背景**: `scenes/ui/MainBarWindow.tscn` 中布局使用硬编码绝对偏移（`offset_left = 1040.0` 等），`MainBarLayoutController.cs` 中有大量 magic number（`textRowY = controlRowY + 34.0f`）。
+
+**涉及文件**:
+- `scenes/ui/MainBarWindow.tscn` — 修改 anchor/margin
+- `scripts/ui/MainBarLayoutController.cs` — `ApplyLayout()`, `UpdateRightAnchoredLayout()`
+
+**步骤**:
+1. 在 `.tscn` 中将关键控件的锚点改为相对锚点（anchor_left/right/top/bottom），避免绝对偏移。
+2. 对 ResizeHandle 使用 `anchor_right = 1.0` + `offset_left = -60`（相对右侧）而非绝对 `1040.0`。
+3. 在 `MainBarLayoutController.ApplyLayout()` 中将 magic number 提取为命名常量。
+4. 测试分辨率：在 Godot 的 Project Settings → Display → Window 中切换 1280×720、1920×1080、2560×1440 验证。
+5. 测试 DPI 缩放：在 `BookTabsController` 的 `ui_scale` 设置项中切换 1.0 / 1.25 / 1.5 验证。
+
+**验收标准**:
+- 最小宽度(800px)下核心信息可见，无控件重叠
+- 最大宽度(2560px)下布局合理延展
+- DPI 1.5x 下文字不超出容器
+
+---
+
+### TASK-13: 离线结算与每日上限一致性
+**依赖**: TASK-04
+**背景**: 掉落表有 `daily_cap`(120 rolls) 和 `hourly_soft_cap`(20 rolls)。`DungeonOfflineSettlementRules.BuildDungeonOfflineSettlement()` 中 `equipmentDropCap: 2` 是局部硬编码，但未接入 `LevelDropEconomyRules` 的全局上限体系。
+
+**涉及文件**:
+- `scripts/services/DungeonOfflineSettlementRules.cs`
+- `scripts/services/LevelDropEconomyRules.cs` — `ConsumeDropRoll()`, `ShouldSkipDropBySoftCap()`
+
+**步骤**:
+1. 在 `DungeonOfflineSettlementRules.BuildDungeonOfflineSettlement()` 中，增加参数 `int remainingDailyRolls`，将掉落数与剩余配额取 min。
+2. `PrototypeRootController.BuildOfflineDungeonSettlement()` 中从 `LevelConfigLoader` 读取当日已消耗 roll 次数，传入。
+3. 如跨日（离线前为昨天，恢复时为今天），重置配额。
+4. 新增测试：离线满上限场景 → 掉落被截断到 daily_cap 剩余量。
+
+**验收标准**:
+- 离线结算不会导致掉落超出日上限
+- 跨日离线正确重置配额
+- 新增测试通过
+
+---
+
+## Phase 3: P2 — 打磨与长期健康
+
+### TASK-14: 消除魔法数字
+**依赖**: TASK-01, TASK-02
+**背景**: 业务逻辑中散布硬编码常量。
+
+**涉及文件**:
+- `scripts/services/InputActivityRules.cs` — AP baseline 6.0, decay threshold 1.0, decay rate 0.25, floor 0.45
+- `scripts/services/ActivityConversionService.cs` — lingqi factor 0.9, insight 0.08, pet_affinity 0.03
+- `scripts/services/EquipmentGenerationRules.cs` — sub-stat counts [0,1,1,2] by rarity
+- `scripts/game/PrototypeRootController.cs` — `ApplyOfflineSettlementIfNeeded()` 中 apPerInput/lingqiFactor 等
+- `scripts/game/ExploreProgressController.cs` — `ProgressPerInput = 0.02f`, battle params
+
+**步骤**:
+1. 新建 `scripts/services/GameBalanceConstants.cs`（静态常量类）。
+2. 将上述所有裸数字迁移到该类中，分 region（`InputDecay`, `ResourceConversion`, `EquipmentGeneration`, `Offline`）。
+3. 替换所有引用点。
+4. 确保所有现有测试通过。
+
+**验收标准**:
+- 全项目搜索 `0.9` / `0.08` / `0.03` / `6.0` 无业务逻辑中的裸数字
+- 所有常量集中在 `GameBalanceConstants.cs`
+
+---
+
+### TASK-15: 隐藏未实现的设置项
+**状态**: 已完成（2026-03-24，按“直接隐藏”方案执行）
+**依赖**: 无
+**背景**: `BookTabsController` 定义的 17 个设置项中，`taskbar_icon`, `startup_animation`, `admin_mode`, `handwriting_support`, `show_control_markers`, `milestone_tips` 均为 stub。
+
+**涉及文件**:
+- `scripts/ui/BookTabsController.cs` — 设置页构建逻辑
+
+**步骤**:
+1. 在设置页构建逻辑中，对上述 6 个 stub 设置项：
+   - 选项一：从 UI 中隐藏（不显示）
+   - 选项二：保留但附加 "(即将推出)" 标签并禁用交互
+2. 推荐选项一（隐藏），减少信息噪音。
+
+**验收标准**:
+- 打开设置页 → 不出现未实现的设置项（或标注"即将推出"且禁用）
+- 功能性设置项（vsync, max_fps, language, ui_scale 等）正常可用
+
+---
+
+### TASK-16: Steam Cloud 接口抽象
+**依赖**: 无
+**背景**: `scripts/services/CloudSaveSyncService.cs` 通过反射动态调用 Steamworks API，难以测试和维护。
+
+**涉及文件**:
+- `scripts/services/CloudSaveSyncService.cs`
+- 新建 `scripts/services/ISaveCloudProvider.cs`
+- 新建 `scripts/services/NullCloudProvider.cs`
+
+**步骤**:
+1. 新建接口 `ISaveCloudProvider`:
+   ```
+   public interface ISaveCloudProvider
+   {
+       bool IsAvailable { get; }
+       bool TryUpload(string localPath);
+       bool TryDownload(string localPath);
+   }
+   ```
+2. 将 `CloudSaveSyncService` 内部的反射逻辑封装到 `SteamCloudProvider : ISaveCloudProvider`。
+3. 新建 `NullCloudProvider : ISaveCloudProvider`（所有方法返回 false），用于非 Steam 环境。
+4. `CloudSaveSyncService` 改为使用工厂模式选择 Provider。
+5. 在 `PrototypeRootController` 中通过接口调用，不再直接依赖 Steam 反射。
+
+**验收标准**:
+- 无 Steam SDK 环境下游戏正常运行（使用 NullCloudProvider）
+- 有 Steam SDK 时自动选择 SteamCloudProvider
+- 接口可用于未来测试 mock
+
+---
+
+### TASK-17: 全局反挂机规则
+**依赖**: 无
+**背景**: 个别怪物有 `anti_afk_rule`，但无全局"零输入 → 暂停进度"机制。
+
+**涉及文件**:
+- `scripts/services/InputActivityState.cs` — 需追踪零输入持续时间
+- `scripts/game/ExploreProgressController.cs` (或 TASK-02 后的 `ExploreGameLogic.cs`) — 暂停探索推进
+- 新建 `scripts/services/AfkDetectionRules.cs`
+
+**步骤**:
+1. 新建 `AfkDetectionRules.cs`（纯静态类）：
+   - `bool IsAfk(double secondsSinceLastInput, double threshold = 120.0)` — 超过 2 分钟无输入视为 AFK
+   - `double GetProgressMultiplier(double secondsSinceLastInput)` — 0-60s: 1.0, 60-120s: 0.5, >120s: 0.0
+2. 在 `InputActivityState` 中新增 `SecondsSinceLastInput` 属性（基于 `_Process` 中的 delta 累加，每次 RegisterXxx 重置）。
+3. 在探索推进逻辑中检查 `AfkDetectionRules.GetProgressMultiplier()` 并应用到 `explore_progress_gain`。
+4. 新增测试 `AfkDetectionRulesTests.cs`。
+
+**验收标准**:
+- 无输入 2 分钟后探索进度不再推进
+- 恢复输入后进度立即恢复
+- 新增测试通过
+
+---
+
+### TASK-18: 遭遇率境界缩放
+**依赖**: 无
+**背景**: 当前遭遇率 `base_rate = 18% + danger_level * 4%`，不考虑玩家境界与关卡推荐境界的差异。
+
+**涉及文件**:
+- `scripts/services/BattleStartRules.cs` — `DetermineEncounterStart()`
+- `scripts/game/ExploreProgressRules.cs`
+
+**步骤**:
+1. 在 `BattleStartRules.DetermineEncounterStart()` 中新增参数 `int playerRealmLevel, int zoneDangerLevel`。
+2. 计算境界差：`levelDiff = playerRealmLevel - zoneDangerLevel`。
+3. 应用缩放：`encounter_rate = base_rate * (1.0 + levelDiff * 0.05)`，clamp 到 [0.05, 0.95]。
+4. 高境界打低图遭遇率升高（更快清图），低境界进高图遭遇率降低（更安全探索）。
+5. 新增测试。
+
+**验收标准**:
+- 境界 3 打危险度 1 的图 → 遭遇率高于基准
+- 境界 1 打危险度 3 的图 → 遭遇率低于基准
+- 基准（境界=危险度）→ 遭遇率不变
+
+---
+
+## 任务依赖图
+
+```
+TASK-06 (UTF-8)           ─── 独立
+TASK-03 (存档迁移)        ─── 独立
+TASK-04 (离线结算)        ─── 独立
+TASK-05 (装备闭环)        ─── 独立
+TASK-01 (拆 ConfigLoader) ─── 独立
+  └→ TASK-02 (拆 ExploreCtrl)
+      └→ TASK-07 (战斗测试)
+  └→ TASK-09 (服务定位器)
+  └→ TASK-14 (魔法数字)
+TASK-03 → TASK-08 (存档往返测试)
+TASK-04 → TASK-13 (离线×上限)
+TASK-10 (统计概览)        ─── 独立
+TASK-11 (宠物亲密度)      ─── 独立
+TASK-12 (UI 自适应)       ─── 独立
+TASK-15 (隐藏设置)        ─── 独立
+TASK-16 (Cloud 抽象)      ─── 独立
+TASK-17 (反挂机)          ─── 独立
+TASK-18 (遭遇率缩放)      ─── 独立
+```
+
+## 推荐执行顺序
+
+**批次 1（可并行）**: TASK-06, TASK-03, TASK-01
+**批次 2（可并行）**: TASK-04, TASK-05, TASK-02
+**批次 3（可并行）**: TASK-07, TASK-08, TASK-09, TASK-10
+**批次 4（可并行）**: TASK-11, TASK-12, TASK-13
+**批次 5（可并行）**: TASK-14, TASK-15, TASK-16, TASK-17, TASK-18
+
+---
+
+<!-- MELVOR-CHANGE: 新增 Phase 4，包含 Melvor Idle 启发的系统扩展任务 -->
+## Phase 4: Melvor-Inspired 系统扩展
+
+### TASK-19: 活动模式扩展 — 从 2 模式到 4 模式
+**依赖**: 无（可独立实施，但建议在 TASK-01/02 之后以获得更好架构）
+**背景**: 当前 `PlayerActionState` 仅支持 `ModeDungeon` / `ModeCultivation` 两种硬编码模式，`ToggleMode()` 为二元切换。参考 Melvor Idle 多活动设计，需扩展为 4 模式。
+
+**涉及文件**:
+- `scripts/services/PlayerActionState.cs` — 新增 `ModeAlchemy`, `ModeSmithing` 常量
+- `scripts/services/PlayerActionCapabilityRules.cs` — 新增 alchemy/smithing 的能力集
+- `scripts/game/ExploreProgressController.cs` — `ConfigureActionModeOptionButton()` 支持 4 项, `OnActionModeOptionSelected()` 改为 switch
+- `scripts/services/PlayerActionCapability.cs` — 新增 `AdvancesAlchemy`, `AdvancesSmithing` 枚举值
+
+**步骤**:
+1. 在 `PlayerActionState` 中新增 `ModeAlchemy = "alchemy"`, `ModeSmithing = "smithing"` 常量。
+2. 将 `ToggleMode()` 替换为 `SetMode(string mode)`，接受 4 个合法值。
+3. 在 `PlayerActionCapabilityRules` 的 switch 中新增 alchemy 和 smithing 分支。
+4. 在 `ExploreProgressController.ConfigureActionModeOptionButton()` 中添加炼丹/炼器选项。
+5. 在 `OnActionModeOptionSelected()` 中改为 4 模式 switch。
+6. 存档字段 `player.action_mode` 支持 4 个值。
+
+**验收标准**:
+- 底栏下拉选择器显示 4 个模式：副本、修炼、炼丹、炼器
+- 切换模式后 AP 结算不中断，仅改变进度类型
+- 存档 → 重载后模式不丢失
+
+---
+
+### TASK-20: 炼丹系统实现
+**依赖**: TASK-19（需要 alchemy 模式可切换）
+**背景**: 当前副本掉落的灵草类材料无消费出口。参考 Melvor Idle Herblore，实现配方驱动的炼丹系统。
+
+**涉及文件**:
+- 新建 `scripts/services/AlchemyRules.cs` — 配方校验、材料消耗、产出计算（纯静态）
+- 新建 `scripts/services/AlchemyState.cs` — 当前配方、进度
+- 新建 `scripts/services/PotionInventoryState.cs` — 丹药背包状态
+- `scripts/services/BackpackState.cs` — 新增丹药存储区
+- `scripts/ui/BookTabsController.cs` — 新增"炼丹"子页或在修炼概况中展示
+
+**步骤**:
+1. 新建 `AlchemyRules.cs`：
+   - `bool CanStartRecipe(string recipeId, ResourceWalletState wallet, BackpackState backpack)` — 校验材料
+   - `AlchemyResult CompleteRecipe(string recipeId)` — 返回产出丹药 ID 和数量
+   - 静态配方表：`回气丹`（凝气草×2 + 灵气×50 → 回气丹×2）、`聚灵散`（聚灵花×3 + 灵气×80 → 聚灵散×1）
+2. 新建 `AlchemyState.cs`（继承 Node，Autoload）：
+   - `SelectedRecipeId`, `CurrentProgress`, `RequiredProgress`
+   - `AdvanceProgress(int inputEvents)` — 推进炼丹进度
+3. 新建 `PotionInventoryState.cs`：
+   - `Dictionary<string, int>` 丹药堆叠
+   - `ToDictionary()` / `FromDictionary()` 支持存档
+4. 在 `ExploreProgressController` 中 alchemy 模式 `_Process` 路径调用 `AlchemyState.AdvanceProgress()`。
+5. 新增测试 `AlchemyRulesTests.cs`。
+
+**验收标准**:
+- 切换到炼丹模式 → 键鼠输入推进炼丹进度条
+- 材料不足时显示提示，不开始炼丹
+- 完成后丹药进入背包，数量正确
+- 存档 → 重载后炼丹状态和丹药库存不丢失
+
+---
+
+### TASK-21: 炼器 / 强化系统实现
+**依赖**: TASK-19（需要 smithing 模式可切换）
+**背景**: `EquipmentInstanceData.EnhanceLevel` 字段已存在但未消费。参考 Melvor Idle Smithing，实现装备强化系统。
+
+**涉及文件**:
+- 新建 `scripts/services/SmithingRules.cs` — 强化校验、材料消耗、属性计算（纯静态）
+- 新建 `scripts/services/SmithingState.cs` — 当前强化目标、进度
+- `scripts/services/EquipmentStatProfile.cs` — 新增 `GetEnhancedValue(double baseValue, int enhanceLevel)`
+- 战斗属性管线 — 应用强化倍率
+
+**步骤**:
+1. 新建 `SmithingRules.cs`：
+   - `int GetMaxEnhanceLevel(int rarityTier)` → `rarityTier * 3`
+   - `bool CanEnhance(EquipmentInstanceData equipment, BackpackState backpack, ResourceWalletState wallet)`
+   - `SmithingCost GetCost(int currentLevel)` — 返回碎片/碎符/灵气消耗
+   - `double GetEnhanceMultiplier(int enhanceLevel)` → `Math.Pow(1.08, enhanceLevel)`
+2. 新建 `SmithingState.cs`（继承 Node，Autoload）：
+   - `TargetEquipmentId`, `CurrentProgress`, `RequiredProgress`
+3. 在 `EquipmentStatProfile` 中新增方法，战斗属性计算时应用强化倍率。
+4. 新增测试 `SmithingRulesTests.cs`。
+
+**验收标准**:
+- 切换到炼器模式 → 选择装备 → 键鼠输入推进强化进度
+- 强化完成后 `EnhanceLevel + 1`，战斗属性立即生效
+- 达到上限后无法继续强化
+- 存档 → 重载后强化等级不丢失
+
+---
+
+### TASK-22: Boss 挑战系统
+**依赖**: 无
+**背景**: 当前区域探索 100% 后直接切换下一区域，缺乏里程碑感。参考 Melvor 但采用进度+Boss 模型。
+
+**涉及文件**:
+- `scripts/services/BattleLifecycleRules.cs` — 新增 Boss 相关决策
+- `scripts/game/ExploreProgressController.cs` — 区域完成后进入 Boss 而非直接切区
+- 新建 `scripts/services/BossEncounterRules.cs`
+- `scripts/services/LevelConfigLoader.cs` — Boss 配置加载
+
+**步骤**:
+1. 新建 `BossEncounterRules.cs`（纯静态）：
+   - `MonsterData GetBossForZone(string zoneId)` — 返回 Boss 数据（精英怪属性 × multiplier）
+   - `bool IsBossDefeated(string zoneId, List<string> defeatedBossZones)`
+   - `BattleOutcome ResolveBossTimeout(int currentRound, int maxRounds)` — 超时判负
+2. 在 `ExploreProgressController` 中，区域 100% 后检查 Boss 是否已击败：
+   - 未击败 → 进入 `BossChallenge` 状态
+   - 已击败 → 直接切下一区域
+3. Boss 掉落：首次击杀保底灵器，重复击杀使用普通 Boss 掉落表。
+4. 新增测试 `BossEncounterRulesTests.cs`。
+
+**验收标准**:
+- 区域 100% 后出现 Boss 挑战而非立即切区
+- Boss 属性 = 精英怪 × 2-3 倍
+- 首次击杀 Boss 获得灵器级掉落
+- 失败后保持 100% 进度，可重复挑战
+- 击败后解锁下一区域
+
+---
+
+### TASK-23: 战斗消耗品（丹药自动使用）
+**依赖**: TASK-20（需要丹药系统就绪）
+**背景**: 丹药需在战斗中自动消耗以完成资源循环闭环。
+
+**涉及文件**:
+- 新建 `scripts/services/ConsumableUsageRules.cs` — 丹药触发判定（纯静态）
+- `scripts/services/BattleRules.cs` — 在回合结算中调用消耗品逻辑
+- `scripts/services/BattleRoundResult.cs` — 新增 `consumed_potions` 字段
+- `scripts/services/PotionInventoryState.cs` — 消耗丹药
+
+**步骤**:
+1. 新建 `ConsumableUsageRules.cs`：
+   - `List<PotionUsage> DetermineAutoConsume(BattleState state, PotionInventoryState potions)` — 根据 HP 阈值等条件返回应消耗的丹药列表
+   - 回气丹触发条件：HP < 50%，每场最多 1 次
+   - 聚灵散触发条件：战斗开始时检查，有则消耗
+2. 在 `BattleRules` 回合结算流程中调用 `ConsumableUsageRules`。
+3. 消耗记录写入 `BattleRoundResult.consumed_potions` 和战斗日志。
+4. 新增测试 `ConsumableUsageRulesTests.cs`。
+
+**验收标准**:
+- 持有回气丹 + HP < 50% 时自动消耗并恢复 HP
+- 持有聚灵散时战斗开始自动消耗，掉落加成生效
+- 丹药消耗后库存正确减少
+- 战斗日志显示丹药消耗记录
+
+---
+
+## 更新后的任务依赖图
+
+```
+（原有依赖关系不变）
+
+TASK-19 (4 模式扩展)     ─── 独立（建议在 TASK-01/02 后）
+  └→ TASK-20 (炼丹系统)
+      └→ TASK-23 (战斗消耗品)
+  └→ TASK-21 (炼器/强化)
+TASK-22 (Boss 挑战)      ─── 独立
+```
+
+## 更新后的推荐执行顺序
+
+**批次 1-5**: （保持不变）
+**批次 6（Melvor 扩展，可并行）**: TASK-19, TASK-22
+**批次 7（依赖 TASK-19）**: TASK-20, TASK-21
+**批次 8（依赖 TASK-20）**: TASK-23
+**批次 9（Review-Fix 实施，可并行）**: TASK-24, TASK-25, TASK-26, TASK-27, TASK-28, TASK-29
+
+---
+
+<!-- REVIEW-FIX: 以下为文档审计后新增实施任务 -->
+## Phase 5: Review-Fix — 文档审计修复实施
+
+### TASK-24: 灵石经济接入代码 (P1)
+**依赖**: TASK-19
+**背景**: `ResourceWalletState` 中缺少 `SpiritStones` 字段，但设计已定义灵石产出/消耗闭环（见 `02_systems.md` §11）。
+**涉及文件**:
+- `scripts/services/ResourceWalletState.cs` — 新增 `SpiritStones` 字段
+- `scripts/services/RewardRules.cs` — Boss/精英怪战斗产出灵石
+- `PrototypeRootController.cs` — 存档读写 `wallet.spirit_stones`
+**验收标准**:
+- 灵石在钱包中可读写、可存档、可恢复。
+- Boss 首杀奖励包含灵石。
+
+### TASK-25: 战斗失败规则 + 副本循环实施 (P1)
+**依赖**: 无
+**背景**: `BattleDefeatDecision` 已有 `ShouldResetExploreProgress` 和 `ShouldResetLevel` 字段。副本采用循环刷取模型：Boss 胜利/失败后进度均归零，普通/精英怪失败不归零（见 `06_bottom_exploration_battle.md` §3a + §4）。
+**涉及文件**:
+- `scripts/services/BattleDefeatDecision.cs` — Boss 失败时 `ShouldResetExploreProgress = true`
+- `scripts/services/BattleLifecycleRules.cs` — 在失败分支显式赋值
+- `scripts/game/ExploreProgressController.cs` — Boss 胜利后进度归零 + `repeat_clear` 结算
+- 新增区域选择器 UI（子菜单或底栏下拉）
+**验收标准**:
+- Boss 失败后进度归零，重新开始本区域循环。
+- Boss 胜利后进度归零，结算 `repeat_clear` 奖励，继续下一循环。
+- 玩家可在已解锁区域之间自由切换。
+- 新增单元测试覆盖 3 种失败场景 + 循环归零场景。
+
+### TASK-26: 悟性新消耗路径 (P1)
+**依赖**: TASK-20, TASK-22
+**背景**: 悟性当前仅用于境界突破，产消比 ~0.96:1 但未来系统扩展后将过剩。设计新增 3 个消耗场景（见 `03_progression_and_balance.md`）。
+**涉及文件**:
+- `BossEncounterRules.cs`（TASK-22 产物） — 弱点窃探消耗悟性
+- `AlchemyRules.cs`（TASK-20 产物） — 高阶配方消耗悟性
+**验收标准**:
+- 至少 2 个新悟性消耗路径可触发并扣除。
+- 产消比维持在 1.0-1.5 范围。
+
+### TASK-27: 突破丹已取消 — 无需实施
+**状态**: 已取消（V1 决策：移除突破丹，掉落 slot 用于灵石/灵草，见 `02_systems.md` §3）。
+- 突破成功后丹药被消耗。
+- 无突破丹时行为不变。
+
+### TASK-28: Boss 内容样本填充 (P2)
+**依赖**: TASK-22
+**背景**: Boss 模板字段已补充（`07_content_template.md` §3.5），但 `09_level_monster_drop_sample.md` 和对应 JSON 缺少 Boss 内容样本。
+**涉及文件**:
+- `docs/design/09_level_monster_drop_sample.md` — 新增 Boss 怪物条目
+- `docs/design/09_level_monster_drop_sample.json` — 新增 Boss JSON 数据
+**验收标准**:
+- 练气期至少 1 个 Boss 样本含完整字段。
+- JSON 可被 `LevelConfigLoader` 正常解析。
+
+### TASK-29: 存档 v5→v6 迁移代码 (P1)
+**依赖**: TASK-24
+**背景**: 迁移规格已预写在 `14_save_migration.md`，需在 `SaveMigrationRules.cs` 中实现。
+**涉及文件**:
+- `scripts/services/SaveMigrationRules.cs` — 新增 `MigrateV5ToV6()` 方法
+- `tests/Xiuxian2.Tests/SaveMigrationRulesTests.cs` — v5→v6 测试用例
+**验收标准**:
+- v5 存档加载后自动升级到 v6。
+- 新字段 (`spirit_stones`, `alchemy.*`, `smithing.*`, `boss.*`, `backpack.potions`) 均有合理默认值。
+- 现有 v5 测试不受影响。
