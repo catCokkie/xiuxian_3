@@ -12,6 +12,10 @@
   - `LevelConfigLoader.cs` 已瘦身为 159 行兼容门面，保留 `/root/LevelConfigLoader` 访问路径
   - 已拆出 `LevelConfigProvider`、`MonsterConfigService`、`LevelRuntimeStateService`、`ConfigValidationService`
   - `dotnet test tests/Xiuxian2.Tests/Xiuxian2.Tests.csproj` 已通过（162/162）
+- `TASK-02 拆分 ExploreProgressController` ✅
+  - `ExploreProgressController.cs` 已收口为 11 行入口，运行时胶水迁入 `ExploreProgressController.Runtime.cs`
+  - 已拆出 `ExploreGameLogic.cs`（纯逻辑）与 `BattleTrackVisualizer.cs`（战斗轨道可视化）
+  - 已补充 `ExploreGameLogicTests.cs`，覆盖探索完成、战斗触发、Boss 失败重置
 - `TASK-03 存档版本迁移框架` ✅
   - 已新增 `scripts/services/SaveMigrationRules.cs`（当前 LatestVersion = 6）
   - 已接入 `PrototypeRootController.LoadUnifiedState()`
@@ -131,11 +135,16 @@
 ---
 
 ### TASK-02: 拆分 ExploreProgressController
+**状态**: 已完成（2026-03-25）
 **依赖**: TASK-01（引用 LevelConfigLoader 的部分需先稳定）
 **背景**: `scripts/game/ExploreProgressController.cs` 共 1558 行、27 个 Export、89 个私有字段，混合了探索逻辑、战斗逻辑、怪物队列 UI、战斗轨道 UI、调试面板、持久化。
 
 **涉及文件**:
 - `scripts/game/ExploreProgressController.cs` — 拆分源
+- `scripts/game/ExploreProgressController.Runtime.cs` — Godot 胶水层与状态同步
+- `scripts/game/ExploreGameLogic.cs` — 纯探索/战斗逻辑
+- `scripts/ui/BattleTrackVisualizer.cs` — 怪物队列与战斗轨道 UI
+- `tests/Xiuxian2.Tests/ExploreGameLogicTests.cs` — 新增逻辑测试
 - `scenes/PrototypeRoot.tscn` — 节点结构可能需调整
 - `scripts/game/PrototypeRootController.cs` — 引用 `ExploreProgressController`
 
@@ -161,6 +170,11 @@
 - `ExploreGameLogic` 无 Godot UI 依赖（纯逻辑，可单元测试）
 - 新增至少 3 个测试覆盖 `ExploreGameLogic`（探索推进、战斗开始触发、战败重置）
 - 游戏运行时探索、战斗、怪物动画、进度条全部正常
+
+**完成说明**:
+- 当前 `ExploreProgressController.cs` 为薄入口文件，实际运行时胶水保留在 `ExploreProgressController.Runtime.cs`
+- 探索/战斗结算状态已下沉到 `ExploreGameLogic`，战斗轨道、怪物队列与敌人表现已下沉到 `BattleTrackVisualizer`
+- `ExploreGameLogicTests.cs` 已覆盖任务要求的 3 个核心场景
 
 ---
 
@@ -603,8 +617,8 @@ TASK-03 (存档迁移)        ─── ✅ 已完成
 TASK-04 (离线结算)        ─── ✅ 已完成
 TASK-05 (装备闭环)        ─── ✅ 已完成
 TASK-01 (拆 ConfigLoader) ─── ✅ 已完成
-  └→ TASK-02 (拆 ExploreCtrl)
-      └→ TASK-07 (战斗测试)
+  └→ TASK-02 (拆 ExploreCtrl) ─── ✅ 已完成
+      └→ TASK-07 (战斗测试) ─── ✅ 已完成
   └→ TASK-09 (服务定位器)
   └→ TASK-14 (魔法数字)
 TASK-03 → TASK-08 (存档往返测试)
@@ -620,10 +634,10 @@ TASK-18 (遭遇率缩放)      ─── 独立
 
 ## 推荐执行顺序
 
-**批次 1（可并行）**: TASK-06（待验收）, TASK-02
-**批次 2（可并行）**: TASK-09, TASK-10, TASK-11
-**批次 3（可并行）**: TASK-12, TASK-13, TASK-14
-**批次 4（可并行）**: TASK-16, TASK-17, TASK-18
+**批次 1（可并行）**: TASK-06（待验收）, TASK-09, TASK-10
+**批次 2（可并行）**: TASK-11, TASK-12, TASK-13
+**批次 3（可并行）**: TASK-14, TASK-16, TASK-17
+**批次 4（可并行）**: TASK-18
 
 ---
 
