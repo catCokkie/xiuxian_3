@@ -16,7 +16,7 @@
 - 延后到 V2：`TASK-11 宠物亲密度最小闭环`
 - 维护规则：新增任务或状态变更时，只更新本文件，不在 agent 指令文件重复记录
 - **设计变更（2026-03-26）**：境界突破改为纯经验驱动，悟性完全转为子系统熟练度解锁货币。`TASK-26` 被 `TASK-30` 系列替代。详见 `02_systems.md` §12。
-- **设计变更（2026-03-26 #2）**：子系统从 4 个扩展至 12 个（参考 Melvor Idle），新增 Phase 7（TASK-36~42）。详见 `02_systems.md` §13-§20、`15_melvor_resource_loop.md`。
+- **设计变更（2026-03-26 #2）**：子系统从 4 个扩展至 12 个（参考 Melvor Idle），新增 Phase 7（TASK-36~42）。详见 `02_systems.md` §13-§20、`01_core_loop.md` 设计决策记录。
 
 ### 已完成
 - `TASK-01 拆分 LevelConfigLoader 上帝对象` ✅
@@ -984,9 +984,9 @@ TASK-22 (Boss 挑战)      ─── ✅ 已完成
 
 ### TASK-28: Boss 内容样本填充 (P2)
 **依赖**: TASK-22
-**背景**: Boss 模板字段已补充（`07_content_template.md` §3.5），但 `09_level_monster_drop_sample.md` 和对应 JSON 缺少 Boss 内容样本。
+**背景**: Boss 模板字段已补充（`07_content_template.md` §3.5），但 `09_level_monster_drop_sample.json` 缺少 Boss 内容样本。
 **涉及文件**:
-- `docs/design/09_level_monster_drop_sample.md` — 新增 Boss 怪物条目
+- `docs/design/09_level_monster_drop_sample.json` — 新增 Boss 怪物条目
 - `docs/design/09_level_monster_drop_sample.json` — 新增 Boss JSON 数据
 **验收标准**:
 - 练气期至少 1 个 Boss 样本含完整字段。
@@ -1163,7 +1163,7 @@ TASK-22 (Boss 挑战)      ─── ✅ 已完成
 > 设计变更日期：2026-03-26
 > 核心变更：子系统从 4 个扩展至 12 个，参考 Melvor Idle 多系统设计。
 > 新增采集系 3 个（灵田/矿脉/灵渔）、加工系 3 个（符箓/烹饪/阵法）、修行系 2 个（悟道/体修）。
-> 参考设计：`02_systems.md` §13-§20、`15_melvor_resource_loop.md`、`01_core_loop.md`、`03_progression_and_balance.md`。
+> 参考设计：`02_systems.md` §13-§20、`01_core_loop.md`、`03_progression_and_balance.md`。
 > 可扩展框架：`IActivityDefinition` / `IRecipeDefinition` / `ActivityRegistry` / `MaterialRegistry`
 
 ### TASK-36: 通用活动框架（Generic Activity Framework）(P0)

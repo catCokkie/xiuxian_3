@@ -44,7 +44,7 @@ The current UI surface also includes:
 `-- TESTING.md                Regression coverage notes
 ```
 
-For a fuller directory guide and republish checklist, see `docs/README.md`.
+For a fuller directory guide and republish checklist, see the Directory Responsibilities section below.
 
 ## Requirements
 
@@ -82,9 +82,27 @@ For a fuller coverage summary and current testing gaps, see `TESTING.md`.
 
 ## Documentation
 
-- repository and directory guide: `docs/README.md`
-- design hub: `docs/design/README.md`
+- design hub & agent guide: `docs/design/AGENT_PROMPT.md`
 - input system notes: `docs/INPUT_SYSTEM.md`
+- design documents: `docs/design/00_vision.md` through `docs/design/14_save_migration.md`
+- master task list: `docs/design/10_todo.md`
+
+## Directory Responsibilities
+
+- `assets/` — committed game assets and their import metadata, not exports or temporary captures.
+- `scenes/` — runtime scenes organized by usage. `ui/` and `tests/` subdirectories keep things separate.
+- `scripts/game/` — scene-driven orchestration and root controllers.
+- `scripts/services/` — core logic layer (pure rules, state, persistence). Most valuable area to keep stable and testable.
+- `scripts/ui/` — UI controllers, separated from gameplay rule code.
+- `tests/Xiuxian2.Tests/` — standalone .NET test project for xUnit regression suite.
+
+## Republish Checklist
+
+- Confirm `README.md` matches the actual directory layout.
+- Run `dotnet test tests/Xiuxian2.Tests/Xiuxian2.Tests.csproj`.
+- Do not commit `.godot/`, `bin/`, `obj/`, `.vs/`, or `.idea/`.
+- Decide whether to add a formal `LICENSE` file before making the repository public.
+- Use `main` as the default branch name for the new repository.
 
 ## Still Prototype-Only
 

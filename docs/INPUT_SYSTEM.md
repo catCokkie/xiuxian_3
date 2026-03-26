@@ -2,6 +2,20 @@
 
 本文档说明修仙桌宠项目的全局键鼠输入采集系统实现。
 
+## TL;DR — 快速参考
+
+| 服务 | 文件 | 功能 |
+|------|------|------|
+| `InputActivityState` | `scripts/services/InputActivityState.cs` | 输入数据聚合、AP 计算、高频衰减 |
+| `InputHookService` | `scripts/services/InputHookService.cs` | Win32 全局钩子管理 |
+| `InputPauseShortcut` | `scripts/services/InputPauseShortcut.cs` | 全局快捷键 (Ctrl+Shift+X) |
+
+**数值公式**: `AP = key×1.0 + click×1.2 + scroll×0.4 + move/600`，高频衰减 `decay = clamp(1 - max(0, R-1)×0.25, 0.45, 1)`
+
+**隐私**: 不记录键值/轨迹，仅统计次数/距离，本地处理不上传。
+
+**快捷键**: Ctrl+Shift+X 暂停/恢复采集。Windows 限定（其他平台自动降级）。
+
 ## 系统架构
 
 ```
@@ -232,3 +246,13 @@ A: 高频衰减机制会自动降低超高频输入的收益。同时 `ApAccumul
 | Linux | ⚠️ 待实现 | 需要 X11/evdev 实现 |
 
 非 Windows 平台当前会静默降级（无全局输入），后续可通过条件编译或接口实现多平台支持。
+
+## 手动验证清单
+
+启动项目后，快速验证以下功能：
+
+- [ ] 控制台显示 `InputHookService: Global hooks started successfully`
+- [ ] 底栏显示 `AP/s 0.0`，输入后数值变化
+- [ ] 高频输入时（快速按键），衰减生效（AP/s 增长变缓）
+- [ ] Ctrl+Shift+X 可暂停/恢复采集
+- [ ] 关闭程序后重新打开，累计统计值保持

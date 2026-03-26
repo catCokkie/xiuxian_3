@@ -32,18 +32,17 @@ xiuxian_4/
 
 | 文档 | 关键内容 |
 |------|---------|
-| `10_todo.md` | 完整任务清单 TASK-01 到 TASK-29，含依赖、步骤、验收标准 |
-| `02_systems.md` | 系统总表（11 个系统），§3 突破丹(已取消)，§9 炼丹，§10 炼器，§11 灵石经济 |
-| `06_bottom_exploration_battle.md` | §4 副本循环模型，§3a 战斗失败后果，§5 Boss 挑战，§5a 区域选择，§11 新手引导 |
-| `03_progression_and_balance.md` | 悟性 3 消耗路径，日产消预算表 |
-| `13_offline_settlement.md` | §17 炼丹离线(无上限)，§18 炼器离线(无上限)，§19 离线 Toast 播报 |
-| `14_save_migration.md` | v5→v6 迁移字段表（含 unlocked_zone_ids, zone_cycle_counts） |
-| `05_ui_style.md` | Toast 通知规范（三级分类） |
-| `07_content_template.md` | §3.5 Boss 模板字段，§4a 丹药模板 |
-| `15_melvor_resource_loop.md` | 资源流转矩阵，变更标记索引 |
-| `01_core_loop.md` | 4 活动模式核心循环 |
+| `10_todo.md` | 完整任务清单 TASK-01 到 TASK-42，含依赖、步骤、验收标准 |
+| `02_systems.md` | 系统总表（20 个系统），§9 炼丹，§10 炼器，§11 灵石经济，§12-§20 新子系统 |
+| `06_bottom_exploration_battle.md` | §4 副本循环模型，§3a 战斗失败后果，§5 Boss 挑战，§5a 区域选择 |
+| `03_progression_and_balance.md` | 悟性消耗路径，日产消预算表，12 系统数值平衡 |
+| `13_offline_settlement.md` | §17 炼丹离线，§18 炼器离线，§18A-§18H 新系统离线 |
+| `14_save_migration.md` | v5→v6→v7→v8 迁移字段表 |
+| `05_ui_style.md` | Toast 通知规范，12 模式选择器设计 |
+| `07_content_template.md` | §3.5 Boss 模板字段，§4a 丹药模板，采集/烹饪/体修模板 |
+| `01_core_loop.md` | 12 活动模式核心循环，资源蛛网，V2 扩展蓝图 |
 | `11_equipment_content_system.md` | §5.4 炼器/强化系统 |
-| `09_level_monster_drop_sample.json` | 内容样本数据（突破丹已替换为灵石/灵草） |
+| `09_level_monster_drop_sample.json` | 内容样本数据 |
 
 ## 关键设计决策摘要
 
@@ -143,4 +142,13 @@ TASK-01 部分进展（ActiveLevelManager 已拆出）。
 5. **ExploreProgressController 是 1600+ 行上帝对象**，修改时注意不要引入新的耦合，TASK-02 会拆分它
 6. **LevelConfigLoader 是 1531 行上帝对象**，TASK-01 会拆分它
 7. **`PlayerActionCapability` 枚举** 定义了各模式能力：`ConsumesApSettlement`, `GrantsCultivationInputExp`, `AdvancesDungeon`, `RunsBattle`, `GeneratesLoot`, `SupportsOfflineSettlement`
-8. **4 活动模式**：`dungeon`(副本)、`cultivation`(修炼)、`alchemy`(炼丹)、`smithing`(炼器) — 在 `PlayerActionState` 中通过 `mode_id` 字符串区分
+8. **12 活动模式**：`dungeon`, `cultivation`, `alchemy`, `smithing`, `garden`, `mining`, `fishing`, `talisman`, `cooking`, `formation`, `enlightenment`, `body_cultivation` — 在 `PlayerActionState` 中通过 mode_id 字符串区分
+
+## 设计工作规则
+
+- 改变产品行为时，先更新设计文档再改代码。
+- 涉及数值平衡的变更，必须明确写出公式、上限和调参钩子。
+- 每个系统需定义输入/输出、存档字段、UI 入口。
+- 输入采集仅存储次数和强度，不记录原始键值或鼠标轨迹。
+- 共享 UI 文本统一维护在 `scripts/ui/UiText.cs`，不散落硬编码字符串。
+- Godot 场景文件 `*.tscn` 使用 UTF-8 无 BOM 编码。
