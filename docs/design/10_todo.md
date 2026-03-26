@@ -99,7 +99,7 @@
   - 已补充遭遇率缩放与触发拦截测试，`dotnet test` 全绿（171/171）
 
 ### 已落地的补充修复（待办外）
-- `修炼概况` 页已改为“状态总览 + 下一步建议”结构
+- `修炼概况` 页已改为“状态总览 + 当前判断”结构
   - 当前会展示主行为、当前重心、成长状态、战斗准备、资源判断与当前判断
   - 文案重心从纯数值堆叠调整为中性状态判断，避免在多子系统方向上替玩家做全局决策
 - 主行为切换文案已补充收益提示
@@ -125,7 +125,8 @@
 
 ### 明确延后到 V2
 - `TASK-11 宠物亲密度最小闭环`
-  - `pet_affinity` / `pet_mood` 在 V1 中仅保留弱存在感预留字段
+  - 完整的亲密度等级、全局增益、互动/羁绊闭环已延后到 V2
+  - `pet_affinity` 目前仍保留为累计资源/统计字段，`pet_mood` 仍会影响当前资源转化倍率
   - 等级、全局增益、互动/羁绊闭环统一延后到 V2 设计
 
 ---
@@ -444,7 +445,7 @@
 - 已新增 `scripts/services/ServiceLocator.cs`，集中缓存 `InputActivityState`、`BackpackState`、`LevelConfigLoader`、`CloudSaveSyncService` 等 autoload 引用
 - `project.godot` 已将 `ServiceLocator` 注册为首个 autoload，保证其他全局节点可被统一解析
 - `scripts/game/PrototypeRootController.cs` 与 `scripts/ui/BookTabsController.cs` 已移除分散的 `GetNodeOrNull<T>("/root/...")` 调用，统一改为 `ServiceLocator.Instance`
-- 当前仓库中 `"/root/..."` 字符串已只保留在 `ServiceLocator` 内部，符合路径集中目标
+- 当前已完成核心调用点迁移，但仓库中仍有部分 `"/root/..."` 路径保留在其他旧调用点，后续如继续收口可再统一清理
 - 已验证 `UiTextStatsTests` 与 `SaveRoundTripTests` 通过
 
 ---
@@ -488,9 +489,9 @@
 **背景**: `ResourceWalletState` 中 `pet_affinity` 字段持续累积（每 10 秒 AP * 0.03），但无消费和效果。`PlayerProgressState` 有 `petMood` 字段和 `GetMoodMultiplier()` 方法。
 
 **V1 决策**:
-- 当前版本不将 `pet_affinity` 或 `pet_mood` 作为核心成长系统推进，二者均弱化存在感，仅保留为轻量预留字段/背景数值。
+- 当前版本不将 `pet_affinity` / `pet_mood` 扩展成独立主系统，完整成长闭环延后到 V2。
 - `pet_affinity` 可继续作为低权重累计统计保留，但不在 V1 中扩展为等级、全局增益或主动培养闭环。
-- `pet_mood` 不再作为 V1 重点体验方向，后续如保留，应在 V2 与互动/羁绊玩法一起重构其定位。
+- `pet_mood` 不再作为 V1 重点体验方向，但当前仍保留在资源转化倍率中；后续如保留，应在 V2 与互动/羁绊玩法一起重构其定位。
 - 因此本任务整体延期到 V2，当前不进入近期待办批次。
 
 **涉及文件**:
@@ -743,24 +744,22 @@ TASK-01 (拆 ConfigLoader) ─── ✅ 已完成
   └→ TASK-02 (拆 ExploreCtrl) ─── ✅ 已完成
       └→ TASK-07 (战斗测试) ─── ✅ 已完成
   └→ TASK-09 (服务定位器) ─── ✅ 已完成
-  └→ TASK-14 (魔法数字)
-TASK-03 → TASK-08 (存档往返测试)
-TASK-04 → TASK-13 (离线×上限)
+  └→ TASK-14 (魔法数字)   ─── ✅ 已完成
+TASK-03 → TASK-08 (存档往返测试) ─── ✅ 已完成
+TASK-04 → TASK-13 (离线×上限) ─── ✅ 已完成
 TASK-10 (统计概览)        ─── ✅ 已完成
 TASK-11 (宠物亲密度)      ─── 延后至 V2
 TASK-12 (UI 自适应)       ─── ✅ 已完成
 TASK-15 (隐藏设置)        ─── ✅ 已完成
-TASK-16 (Cloud 抽象)      ─── 独立
-TASK-17 (反挂机)          ─── 独立
+TASK-16 (Cloud 抽象)      ─── ✅ 已完成
+TASK-17 (反挂机)          ─── ✅ 已完成
 TASK-18 (遭遇率缩放)      ─── ✅ 已完成
 ```
 
 ## 推荐执行顺序
 
-**批次 1（可并行）**: TASK-06（待验收）
-**批次 2（可并行）**: （已清空）
-**批次 3（可并行）**: TASK-14, TASK-16, TASK-17
-**批次 4（可并行）**: TASK-18
+**批次 1**: TASK-06（待验收）
+**批次 2**: TASK-11（延后至 V2，不进入当前版本执行）
 
 ---
 
@@ -809,7 +808,7 @@ TASK-18 (遭遇率缩放)      ─── ✅ 已完成
 1. 新建 `AlchemyRules.cs`：
    - `bool CanStartRecipe(string recipeId, ResourceWalletState wallet, BackpackState backpack)` — 校验材料
    - `AlchemyResult CompleteRecipe(string recipeId)` — 返回产出丹药 ID 和数量
-   - 静态配方表：`回气丹`（凝气草×2 + 灵气×50 → 回气丹×2）、`聚灵散`（聚灵花×3 + 灵气×80 → 聚灵散×1）
+   - 静态配方表：`回气丹`（`spirit_herb`×2 + 灵气×50 → 回气丹×2）、`聚灵散`（`spirit_herb`×3 + 灵气×80 → 聚灵散×1）
 2. 新建 `AlchemyState.cs`（继承 Node，Autoload）：
    - `SelectedRecipeId`, `CurrentProgress`, `RequiredProgress`
    - `AdvanceProgress(int inputEvents)` — 推进炼丹进度
@@ -883,7 +882,7 @@ TASK-18 (遭遇率缩放)      ─── ✅ 已完成
 - 区域 100% 后出现 Boss 挑战而非立即切区
 - Boss 属性 = 精英怪 × 2-3 倍
 - 首次击杀 Boss 获得灵器级掉落
-- 失败后保持 100% 进度，可重复挑战
+- 失败后探索进度归零，但可重新推进并再次挑战 Boss
 - 击败后解锁下一区域
 
 ---
@@ -930,7 +929,7 @@ TASK-22 (Boss 挑战)      ─── ✅ 已完成
 
 ## 更新后的推荐执行顺序
 
-**批次 1-5**: （保持不变）
+**批次 1-5**: 已完成，当前仅剩 `TASK-06` 人工验收与 `TASK-11` V2 延后项需要单独跟踪
 **批次 6（Melvor 扩展）**: TASK-19 ✅, TASK-22 ✅
 **批次 7（依赖 TASK-19）**: TASK-20 ✅, TASK-21 ✅
 **批次 8（依赖 TASK-20）**: TASK-23 ✅
