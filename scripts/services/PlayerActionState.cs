@@ -19,11 +19,27 @@ namespace Xiuxian.Scripts.Services
         public const string ModeCultivation = "cultivation";
         public const string ModeAlchemy = "alchemy";
         public const string ModeSmithing = "smithing";
+        public const string ModeGarden = "garden";
+        public const string ModeMining = "mining";
+        public const string ModeFishing = "fishing";
+        public const string ModeTalisman = "talisman";
+        public const string ModeCooking = "cooking";
+        public const string ModeFormation = "formation";
+        public const string ModeEnlightenment = "enlightenment";
+        public const string ModeBodyCultivation = "body_cultivation";
 
         public const string ActionDungeon = ModeDungeon;
         public const string ActionCultivation = ModeCultivation;
         public const string ActionAlchemy = ModeAlchemy;
         public const string ActionSmithing = ModeSmithing;
+        public const string ActionGarden = ModeGarden;
+        public const string ActionMining = ModeMining;
+        public const string ActionFishing = ModeFishing;
+        public const string ActionTalisman = ModeTalisman;
+        public const string ActionCooking = ModeCooking;
+        public const string ActionFormation = ModeFormation;
+        public const string ActionEnlightenment = ModeEnlightenment;
+        public const string ActionBodyCultivation = ModeBodyCultivation;
 
         private string _actionId = ActionDungeon;
         private string _actionTargetId = string.Empty;
@@ -68,17 +84,19 @@ namespace Xiuxian.Scripts.Services
             EmitSignal(SignalName.ActionChanged, _actionId, _actionTargetId, _actionVariant);
         }
 
+        private static readonly string[] AllModes =
+        {
+            ActionDungeon, ActionCultivation, ActionAlchemy, ActionSmithing,
+            ActionGarden, ActionMining, ActionFishing,
+            ActionTalisman, ActionCooking, ActionFormation,
+            ActionEnlightenment, ActionBodyCultivation,
+        };
+
         public void ToggleMode()
         {
-            string next = _actionId switch
-            {
-                ActionDungeon => ActionCultivation,
-                ActionCultivation => ActionAlchemy,
-                ActionAlchemy => ActionSmithing,
-                _ => ActionDungeon,
-            };
-
-            SetAction(next);
+            int current = System.Array.IndexOf(AllModes, _actionId);
+            int next = (current + 1) % AllModes.Length;
+            SetAction(AllModes[next]);
         }
 
         public Godot.Collections.Dictionary<string, Variant> ToDictionary()

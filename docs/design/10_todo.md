@@ -3,16 +3,20 @@
 > 项目：xiuxian_4 — Godot 4.5.1 + C# (.NET 8) 桌宠修仙挂机游戏
 > 生成日期：2026-03-24
 > 每个任务标记了优先级(P0/P1/P2)、依赖和验收标准。
+>
+> **唯一定义点原则**：各 TASK 中引用的配方/材料/数值以 `02_systems.md` 对应 § 为权威来源。TASK 描述仅做摘要引用，不另立口径。
 > 约定：修改后必须通过 `dotnet test tests/Xiuxian2.Tests/Xiuxian2.Tests.csproj` 零失败。
 > 维护规则：`docs/design/10_todo.md` 是任务状态唯一真源；`AGENTS.md` 仅保留流程规则，不重复维护任务进度。
 
 ## 当前进度记录（更新：2026-03-26）
 
 ### 总览
-- 代码任务：除 `TASK-06` 外，本轮计划内实现项已全部落地并通过 `dotnet test tests/Xiuxian2.Tests/Xiuxian2.Tests.csproj`
+- 代码任务：除 `TASK-06` 外，Phase 1–5 实现项已全部落地并通过 `dotnet test tests/Xiuxian2.Tests/Xiuxian2.Tests.csproj`
 - 待人工验收：`TASK-06 场景文件 UTF-8 编码修复`
 - 延后到 V2：`TASK-11 宠物亲密度最小闭环`
 - 维护规则：新增任务或状态变更时，只更新本文件，不在 agent 指令文件重复记录
+- **设计变更（2026-03-26）**：境界突破改为纯经验驱动，悟性完全转为子系统熟练度解锁货币。`TASK-26` 被 `TASK-30` 系列替代。详见 `02_systems.md` §12。
+- **设计变更（2026-03-26 #2）**：子系统从 4 个扩展至 12 个（参考 Melvor Idle），新增 Phase 7（TASK-36~42）。详见 `02_systems.md` §13-§20、`15_melvor_resource_loop.md`。
 
 ### 已完成
 - `TASK-01 拆分 LevelConfigLoader 上帝对象` ✅
@@ -58,9 +62,9 @@
 - `TASK-25 战斗失败规则 + 副本循环` ✅
   - `BattleDefeatDecision.ShouldResetExploreProgress`：Boss 失败=true，普通/精英=false
   - `BattleLifecycleRules.DetermineDefeatReset()` 已正确实现；区域解锁 `unlocked_zone_ids` 已接入
-- `TASK-26 悟性新消耗路径` ✅
-  - `InsightSpendRules.cs` 实现 3 路径：境界突破、Boss 弱点领悟（30-80 按区域）、高阶炼丹（20/批）
-  - `BossEncounterRules.CanApplyWeaknessInsight()` 已集成
+- `TASK-26 悟性新消耗路径` ✅ → 已废弃，被 TASK-30~35 替代
+  - 原实现的 `InsightSpendRules`（Boss 弱点、高阶炼丹解锁）将在 TASK-30/32 中重构
+  - 悟性消费模型从零散消耗改为子系统熟练度解锁统一体系
 - `TASK-29 存档 v5→v6 迁移代码` ✅
   - `SaveMigrationRules.LatestVersion = 6`，`MigrateV5ToV6()` 已实现
 - `TASK-07 测试补全 — 战斗数学与结算` ✅
@@ -968,15 +972,10 @@ TASK-22 (Boss 挑战)      ─── ✅ 已完成
 - 新增单元测试覆盖 3 种失败场景 + 循环归零场景。
 
 ### TASK-26: 悟性新消耗路径 (P1)
-**状态**: 已完成（2026-03-25）
+**状态**: 已废弃 → 被 TASK-30 系列替代（2026-03-26）
+**原因**: 悟性消费模型重构 — 从「境界突破+Boss弱点+高阶炼丹」零散消耗改为「子系统熟练度解锁」统一消费体系。
 **依赖**: TASK-20, TASK-22
-**背景**: 悟性当前仅用于境界突破，产消比 ~0.96:1 但未来系统扩展后将过剩。设计新增 3 个消耗场景（见 `03_progression_and_balance.md`）。
-**涉及文件**:
-- `BossEncounterRules.cs`（TASK-22 产物） — 弱点窃探消耗悟性
-- `AlchemyRules.cs`（TASK-20 产物） — 高阶配方消耗悟性
-**验收标准**:
-- 至少 2 个新悟性消耗路径可触发并扣除。
-- 产消比维持在 1.0-1.5 范围。
+**替代任务**: TASK-30（子系统熟练度规则层）、TASK-31（存档迁移 v6→v7）、TASK-32（境界突破去悟性化）、TASK-33（炼丹/炼器熟练度门控）、TASK-34（熟练度 UI）、TASK-35（测试补全）
 
 ### TASK-27: 突破丹已取消 — 无需实施
 **状态**: 已取消（V1 决策：移除突破丹，掉落 slot 用于灵石/灵草，见 `02_systems.md` §3）。
@@ -1004,3 +1003,440 @@ TASK-22 (Boss 挑战)      ─── ✅ 已完成
 - v5 存档加载后自动升级到 v6。
 - 新字段 (`spirit_stones`, `alchemy.*`, `smithing.*`, `boss.*`, `backpack.potions`) 均有合理默认值。
 - 现有 v5 测试不受影响。
+
+---
+
+## Phase 6: 悟性→子系统熟练度重构（INSIGHT-MASTERY-CHANGE）
+
+> 设计变更日期：2026-03-26
+> 核心变更：境界突破改为纯经验驱动，悟性完全转为子系统熟练度解锁货币。
+> 参考设计：`02_systems.md` §12、`03_progression_and_balance.md` 悟性消费设计。
+
+### TASK-30: 子系统熟练度规则层 (P0)
+**状态**: 未开始
+**优先级**: P0（其他熟练度相关任务依赖此项）
+**依赖**: 无（但 scope 已扩展至 12 系统，需在 TASK-36 之后最终化）
+**背景**: 实现 `SubsystemMasteryRules.cs`（纯静态规则）和 `SubsystemMasteryState.cs`（Godot Node 持久化），定义 **12** 个子系统各 4 级熟练度的解锁成本、境界门槛、效果查询。
+
+**涉及文件**:
+- `scripts/services/SubsystemMasteryRules.cs` — **新建**，纯静态：各系统等级定义、解锁成本、效果查询、境界门槛校验
+- `scripts/services/SubsystemMasteryState.cs` — **新建**，Godot Node，持久化 `mastery.{systemId}_level`（12 个系统字段）
+- `scripts/services/InsightSpendRules.cs` — 重构：移除 `BossWeakness*` / `AdvancedAlchemy*` 常量，新增 `CanUnlockMastery()` / `GetMasteryCost()` / `SpendInsightForMastery()`
+- `project.godot` — 注册 `SubsystemMasteryState` 为 autoload（或通过 ServiceLocator）
+
+**步骤**:
+1. 定义 `MasteryDefinition` record：`(string SystemId, int Level, double InsightCost, int RequiredRealmLevel, string EffectId, string DisplayName)`
+2. 硬编码 12 系统 × 4 级 = 48 条 `MasteryDefinition`（按 `02_systems.md` §12.2 表格 + 新增系统 §13-§20 的精通树）
+3. 实现 `GetCurrentLevel()` / `CanUnlock()` / `TryUnlock()` / `GetEffectValue()` 接口
+4. `SubsystemMasteryState` 提供 `ToDictionary()` / `FromDictionary()` 用于存档读写
+5. 重构 `InsightSpendRules.cs`：移除旧消费逻辑，统一为 mastery 解锁入口
+6. 使用 `IReadOnlyList<MasteryDefinition>` 注册表，后续新增系统只需追加定义行
+
+**验收标准**:
+- `SubsystemMasteryRules` 可查询任意 12 个系统的当前等级、下一级成本、是否可解锁
+- `InsightSpendRules` 不再包含 Boss 弱点 / 高阶炼丹 相关常量
+- 总解锁成本 = ~2080 悟性（与 `03_progression_and_balance.md` 一致）
+- `dotnet test` 全部通过
+
+---
+
+### TASK-31: 存档迁移 v6→v7（熟练度字段）(P0)
+**状态**: 未开始
+**优先级**: P0
+**依赖**: TASK-30
+**背景**: 新增 `mastery.*` 存档字段，需要 v6→v7 迁移。
+
+**涉及文件**:
+- `scripts/services/SaveMigrationRules.cs` — `LatestVersion = 7`，新增 `MigrateV6ToV7()`
+- `tests/Xiuxian2.Tests/SaveMigrationRulesTests.cs` — v6→v7 测试用例
+- `docs/design/14_save_migration.md` — 更新迁移规格
+
+**步骤**:
+1. `MigrateV6ToV7()`：新增 `mastery.dungeon_level=1`、`mastery.cultivation_level=1`、`mastery.alchemy_level=1`、`mastery.smithing_level=1`（默认值均为 1）
+2. 若旧存档已有 `InsightSpendRules` 的单次解锁标记（如 `advanced_alchemy_unlocked`），自动转换为对应熟练度等级
+3. 更新 `LatestVersion` 常量
+
+**验收标准**:
+- v6 存档加载后自动升级到 v7，`mastery.*` 字段正确填充
+- 现有 v6 测试不受影响
+- 往返测试覆盖 mastery 字段
+
+---
+
+### TASK-32: 境界突破去悟性化 (P1)
+**状态**: 未开始
+**优先级**: P1
+**依赖**: TASK-30
+**背景**: 确认代码中境界突破不消耗悟性。当前实现已是"经验满即可突破"，但需确保所有相关代码路径无遗漏。
+
+**涉及文件**:
+- `scripts/services/InsightSpendRules.cs` — 确认无境界突破相关消耗（TASK-30 会重构此文件）
+- `scripts/game/PrototypeRootController.cs` — 确认突破逻辑无悟性扣除
+- `scripts/services/BossEncounterRules.cs` — Boss 弱点领悟改为副本精通 Lv4 被动效果，移除单次悟性付费
+- `tests/Xiuxian2.Tests/BossEncounterRulesTests.cs` — 更新测试，`CanApplyWeaknessInsight` 替换为 mastery 查询
+- `tests/Xiuxian2.Tests/InsightSpendRulesTests.cs` — 新增/更新测试覆盖 mastery 解锁逻辑
+
+**验收标准**:
+- 突破流程无悟性扣除
+- Boss 弱点效果由副本精通 Lv4 永久被动驱动
+- `dotnet test` 全部通过
+
+---
+
+### TASK-33: 炼丹/炼器熟练度门控 (P1)
+**状态**: 未开始
+**优先级**: P1
+**依赖**: TASK-30
+**背景**: 将炼丹配方可用性和炼器强化段上限改为依赖熟练度等级。
+
+**涉及文件**:
+- `scripts/services/AlchemyRules.cs` — 聚灵散可用性改为依赖炼丹精通 Lv2；Lv3 额外 +1 产量
+- `scripts/services/SmithingRules.cs` — 强化段上限改为依赖炼器精通等级（Lv1: +3, Lv2: +6, Lv4: +9）；Lv3 材料 -10%
+- `scripts/game/CraftingProgressionService.cs` — 注入 mastery 查询
+- `scripts/game/ExploreProgressController.Runtime.cs` — 副本精通效果接入（Lv2 精英率、Lv3 掉率）
+- `scripts/services/ActivityConversionService.cs` — 修炼精通效果接入（Lv2 灵气+10%、Lv4 经验-8%）
+- `tests/Xiuxian2.Tests/AlchemyRulesTests.cs` — 更新测试：配方可用性依赖 mastery level
+- `tests/Xiuxian2.Tests/SmithingRulesTests.cs` — 更新测试：强化上限依赖 mastery level
+
+**验收标准**:
+- 新存档（所有 mastery Lv1）只能炼回气丹，只能强化到 +3
+- 解锁炼丹 Lv2 后可炼聚灵散
+- 解锁炼器 Lv2 后可强化到 +6
+- `dotnet test` 全部通过
+
+---
+
+### TASK-34: 熟练度 UI 入口 (P1)
+**状态**: 未开始
+**优先级**: P1
+**依赖**: TASK-30, TASK-31
+**背景**: 在子菜单中提供熟练度解锁入口，让玩家可以查看和花费悟性。
+
+**涉及文件**:
+- `scripts/ui/BookTabsController.cs` — 修炼概况页或新增"领悟"页签，展示 4 系统熟练度状态与解锁按钮
+- `scripts/ui/UiText.cs` — 新增熟练度相关文案
+
+**步骤**:
+1. 在修炼概况页底部（或新增独立页签）展示 4 系统当前等级和下一级解锁信息
+2. 每条展示：系统名、当前等级、效果描述、下一级成本（悟性）、境界门槛、解锁按钮
+3. 悟性不足或境界不够时按钮灰显+提示
+4. 解锁后即时刷新页面，Toast 提示"领悟成功"
+
+**验收标准**:
+- 可在子菜单中查看到 4 个系统的熟练度状态
+- 悟性充足时可成功解锁，悟性/境界不足时有明确提示
+- 解锁后效果立即生效
+
+---
+
+### TASK-35: 熟练度测试补全 (P1)
+**状态**: 未开始
+**优先级**: P1
+**依赖**: TASK-30, TASK-33
+**背景**: 为子系统熟练度补全单元测试。
+
+**涉及文件**:
+- `tests/Xiuxian2.Tests/SubsystemMasteryRulesTests.cs` — **新建**
+- `tests/Xiuxian2.Tests/InsightSpendRulesTests.cs` — **更新**（原有测试需适配新接口）
+
+**测试覆盖**:
+- `CanUnlock_ReturnsTrueWhenInsightAndRealmSufficient`
+- `CanUnlock_ReturnsFalseWhenInsightInsufficient`
+- `CanUnlock_ReturnsFalseWhenRealmTooLow`
+- `CanUnlock_ReturnsFalseWhenAlreadyMaxLevel`
+- `TryUnlock_DeductsInsight_AdvancesLevel`
+- `GetEffectValue_ReturnsCorrectBonusForDungeonMastery`
+- `GetEffectValue_ReturnsCorrectBonusForCultivationMastery`
+- `GetEffectValue_ReturnsCorrectBonusForAlchemyMastery`
+- `GetEffectValue_ReturnsCorrectBonusForSmithingMastery`
+- `FullUnlockCost_Equals2080Insight`（数值一致性校验：12 系统 × 4 级 ≈ 2080）
+- 存档迁移 v6→v7 round-trip
+
+**验收标准**:
+- 至少 10 个新测试覆盖熟练度核心逻辑（12 系统覆盖）
+- `dotnet test` 全部通过
+
+---
+
+## Phase 7: 12 子系统横向扩展（SUBSYSTEM-EXPAND）
+
+> 设计变更日期：2026-03-26
+> 核心变更：子系统从 4 个扩展至 12 个，参考 Melvor Idle 多系统设计。
+> 新增采集系 3 个（灵田/矿脉/灵渔）、加工系 3 个（符箓/烹饪/阵法）、修行系 2 个（悟道/体修）。
+> 参考设计：`02_systems.md` §13-§20、`15_melvor_resource_loop.md`、`01_core_loop.md`、`03_progression_and_balance.md`。
+> 可扩展框架：`IActivityDefinition` / `IRecipeDefinition` / `ActivityRegistry` / `MaterialRegistry`
+
+### TASK-36: 通用活动框架（Generic Activity Framework）(P0)
+**状态**: ✅ 已完成
+**优先级**: P0（所有新系统依赖此项）
+**依赖**: TASK-30（需 mastery 接口作为 gate 查询）
+**背景**: 建立可扩展的活动框架，使所有采集/加工/修行系统能通过定义数据接入，无需为每个系统编写独立推进逻辑。
+
+**完成说明**:
+- `ActivityFramework.cs`: IActivityDefinition/IRecipeDefinition 接口 + SimpleRecipeDefinition/SimpleActivityDefinition 实现
+- `ActivityRegistry.cs`: 注册表，内置 alchemy + smithing 2 个系统，支持 Register/GetBySystem/GetRecipe
+- `MaterialRegistry.cs`: 16 种材料定义（4 灵田 + 4 矿脉 + 3 灵渔 + 5 战斗掉落）
+- `PlayerActionState.cs`: 12 模式常量 + ToggleMode() 12 模式循环
+- `PlayerActionStateRules.cs`: Normalize() 支持 12 模式
+- `PlayerActionCapabilityRules.cs`: 12 模式能力映射（采集=AP+掉落+离线；加工=AP+离线；修行=AP+悟性+离线）
+- `CraftingProgressionService.cs`: 新增 AdvanceGenericRecipe() + TryCompleteGenericBatch() 通用推进
+- 新增 27 个测试（ActivityRegistryTests 9 + MaterialRegistryTests 6 + GenericCraftingProgressionTests 4 + 原有测试不变），总计 190 测试全部通过
+
+**涉及文件**:
+- `scripts/services/IActivityDefinition.cs` — **新建**，定义活动接口：`SystemId`, `RecipeId`, `InputCost`, `OutputItems`, `RequiredMasteryLevel`
+- `scripts/services/IRecipeDefinition.cs` — **新建**，定义配方接口：`RecipeId`, `Inputs[]`, `Outputs[]`, `QiCost`, `InputEventsRequired`
+- `scripts/services/ActivityRegistry.cs` — **新建**，注册表：按 SystemId 检索所有活动/配方定义
+- `scripts/services/MaterialRegistry.cs` — **新建**，材料注册表：定义 16 种材料的 ID/名称/来源/消费者
+- `scripts/services/PlayerActionState.cs` — 扩展：新增 `ModeGarden` / `ModeMining` / `ModeFishing` / `ModeTalisman` / `ModeCooking` / `ModeFormation` / `ModeEnlightenment` / `ModeBodyCultivation` 共 8 个新模式常量
+- `scripts/services/PlayerActionCapabilityRules.cs` — 扩展：12 个模式的输入→通用活动推进分支
+- `scripts/game/CraftingProgressionService.cs` — 重构：从 alchemy/smithing 专用逻辑改为 `ActivityRegistry` 驱动的通用推进
+
+**步骤**:
+1. 定义 `IActivityDefinition` 接口和 `IRecipeDefinition` 接口
+2. 实现 `ActivityRegistry`，支持 `Register(IActivityDefinition)` / `GetBySystem(string systemId)` / `GetRecipe(string recipeId)`
+3. 实现 `MaterialRegistry`，枚举 16 种材料及其产消关系
+4. 扩展 `PlayerActionState`，增加 8 个新模式常量，`ToggleMode()` 支持 12 模式循环
+5. 重构 `CraftingProgressionService.AdvanceCrafting()` 为基于 `ActivityRegistry` 的通用推进
+6. 将现有 `AlchemyRules` / `SmithingRules` 的配方数据注册到 `ActivityRegistry`
+
+**验收标准**:
+- `PlayerActionState` 支持 12 个模式切换
+- `ActivityRegistry` 包含至少现有 alchemy + smithing 的配方
+- `CraftingProgressionService` 能通过 registry 驱动现有炼丹/炼器流程
+- 框架可通过新增 `IActivityDefinition` 实现类来扩展新系统，无需修改推进逻辑
+- `dotnet test` 全部通过（现有 alchemy/smithing 测试不回归）
+
+---
+
+### TASK-37: 采集系统实现（灵田/矿脉/灵渔）(P1)
+**状态**: 未开始
+**优先级**: P1
+**依赖**: TASK-36
+**背景**: 实现 3 个采集子系统，为加工系统提供原材料。
+
+**涉及文件**:
+- `scripts/services/GardenRules.cs` — **新建**，灵田规则：作物种植/收获/离线生长
+- `scripts/services/GardenState.cs` — **新建**，灵田状态持久化
+- `scripts/services/MiningRules.cs` — **新建**，矿脉规则：矿点开采/耐久/稀有矿
+- `scripts/services/MiningState.cs` — **新建**，矿脉状态持久化
+- `scripts/services/FishingRules.cs` — **新建**，灵渔规则：鱼塘垂钓/稀有鱼
+- `scripts/services/FishingState.cs` — **新建**，灵渔状态持久化
+- 各系统注册到 `ActivityRegistry`
+
+**V1 内容（每系统）**:
+- 灵田：3 作物（灵花、灵果、灵草(替代)），离线生长效率 50%
+- 矿脉：3 矿点（寒铁矿、灵玉、碎片(替代)），矿点耐久 100 次采集后刷新
+- 灵渔：3 鱼塘（灵鱼、灵珠、龙涎），稀有鱼塘需精通 Lv2
+
+**验收标准**:
+- 3 个采集系统可通过模式切换进入
+- 输入事件驱动采集进度，完成后获得对应材料
+- 材料正确进入背包/库存
+- 各系统至少 3 个测试用例
+- `dotnet test` 全部通过
+
+---
+
+### TASK-38: 加工系统实现（符箓/烹饪/阵法）(P1)
+**状态**: 未开始
+**优先级**: P1
+**依赖**: TASK-36, TASK-37（需要采集产出的材料作为输入）
+**背景**: 实现 3 个加工子系统，消费采集材料产出战斗消耗品/增益。
+
+**涉及文件**:
+- `scripts/services/TalismanRules.cs` — **新建**，符箓规则：符咒制作
+- `scripts/services/TalismanState.cs` — **新建**，符箓状态
+- `scripts/services/CookingRules.cs` — **新建**，烹饪规则：灵膳制作
+- `scripts/services/CookingState.cs` — **新建**，烹饪状态
+- `scripts/services/FormationRules.cs` — **新建**，阵法规则：阵盘/阵旗制作
+- `scripts/services/FormationState.cs` — **新建**，阵法状态
+- 各系统注册到 `ActivityRegistry`
+
+**V1 内容（每系统）**:
+- 符箓：2 配方（火符 = 碎符×2 + 灵墨×1 → ATK+15% 单战; 盾符 = 碎符×3 + 兽骨×1 → DEF+20% 单战）
+- 烹饪：3 配方（灵鱼粥 = 灵鱼×2 + 灵草×1 + 灵气×40 → HP+15% 3场; 灵果蜜饯 = 灵果×2 + 灵花×1 + 灵气×60 → 全属性+5% 3场; 龙涎鱼汤 = 灵鱼×1 + 龙涎×1 + 灵气×100 → 灵气掉落+30% 3场）（详见 `02_systems.md` §17）
+- 阵法：2 配方（聚灵阵盘 = 灵玉×3 + 龙涎×1 → 灵气+8% 常驻; 护体阵旗 = 寒铁矿×2 + 灵玉×1 → DEF+5% 常驻）
+
+**验收标准**:
+- 3 个加工系统可通过模式切换进入
+- 材料消耗正确，产出物品进入对应库存
+- 符咒/灵膳为战斗消耗品，阵盘为常驻装备（同时仅 1 个生效）
+- 各系统至少 3 个测试用例
+- `dotnet test` 全部通过
+
+---
+
+### TASK-39: 修行系统实现（悟道/体修）(P1)
+**状态**: 未开始
+**优先级**: P1
+**依赖**: TASK-36
+**背景**: 实现 2 个修行子系统，提供永久小幅加成作为长期目标。
+
+**涉及文件**:
+- `scripts/services/EnlightenmentRules.cs` — **新建**，悟道规则：灵气→永久悟性获取效率
+- `scripts/services/EnlightenmentState.cs` — **新建**，悟道状态
+- `scripts/services/BodyCultivationRules.cs` — **新建**，体修规则：材料+灵气→永久属性
+- `scripts/services/BodyCultivationState.cs` — **新建**，体修状态
+- 各系统注册到 `ActivityRegistry`
+
+**V1 内容（每系统）**:
+- 悟道：2 功法（冥想 = 灵气 200 → 悟性获取+2%，可重复 20 次; 参悟 = 灵气 500 + 灵珠×1 → 悟性获取+5%，可重复 10 次）
+- 体修：2 功法（淬体 = 灵气 300 + 兽骨×2 → HP+1%，可重复 20 次; 炼骨 = 灵气 500 + 寒铁矿×2 → DEF+1%，可重复 15 次）
+
+**验收标准**:
+- 2 个修行系统可通过模式切换进入
+- 材料/灵气消耗正确，永久加成正确累加
+- 永久加成有累计上限，递减规则清晰
+- 各系统至少 3 个测试用例
+- `dotnet test` 全部通过
+
+---
+
+### TASK-40: 存档迁移 v7→v8（新系统字段）(P0)
+**状态**: 未开始
+**优先级**: P0
+**依赖**: TASK-37, TASK-38, TASK-39
+**背景**: 为 8 个新系统的状态字段新增 v7→v8 存档迁移。
+
+**涉及文件**:
+- `scripts/services/SaveMigrationRules.cs` — `LatestVersion = 8`，新增 `MigrateV7ToV8()`
+- `tests/Xiuxian2.Tests/SaveMigrationRulesTests.cs` — v7→v8 测试用例
+- `docs/design/14_save_migration.md` — 更新迁移规格（见 TASK-42 配套）
+
+**迁移字段**:
+```
+garden.plot_*          = empty / 0    // 灵田田地
+mining.node_*          = 0            // 矿脉矿点耐久
+fishing.pond_*         = 0            // 灵渔鱼塘
+talisman.inventory_*   = 0            // 符咒库存
+cooking.inventory_*    = 0            // 灵膳库存
+formation.active_id    = ""           // 当前激活阵盘
+enlightenment.count_*  = 0            // 悟道修炼次数
+body_cult.count_*      = 0            // 体修修炼次数
+mastery.garden_level   = 1            // 新系统精通等级
+mastery.mining_level   = 1
+mastery.fishing_level  = 1
+mastery.talisman_level = 1
+mastery.cooking_level  = 1
+mastery.formation_level= 1
+mastery.enlightenment_level = 1
+mastery.body_cultivation_level = 1
+```
+
+**验收标准**:
+- v7 存档加载后自动升级到 v8，新字段正确填充默认值
+- 现有 v6→v7 迁移不受影响
+- 往返测试覆盖新字段
+- `dotnet test` 全部通过
+
+---
+
+### TASK-41: 新系统精通树集成 (P1)
+**状态**: 未开始
+**优先级**: P1
+**依赖**: TASK-30, TASK-37, TASK-38, TASK-39
+**背景**: 将 8 个新系统的精通树（各 4 级）集成到 `SubsystemMasteryRules`。
+
+**涉及文件**:
+- `scripts/services/SubsystemMasteryRules.cs` — 追加 8 系统 × 4 级 = 32 条 `MasteryDefinition`
+- `scripts/services/SubsystemMasteryState.cs` — 追加 8 个 `mastery.{system}_level` 字段
+- `tests/Xiuxian2.Tests/SubsystemMasteryRulesTests.cs` — 新增 8 系统精通测试
+
+**精通效果概要**:
+| 系统 | Lv2 | Lv3 | Lv4 |
+|------|-----|-----|-----|
+| 灵田 | 生长+15% | 稀有+10% | 离线100% |
+| 矿脉 | 耐久+20% | 稀有+10% | 双倍10% |
+| 灵渔 | 速度+15% | 稀有鱼塘解锁 | 双倍8% |
+| 符箓 | 双出10% | 材料-10% | 附魔概率 |
+| 烹饪 | 持续+1场 | 双出15% | 额外效果 |
+| 阵法 | 效果+10% | 双槽 | 自修复 |
+| 悟道 | 效率+10% | 冥想上限+10 | 参悟上限+5 |
+| 体修 | 效率+10% | 淬体上限+10 | 炼骨上限+5 |
+
+**验收标准**:
+- `SubsystemMasteryRules` 包含 12 系统 × 4 级 = 48 条定义
+- 总解锁成本 ≈ 2080 悟性
+- 各精通效果正确接入对应系统规则
+- `dotnet test` 全部通过
+
+---
+
+### TASK-42: 新系统测试覆盖 (P1)
+**状态**: 未开始
+**优先级**: P1
+**依赖**: TASK-37, TASK-38, TASK-39, TASK-40, TASK-41
+**背景**: 为 Phase 7 增加的 8 个新系统补全测试。
+
+**涉及文件**:
+- `tests/Xiuxian2.Tests/GardenRulesTests.cs` — **新建**
+- `tests/Xiuxian2.Tests/MiningRulesTests.cs` — **新建**
+- `tests/Xiuxian2.Tests/FishingRulesTests.cs` — **新建**
+- `tests/Xiuxian2.Tests/TalismanRulesTests.cs` — **新建**
+- `tests/Xiuxian2.Tests/CookingRulesTests.cs` — **新建**
+- `tests/Xiuxian2.Tests/FormationRulesTests.cs` — **新建**
+- `tests/Xiuxian2.Tests/EnlightenmentRulesTests.cs` — **新建**
+- `tests/Xiuxian2.Tests/BodyCultivationRulesTests.cs` — **新建**
+- `tests/Xiuxian2.Tests/ActivityRegistryTests.cs` — **新建**
+- `tests/Xiuxian2.Tests/SaveMigrationRulesTests.cs` — 追加 v7→v8 迁移测试
+
+**最低测试覆盖（每系统 ≥ 3 个）**:
+- 基本流程：输入→进度→产出
+- 材料不足时拒绝
+- 精通门控：未解锁高级配方/功法时不可用
+- 存档往返：状态正确持久化与恢复
+
+**验收标准**:
+- 每个新系统至少 3 个测试（共 ≥ 24 个新测试）
+- `ActivityRegistry` 至少 5 个测试（注册/查询/重复注册/未找到等）
+- `dotnet test` 全部通过
+
+---
+
+### Phase 7 依赖图
+
+```
+  TASK-30 (mastery rules, Phase 6)
+     |
+  TASK-36 (activity framework)  ← 所有新系统的基础
+   / | \
+  37 38 39   (采集 / 加工 / 修行)
+   \ | /
+  TASK-40 (save migration v7→v8)
+  TASK-41 (mastery tree integration)
+     |
+  TASK-42 (test coverage)
+```
+
+### Phase 7 执行建议
+1. **先 TASK-36**：建立框架，将现有 alchemy/smithing 迁移到 registry，确保零回归
+2. **TASK-37/38/39 可并行**：三个系统组互不依赖，但 38 需要 37 的材料产出
+3. **TASK-40 最后**：所有系统稳定后再固化存档格式
+4. **TASK-41 与 40 可并行**：mastery 数据定义不依赖存档迁移
+5. **TASK-42 收尾**：贯穿各系统完成过程中持续补充
+
+---
+
+## Phase 8: 文档审计修复（16 项）— 已完成
+
+> 本轮审计覆盖全部 16 篇设计文档，发现并修复 16 项跨文档一致性问题。
+
+### 已修复问题清单
+| # | 优先级 | 问题 | 修复内容 | 涉及文档 |
+|---|--------|------|---------|----------|
+| 1 | P0 | 灵气产消赤字 0.68:1 | 被动恢复 +5/min + 新系统降耗 → 1.85:1 | 03, 02 |
+| 2 | P0 | §12.3 悟性口径仍为 4 系统 | 统一为 12 系统/2080 悟性/43 天 | 02 |
+| 3 | P0 | 烹饪配方 02 vs 10 矛盾 | TASK-38 对齐 02 §17（3 配方） | 10 |
+| 4 | P1 | 资源循环图仍为 4 模式 | 替换为 12 模式蛛网大图 | 02 |
+| 5 | P1 | 新系统无离线结算设计 | 新增 §18A-§18H（8 系统） | 13 |
+| 6 | P1 | 符咒/灵膳/阵盘无战斗集成 | InBattle 新增 3 类消耗品规则 | 06 |
+| 7 | P1 | 灵石消费端空缺 | 扩充 8 项新消费（种子商店/矿脉刷新等） | 02 |
+| 8 | P1 | 重复定义缺唯一定义点 | 03/06/10/11 添加 cross-ref 注释 | 03/06/10/11 |
+| 9 | P2 | 12 模式无 UI 选择器设计 | 分组二级菜单 + 样式规范 | 05, 06 |
+| 10 | P2 | 里程碑未反映 Phase 6-7 | 新增 M5/M6 里程碑 | 04 |
+| 11 | P2 | ~15 处 REVIEW-FIX 未清理 | 全部改为 REVIEW-DONE | 04/05/06/07/13/14/15 |
+| 12 | P2 | 09 JSON 缺新材料 | lv_qi_003-005 新增 spirit_ink/beast_bone/toxic_gland | 09 |
+| 13 | P3 | 08 内容示例已脱节 | 标注为历史草稿 | 08 |
+| 14 | P3 | 悟道/体修递减未量化 | 新增递减曲线表 + 公式 | 03 |
+| 15 | P3 | 阵盘双槽与效果+20% 矛盾 | 统一为 Lv3 双槽 | 02, 03, 10 |
+| 16 | P3 | 种子缺消费出口 | 新增育种研究 + 炼丹辅料 + 回售 | 02 |

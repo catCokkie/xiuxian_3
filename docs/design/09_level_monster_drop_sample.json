@@ -548,9 +548,12 @@
       "bind_level_id": "lv_qi_003",
       "bind_monster_ids": ["monster_slime_moss", "monster_bat_shadow"],
       "entries": [
-        { "item_id": "lingqi_shard", "weight": 40, "min_qty": 2, "max_qty": 5 },
-        { "item_id": "spirit_herb", "weight": 35, "min_qty": 2, "max_qty": 3 },
-        { "item_id": "broken_talisman", "weight": 25, "min_qty": 2, "max_qty": 4 }
+        { "item_id": "lingqi_shard", "weight": 30, "min_qty": 2, "max_qty": 5 },
+        { "item_id": "spirit_herb", "weight": 25, "min_qty": 2, "max_qty": 3 },
+        { "item_id": "broken_talisman", "weight": 15, "min_qty": 2, "max_qty": 4 },
+        { "item_id": "spirit_ink", "weight": 15, "min_qty": 1, "max_qty": 2, "_comment": "符箓系统材料" },
+        { "item_id": "beast_bone", "weight": 10, "min_qty": 1, "max_qty": 1, "_comment": "体修系统材料" },
+        { "item_id": "toxic_gland", "weight": 5, "min_qty": 1, "max_qty": 1, "_comment": "体修系统材料" }
       ],
       "pity": {
         "counter_key": "pity_qi_rift_normal",
@@ -591,9 +594,12 @@
       "bind_level_id": "lv_qi_004",
       "bind_monster_ids": ["monster_slime_moss", "monster_bat_shadow"],
       "entries": [
-        { "item_id": "lingqi_shard", "weight": 38, "min_qty": 3, "max_qty": 6 },
-        { "item_id": "spirit_herb", "weight": 32, "min_qty": 2, "max_qty": 4 },
-        { "item_id": "broken_talisman", "weight": 30, "min_qty": 3, "max_qty": 5 }
+        { "item_id": "lingqi_shard", "weight": 25, "min_qty": 3, "max_qty": 6 },
+        { "item_id": "spirit_herb", "weight": 20, "min_qty": 2, "max_qty": 4 },
+        { "item_id": "broken_talisman", "weight": 18, "min_qty": 3, "max_qty": 5 },
+        { "item_id": "spirit_ink", "weight": 15, "min_qty": 1, "max_qty": 3, "_comment": "符箓系统材料" },
+        { "item_id": "beast_bone", "weight": 12, "min_qty": 1, "max_qty": 2, "_comment": "体修系统材料" },
+        { "item_id": "toxic_gland", "weight": 10, "min_qty": 1, "max_qty": 2, "_comment": "体修系统材料" }
       ],
       "pity": {
         "counter_key": "pity_qi_abyss_normal",
@@ -634,9 +640,12 @@
       "bind_level_id": "lv_qi_005",
       "bind_monster_ids": ["monster_slime_moss", "monster_bat_shadow"],
       "entries": [
-        { "item_id": "lingqi_shard", "weight": 35, "min_qty": 4, "max_qty": 7 },
-        { "item_id": "spirit_herb", "weight": 30, "min_qty": 3, "max_qty": 5 },
-        { "item_id": "broken_talisman", "weight": 35, "min_qty": 4, "max_qty": 6 }
+        { "item_id": "lingqi_shard", "weight": 22, "min_qty": 4, "max_qty": 7 },
+        { "item_id": "spirit_herb", "weight": 18, "min_qty": 3, "max_qty": 5 },
+        { "item_id": "broken_talisman", "weight": 20, "min_qty": 4, "max_qty": 6 },
+        { "item_id": "spirit_ink", "weight": 15, "min_qty": 2, "max_qty": 4, "_comment": "符箓系统材料" },
+        { "item_id": "beast_bone", "weight": 13, "min_qty": 2, "max_qty": 3, "_comment": "体修系统材料" },
+        { "item_id": "toxic_gland", "weight": 12, "min_qty": 1, "max_qty": 3, "_comment": "体修系统材料" }
       ],
       "pity": {
         "counter_key": "pity_qi_nether_normal",

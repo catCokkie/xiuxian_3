@@ -25,6 +25,31 @@ namespace Xiuxian.Scripts.Services
                     PlayerActionCapability.SupportsOfflineSettlement => true,
                     _ => false,
                 },
+                PlayerActionState.ActionGarden or
+                PlayerActionState.ActionMining or
+                PlayerActionState.ActionFishing => capability switch
+                {
+                    PlayerActionCapability.ConsumesApSettlement => true,
+                    PlayerActionCapability.GeneratesLoot => true,
+                    PlayerActionCapability.SupportsOfflineSettlement => true,
+                    _ => false,
+                },
+                PlayerActionState.ActionTalisman or
+                PlayerActionState.ActionCooking or
+                PlayerActionState.ActionFormation => capability switch
+                {
+                    PlayerActionCapability.ConsumesApSettlement => true,
+                    PlayerActionCapability.SupportsOfflineSettlement => true,
+                    _ => false,
+                },
+                PlayerActionState.ActionEnlightenment or
+                PlayerActionState.ActionBodyCultivation => capability switch
+                {
+                    PlayerActionCapability.ConsumesApSettlement => true,
+                    PlayerActionCapability.GrantsCultivationInputExp => true,
+                    PlayerActionCapability.SupportsOfflineSettlement => true,
+                    _ => false,
+                },
                 _ => capability switch
                 {
                     PlayerActionCapability.AdvancesDungeon => true,
@@ -49,6 +74,14 @@ namespace Xiuxian.Scripts.Services
                 PlayerActionState.ActionCultivation => PlayerActionState.ActionCultivation,
                 PlayerActionState.ActionAlchemy => PlayerActionState.ActionAlchemy,
                 PlayerActionState.ActionSmithing => PlayerActionState.ActionSmithing,
+                PlayerActionState.ActionGarden => PlayerActionState.ActionGarden,
+                PlayerActionState.ActionMining => PlayerActionState.ActionMining,
+                PlayerActionState.ActionFishing => PlayerActionState.ActionFishing,
+                PlayerActionState.ActionTalisman => PlayerActionState.ActionTalisman,
+                PlayerActionState.ActionCooking => PlayerActionState.ActionCooking,
+                PlayerActionState.ActionFormation => PlayerActionState.ActionFormation,
+                PlayerActionState.ActionEnlightenment => PlayerActionState.ActionEnlightenment,
+                PlayerActionState.ActionBodyCultivation => PlayerActionState.ActionBodyCultivation,
                 _ => PlayerActionState.ActionDungeon,
             };
         }

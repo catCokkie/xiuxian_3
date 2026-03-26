@@ -1,4 +1,5 @@
 using Godot;
+using System;
 using Xiuxian.Scripts.Services;
 
 namespace Xiuxian.Scripts.Game
@@ -127,6 +128,98 @@ namespace Xiuxian.Scripts.Game
 
             smithingState.SelectTarget(enhancedProfile.EquipmentId, enhancedProfile.EnhanceLevel);
             rewardText = $"强化完成，{enhancedProfile.DisplayName} +{enhancedProfile.EnhanceLevel}";
+            return true;
+        }
+
+        // --- Generic activity framework methods ---
+
+        public readonly record struct GenericProgressResult(float ProgressPercent, bool CompletedBatch);
+
+        /// <summary>
+        /// Advance progress for any recipe registered in <see cref="ActivityRegistry"/>.
+        /// Returns progress percentage and whether a batch completed.
+        /// </summary>
+        public static GenericProgressResult AdvanceGenericRecipe(
+            string recipeId,
+            float currentProgress,
+            int inputEvents)
+        {
+            IRecipeDefinition? recipe = ActivityRegistry.GetRecipe(recipeId);
+            if (recipe == null || inputEvents <= 0)
+            {
+                return new GenericProgressResult(0f, false);
+            }
+
+            float next = Math.Max(0f, currentProgress) + Math.Max(0, inputEvents);
+            float threshold = Math.Max(1, recipe.RequiredInputEvents);
+            bool completed = next >= threshold;
+            float percent = completed ? 100f : next / threshold * 100f;
+            return new GenericProgressResult(percent, completed);
+        }
+
+        /// <summary>
+        /// Consume inputs and produce outputs for a completed generic recipe batch.
+        /// Returns false if the player cannot afford the cost.
+        /// </summary>
+        public static bool TryCompleteGenericBatch(
+            string recipeId,
+            BackpackState? backpackState,
+            ResourceWalletState? resourceWalletState,
+            out string rewardText)
+        {
+            rewardText = string.Empty;
+            IRecipeDefinition? recipe = ActivityRegistry.GetRecipe(recipeId);
+            if (recipe == null || backpackState == null || resourceWalletState == null)
+            {
+                return false;
+            }
+
+            // Check lingqi
+            if (resourceWalletState.Lingqi < recipe.LingqiCost)
+            {
+                return false;
+            }
+
+            // Check material inputs
+            foreach (MaterialCost input in recipe.Inputs)
+            {
+                if (backpackState.GetItemCount(input.ItemId) < input.Count)
+                {
+                    return false;
+                }
+            }
+
+            // Deduct lingqi
+            if (!resourceWalletState.SpendLingqi(recipe.LingqiCost))
+            {
+                return false;
+            }
+
+            // Deduct materials (with rollback on failure)
+            for (int i = 0; i < recipe.Inputs.Count; i++)
+            {
+                MaterialCost input = recipe.Inputs[i];
+                if (!backpackState.RemoveItem(input.ItemId, input.Count))
+                {
+                    // Rollback previously removed inputs
+                    for (int j = 0; j < i; j++)
+                    {
+                        backpackState.AddItem(recipe.Inputs[j].ItemId, recipe.Inputs[j].Count);
+                    }
+                    resourceWalletState.AddLingqi(recipe.LingqiCost);
+                    return false;
+                }
+            }
+
+            // Grant outputs
+            foreach (MaterialOutput output in recipe.Outputs)
+            {
+                backpackState.AddItem(output.ItemId, output.Count);
+            }
+
+            rewardText = recipe.Outputs.Count > 0
+                ? $"{recipe.DisplayName}完成，获得 {recipe.Outputs[0].ItemId} x{recipe.Outputs[0].Count}"
+                : $"{recipe.DisplayName}完成";
             return true;
         }
     }

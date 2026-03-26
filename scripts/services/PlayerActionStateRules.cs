@@ -16,6 +16,14 @@ namespace Xiuxian.Scripts.Services
                 PlayerActionState.ActionCultivation => PlayerActionState.ActionCultivation,
                 PlayerActionState.ActionAlchemy => PlayerActionState.ActionAlchemy,
                 PlayerActionState.ActionSmithing => PlayerActionState.ActionSmithing,
+                PlayerActionState.ActionGarden => PlayerActionState.ActionGarden,
+                PlayerActionState.ActionMining => PlayerActionState.ActionMining,
+                PlayerActionState.ActionFishing => PlayerActionState.ActionFishing,
+                PlayerActionState.ActionTalisman => PlayerActionState.ActionTalisman,
+                PlayerActionState.ActionCooking => PlayerActionState.ActionCooking,
+                PlayerActionState.ActionFormation => PlayerActionState.ActionFormation,
+                PlayerActionState.ActionEnlightenment => PlayerActionState.ActionEnlightenment,
+                PlayerActionState.ActionBodyCultivation => PlayerActionState.ActionBodyCultivation,
                 _ => PlayerActionState.ActionDungeon,
             };
 
