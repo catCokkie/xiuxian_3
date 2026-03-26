@@ -70,6 +70,63 @@ namespace Xiuxian.Scripts.Services
                 _provider.TryGetDropTable);
         }
 
+        public int GetRemainingDailyRollsForLevel(string levelId)
+        {
+            if (!_provider.TryFindLevelIndex(levelId, out int levelIndex) || !_provider.TryGetLevelAtIndex(levelIndex, out var level) || !level.ContainsKey("spawn_table") || level["spawn_table"].VariantType != Variant.Type.Array)
+            {
+                return int.MaxValue;
+            }
+
+            long currentDayIndex = (long)Time.GetUnixTimeFromSystem() / 86400;
+            var resolvedTables = new HashSet<string>();
+            long totalRemaining = 0;
+            bool sawCappedTable = false;
+
+            foreach (Variant item in (Godot.Collections.Array<Variant>)level["spawn_table"])
+            {
+                if (item.VariantType != Variant.Type.Dictionary)
+                {
+                    continue;
+                }
+
+                var dict = (Godot.Collections.Dictionary<string, Variant>)item;
+                string monsterId = LevelConfigProvider.GetString(dict, "monster_id", "");
+                if (string.IsNullOrEmpty(monsterId) || !_provider.TryGetMonster(monsterId, out var monster) || !LevelConfigProvider.TryGetChildDictionary(monster, "drops", out var drops))
+                {
+                    continue;
+                }
+
+                string configuredDropTableId = LevelConfigProvider.GetString(drops, "drop_table_id", "");
+                string dropTableId = ResolveDropTableForLevel(levelId, monsterId, configuredDropTableId);
+                if (string.IsNullOrEmpty(dropTableId) || !resolvedTables.Add(dropTableId) || !_provider.TryGetDropTable(dropTableId, out var table))
+                {
+                    continue;
+                }
+
+                int dailyCap = DropEconomyService.ReadDailyCap(table);
+                if (dailyCap <= 0)
+                {
+                    continue;
+                }
+
+                sawCappedTable = true;
+                int usedCount = _dailyRollCountByTable.TryGetValue(dropTableId, out int savedCount) ? savedCount : 0;
+                long savedDay = _dailyRollDayByTable.TryGetValue(dropTableId, out long dayIndex) ? dayIndex : currentDayIndex;
+                if (savedDay != currentDayIndex)
+                {
+                    usedCount = 0;
+                }
+
+                totalRemaining += Math.Max(0, dailyCap - usedCount);
+                if (totalRemaining >= int.MaxValue)
+                {
+                    return int.MaxValue;
+                }
+            }
+
+            return sawCappedTable ? (int)totalRemaining : int.MaxValue;
+        }
+
         public Dictionary<string, int> RollMonsterDrops(string monsterId)
         {
             var result = new Dictionary<string, int>();

@@ -4,8 +4,15 @@
 > 生成日期：2026-03-24
 > 每个任务标记了优先级(P0/P1/P2)、依赖和验收标准。
 > 约定：修改后必须通过 `dotnet test tests/Xiuxian2.Tests/Xiuxian2.Tests.csproj` 零失败。
+> 维护规则：`docs/design/10_todo.md` 是任务状态唯一真源；`AGENTS.md` 仅保留流程规则，不重复维护任务进度。
 
-## 当前进度记录（更新：2026-03-25）
+## 当前进度记录（更新：2026-03-26）
+
+### 总览
+- 代码任务：除 `TASK-06` 外，本轮计划内实现项已全部落地并通过 `dotnet test tests/Xiuxian2.Tests/Xiuxian2.Tests.csproj`
+- 待人工验收：`TASK-06 场景文件 UTF-8 编码修复`
+- 延后到 V2：`TASK-11 宠物亲密度最小闭环`
+- 维护规则：新增任务或状态变更时，只更新本文件，不在 agent 指令文件重复记录
 
 ### 已完成
 - `TASK-01 拆分 LevelConfigLoader 上帝对象` ✅
@@ -62,6 +69,34 @@
 - `TASK-08 测试补全 — 存档往返` ✅
   - 已新增 `tests/Xiuxian2.Tests/SaveRoundTripTests.cs`
   - 已补充 `Backpack/Wallet/PlayerProgress/EquippedItems` 纯持久化规则，运行时 State 已统一委托到规则层
+- `TASK-10 统计概览 Tab 内容实现` ✅
+  - `BuildStatsOverviewText()` 已展示累计输入、活跃时长、当前境界停留、战斗总数/胜率、累计资源获得
+  - `InputActivityState.TotalActiveSeconds`、`ResourceWalletState.TotalEarned*`、战斗累计计数均已接入持久化
+  - 已补充 `tests/Xiuxian2.Tests/UiTextStatsTests.cs`
+- `TASK-09 服务定位器替代硬编码路径` ✅
+  - 已新增 `scripts/services/ServiceLocator.cs` 统一集中 autoload 访问
+  - `project.godot` 已注册 `ServiceLocator` 为首个 autoload
+  - `PrototypeRootController` / `BookTabsController` 已改为通过 `ServiceLocator.Instance` 获取全局状态
+- `TASK-13 离线结算与每日上限一致性` ✅
+  - 离线副本结算已接入剩余 daily rolls 约束，材料/装备掉落会按剩余配额缩放
+  - 运行时掉落状态已支持按关卡聚合剩余日配额，并在跨日场景下自动视为重置
+  - 已补充 `DungeonOfflineSettlementRulesTests` 覆盖离线掉落被日上限截断场景
+- `TASK-12 UI 自适应布局修复` ✅
+  - `MainBarLayoutController` 已提取布局常量并按容器宽度动态计算战斗轨道/按钮/进度条宽度
+  - `ResizeHandleButton` 已改为右侧相对锚定，避免依赖绝对 `1040.0` 偏移
+  - `dotnet test tests/Xiuxian2.Tests/Xiuxian2.Tests.csproj` 已通过（163/163）
+- `TASK-16 Steam Cloud 接口抽象` ✅
+  - 已新增 `ISaveCloudProvider` / `NullCloudProvider` / `SteamCloudProvider`
+  - `CloudSaveSyncService` 已改为 provider 工厂 + 接口调用，不再内嵌 Steam 反射桥实现
+  - `dotnet test tests/Xiuxian2.Tests/Xiuxian2.Tests.csproj` 已通过（163/163）
+- `TASK-17 全局反挂机规则` ✅
+  - 已新增 `AfkDetectionRules`，定义 `60s -> 0.5x`、`120s -> 0x` 探索倍率
+  - `InputActivityState` 已追踪“距离上次输入秒数”和“本批输入前空闲秒数”
+  - 探索推进已接入反挂机倍率，AFK 时会暂停副本推进并显示暂停文案
+- `TASK-18 遭遇率境界缩放` ✅
+  - 已按 `playerRealmLevel - zoneDangerLevel` 缩放遭遇率，并 clamp 到 `[0.05, 0.95]`
+  - 当前关卡 `danger_level` 已接入运行时 `ActiveLevelManager` / `LevelConfigLoader`
+  - 已补充遭遇率缩放与触发拦截测试，`dotnet test` 全绿（171/171）
 
 ### 已落地的补充修复（待办外）
 - 已补上子菜单中的"突破"按钮
@@ -78,6 +113,11 @@
 - `TASK-06 场景文件 UTF-8 编码修复`
   - 代码侧中文文本与场景文件已修复
   - 仍需在 Godot 编辑器内手动打开主场景，最终确认无 Parse Error
+
+### 明确延后到 V2
+- `TASK-11 宠物亲密度最小闭环`
+  - `pet_affinity` / `pet_mood` 在 V1 中仅保留弱存在感预留字段
+  - 等级、全局增益、互动/羁绊闭环统一延后到 V2 设计
 
 ---
 
@@ -362,6 +402,7 @@
 ---
 
 ### TASK-09: 服务定位器替代硬编码路径
+**状态**: 已完成（2026-03-26）
 **依赖**: TASK-01（新服务类就位后）
 **背景**: 项目中所有 Controller/Service 通过 `GetNodeOrNull<T>("/root/XxxState")` 硬编码字符串获取依赖，有 12 个 Autoload 节点。路径字符串分散在 `PrototypeRootController`, `ExploreProgressController`, `BookTabsController` 等多个文件中。
 
@@ -390,9 +431,17 @@
 - 现有功能不变，所有测试通过
 - 新增任何 Autoload 只需在 ServiceLocator 加一个属性
 
+**完成说明**:
+- 已新增 `scripts/services/ServiceLocator.cs`，集中缓存 `InputActivityState`、`BackpackState`、`LevelConfigLoader`、`CloudSaveSyncService` 等 autoload 引用
+- `project.godot` 已将 `ServiceLocator` 注册为首个 autoload，保证其他全局节点可被统一解析
+- `scripts/game/PrototypeRootController.cs` 与 `scripts/ui/BookTabsController.cs` 已移除分散的 `GetNodeOrNull<T>("/root/...")` 调用，统一改为 `ServiceLocator.Instance`
+- 当前仓库中 `"/root/..."` 字符串已只保留在 `ServiceLocator` 内部，符合路径集中目标
+- 已验证 `UiTextStatsTests` 与 `SaveRoundTripTests` 通过
+
 ---
 
 ### TASK-10: 统计概览 Tab 内容实现
+**状态**: 已完成（2026-03-26）
 **依赖**: 无
 **背景**: `BookTabsController` 中 "StatsTab" 已有 `BuildStatsOverviewText()` 方法，但内容仅包含输入计数。设计文档提到应有更丰富的统计。
 
@@ -415,11 +464,25 @@
 - 重启后统计数据不丢失
 - 存档版本号 +1（或在 TASK-03 迁移框架内处理）
 
+**完成说明**:
+- `scripts/ui/BookTabsController.cs` 已输出累计输入量、累计活跃时间、当前境界与停留天数、累计战斗与胜率、累计获得灵气/悟性/灵宠亲和/灵石
+- `scripts/services/InputActivityState.cs` 已持久化 `total_active_seconds`
+- `scripts/services/ResourceWalletState.cs` 已持久化 `TotalEarnedLingqi` / `TotalEarnedInsight` / `TotalEarnedPetAffinity` / `TotalEarnedSpiritStones`
+- `scripts/game/ExploreProgressController.Runtime.cs` 已持久化 `total_battle_count` / `total_battle_win_count`
+- `tests/Xiuxian2.Tests/UiTextStatsTests.cs` 已覆盖统计文本格式化
+
 ---
 
 ### TASK-11: 宠物亲密度最小闭环
+**状态**: 延后至 V2（2026-03-26 决策）
 **依赖**: 无
 **背景**: `ResourceWalletState` 中 `pet_affinity` 字段持续累积（每 10 秒 AP * 0.03），但无消费和效果。`PlayerProgressState` 有 `petMood` 字段和 `GetMoodMultiplier()` 方法。
+
+**V1 决策**:
+- 当前版本不将 `pet_affinity` 或 `pet_mood` 作为核心成长系统推进，二者均弱化存在感，仅保留为轻量预留字段/背景数值。
+- `pet_affinity` 可继续作为低权重累计统计保留，但不在 V1 中扩展为等级、全局增益或主动培养闭环。
+- `pet_mood` 不再作为 V1 重点体验方向，后续如保留，应在 V2 与互动/羁绊玩法一起重构其定位。
+- 因此本任务整体延期到 V2，当前不进入近期待办批次。
 
 **涉及文件**:
 - `scripts/services/ResourceWalletState.cs` — `PetAffinity` 字段
@@ -437,7 +500,7 @@
 3. 在 `ActivityConversionService` 中将亲密度等级加成应用到资源转化公式。
 4. 新增测试 `PetAffinityRulesTests.cs`。
 
-**验收标准**:
+**原 V2 目标验收标准**:
 - 修炼概况页显示"灵宠亲和 Lv.X (名称) — 加成 +Y%"
 - 亲密度随时间增长，等级提升反映到加成倍率
 - 新增测试通过
@@ -445,6 +508,7 @@
 ---
 
 ### TASK-12: UI 自适应布局修复
+**状态**: 已完成（2026-03-26）
 **依赖**: 无
 **背景**: `scenes/ui/MainBarWindow.tscn` 中布局使用硬编码绝对偏移（`offset_left = 1040.0` 等），`MainBarLayoutController.cs` 中有大量 magic number（`textRowY = controlRowY + 34.0f`）。
 
@@ -464,9 +528,17 @@
 - 最大宽度(2560px)下布局合理延展
 - DPI 1.5x 下文字不超出容器
 
+**完成说明**:
+- `scripts/ui/MainBarLayoutController.cs` 已提取关键布局常量（边距、间距、最小/默认宽度、行间距），替代散落 magic number
+- `UpdateRightAnchoredLayout()` 已改为基于当前容器宽度动态分配 `BattleTrack`、`ExploreProgressBar`、`CultivationProgressBar`、模式按钮与副本按钮宽度
+- `MinWidth` 默认值已提升到 `800`，与任务验收口径对齐
+- `scenes/ui/MainBarWindow.tscn` 中 `ResizeHandleButton` 已改为右锚定 + 负偏移，避免依赖固定像素右侧位置
+- 已执行 `dotnet test tests/Xiuxian2.Tests/Xiuxian2.Tests.csproj`，当前 163 个测试全部通过
+
 ---
 
 ### TASK-13: 离线结算与每日上限一致性
+**状态**: 已完成（2026-03-26）
 **依赖**: TASK-04
 **背景**: 掉落表有 `daily_cap`(120 rolls) 和 `hourly_soft_cap`(20 rolls)。`DungeonOfflineSettlementRules.BuildDungeonOfflineSettlement()` 中 `equipmentDropCap: 2` 是局部硬编码，但未接入 `LevelDropEconomyRules` 的全局上限体系。
 
@@ -485,11 +557,19 @@
 - 跨日离线正确重置配额
 - 新增测试通过
 
+**完成说明**:
+- `scripts/services/DungeonOfflineSettlementRules.cs` 已新增 `remainingDailyRolls` / `averageDropRollsPerVictory` 参数，并按剩余配额对离线材料/装备掉落做缩放
+- `scripts/services/OfflineProjectionService.cs` 已新增离线平均掉落 roll 估算，用于计算配额缩放比例
+- `scripts/services/LevelRuntimeStateService.cs` 已支持按关卡聚合当前剩余 daily rolls，并在 `savedDay != currentDay` 时将已用计数视为重置
+- `scripts/game/PrototypeRootController.cs` 已在离线副本结算中传入目标关卡的剩余日配额与平均 roll 数据
+- `tests/Xiuxian2.Tests/DungeonOfflineSettlementRulesTests.cs` 已覆盖“离线掉落被剩余日配额截断”场景
+
 ---
 
 ## Phase 3: P2 — 打磨与长期健康
 
 ### TASK-14: 消除魔法数字
+**状态**: 已完成（2026-03-26）
 **依赖**: TASK-01, TASK-02
 **背景**: 业务逻辑中散布硬编码常量。
 
@@ -509,6 +589,14 @@
 **验收标准**:
 - 全项目搜索 `0.9` / `0.08` / `0.03` / `6.0` 无业务逻辑中的裸数字
 - 所有常量集中在 `GameBalanceConstants.cs`
+
+**完成说明**:
+- 已新增 `scripts/services/GameBalanceConstants.cs`，集中定义 `InputDecay`、`ResourceConversion`、`EquipmentGeneration`、`Offline`、`Explore` 五组核心数值
+- `scripts/services/InputActivityState.cs` 已改为从 `GameBalanceConstants.InputDecay` 读取 AP baseline、decay threshold、decay rate、floor
+- `scripts/services/ActivityConversionService.cs` 与 `scripts/game/PrototypeRootController.cs` 已改为复用 `GameBalanceConstants.ResourceConversion` / `Offline` 中的资源转化与离线修炼参数
+- `scripts/services/EquipmentGenerationRules.cs` 已改为复用 rarity 对应副词条数量常量
+- `scripts/game/ExploreProgressController.Runtime.cs`、`scripts/game/ExploreGameLogic.cs`、`scripts/services/MonsterConfigService.cs`、`scripts/ui/BattleTrackVisualizer.cs` 已统一复用探索默认参数常量
+- 已执行 `dotnet test tests/Xiuxian2.Tests/Xiuxian2.Tests.csproj`，当前 171 个测试全部通过
 
 ---
 
@@ -533,6 +621,7 @@
 ---
 
 ### TASK-16: Steam Cloud 接口抽象
+**状态**: 已完成（2026-03-26）
 **依赖**: 无
 **背景**: `scripts/services/CloudSaveSyncService.cs` 通过反射动态调用 Steamworks API，难以测试和维护。
 
@@ -561,9 +650,17 @@
 - 有 Steam SDK 时自动选择 SteamCloudProvider
 - 接口可用于未来测试 mock
 
+**完成说明**:
+- 已新增 `scripts/services/ISaveCloudProvider.cs`，统一暴露 `IsAvailable` / `TryUpload()` / `TryDownload()`
+- 已新增 `scripts/services/NullCloudProvider.cs`，在非 Steam 环境下稳定返回不可用
+- 已新增 `scripts/services/SteamCloudProvider.cs`，将原 `CloudSaveSyncService` 内嵌的 Steam 反射逻辑抽离为独立 provider
+- `scripts/services/CloudSaveSyncService.cs` 已改为通过 `CreateProvider()` 选择 provider，并只负责本地路径与日志封装
+- 已执行 `dotnet test tests/Xiuxian2.Tests/Xiuxian2.Tests.csproj`，当前 163 个测试全部通过
+
 ---
 
 ### TASK-17: 全局反挂机规则
+**状态**: 已完成（2026-03-26）
 **依赖**: 无
 **背景**: 个别怪物有 `anti_afk_rule`，但无全局"零输入 → 暂停进度"机制。
 
@@ -585,9 +682,18 @@
 - 恢复输入后进度立即恢复
 - 新增测试通过
 
+**完成说明**:
+- 已新增 `scripts/services/AfkDetectionRules.cs`，实现 `IsAfk()` 与 `GetProgressMultiplier()`：`0-60s = 1.0`、`60-120s = 0.5`、`>=120s = 0.0`
+- `scripts/services/InputActivityState.cs` 已新增 `SecondsSinceLastInput` 与 `SecondsSinceLastInputBeforeLatestBatch`，可区分当前空闲时长与“本批输入发生前”的空闲时长
+- 所有 `RegisterXxx()` 输入入口现在都会重置空闲计时，并保留本批输入前的 idle snapshot
+- `scripts/game/ExploreProgressController.Runtime.cs` 已在探索推进时应用 AFK 倍率：`0.5x` 时半速推进，`0x` 时暂停副本推进并显示 `AFK 暂停` 提示
+- 已新增 `tests/Xiuxian2.Tests/AfkDetectionRulesTests.cs`
+- 已执行 `dotnet test tests/Xiuxian2.Tests/Xiuxian2.Tests.csproj`，当前 169 个测试全部通过
+
 ---
 
 ### TASK-18: 遭遇率境界缩放
+**状态**: 已完成（2026-03-26）
 **依赖**: 无
 **背景**: 当前遭遇率 `base_rate = 18% + danger_level * 4%`，不考虑玩家境界与关卡推荐境界的差异。
 
@@ -607,6 +713,14 @@
 - 境界 1 打危险度 3 的图 → 遭遇率低于基准
 - 基准（境界=危险度）→ 遭遇率不变
 
+**完成说明**:
+- `scripts/services/BattleStartRules.cs` 已新增 `CalculateEncounterRate()`，按 `base_rate * (1 + levelDiff * 0.05)` 计算并 clamp 到 `[0.05, 0.95]`
+- `scripts/services/ActiveLevelManager.cs` 已在运行时读取当前关卡 `danger_level`
+- `scripts/services/LevelConfigLoader.cs` 已暴露 `ActiveLevelDangerLevel`
+- `scripts/game/ExploreGameLogic.cs` / `scripts/game/ExploreProgressController.Runtime.cs` 已在实际遇怪判定中传入 `baseEncounterRate`、玩家境界、关卡危险度与随机 roll
+- `tests/Xiuxian2.Tests/CoreRegressionRulesTests.cs` 已新增遭遇率缩放与缩放后判定测试
+- 已执行 `dotnet test tests/Xiuxian2.Tests/Xiuxian2.Tests.csproj`，当前 171 个测试全部通过
+
 ---
 
 ## 任务依赖图
@@ -619,23 +733,23 @@ TASK-05 (装备闭环)        ─── ✅ 已完成
 TASK-01 (拆 ConfigLoader) ─── ✅ 已完成
   └→ TASK-02 (拆 ExploreCtrl) ─── ✅ 已完成
       └→ TASK-07 (战斗测试) ─── ✅ 已完成
-  └→ TASK-09 (服务定位器)
+  └→ TASK-09 (服务定位器) ─── ✅ 已完成
   └→ TASK-14 (魔法数字)
 TASK-03 → TASK-08 (存档往返测试)
 TASK-04 → TASK-13 (离线×上限)
-TASK-10 (统计概览)        ─── 独立
-TASK-11 (宠物亲密度)      ─── 独立
-TASK-12 (UI 自适应)       ─── 独立
+TASK-10 (统计概览)        ─── ✅ 已完成
+TASK-11 (宠物亲密度)      ─── 延后至 V2
+TASK-12 (UI 自适应)       ─── ✅ 已完成
 TASK-15 (隐藏设置)        ─── ✅ 已完成
 TASK-16 (Cloud 抽象)      ─── 独立
 TASK-17 (反挂机)          ─── 独立
-TASK-18 (遭遇率缩放)      ─── 独立
+TASK-18 (遭遇率缩放)      ─── ✅ 已完成
 ```
 
 ## 推荐执行顺序
 
-**批次 1（可并行）**: TASK-06（待验收）, TASK-09, TASK-10
-**批次 2（可并行）**: TASK-11, TASK-12, TASK-13
+**批次 1（可并行）**: TASK-06（待验收）
+**批次 2（可并行）**: （已清空）
 **批次 3（可并行）**: TASK-14, TASK-16, TASK-17
 **批次 4（可并行）**: TASK-18
 

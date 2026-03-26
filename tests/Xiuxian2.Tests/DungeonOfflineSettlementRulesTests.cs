@@ -49,6 +49,8 @@ public sealed class DungeonOfflineSettlementRulesTests
             averageLingqiPerVictory: 3.0,
             averageInsightPerVictory: 1.0,
             averageItemDropsPerVictory: new Dictionary<string, double> { ["lingqi_shard"] = 0.5 },
+            remainingDailyRolls: int.MaxValue,
+            averageDropRollsPerVictory: 1.0,
             equipmentDropCap: 2,
             estimatedEquipmentDropsPerVictory: 0.8);
 
@@ -59,5 +61,35 @@ public sealed class DungeonOfflineSettlementRulesTests
         Assert.True(result.InsightGain > 0.0);
         Assert.True(result.ItemDrops.ContainsKey("lingqi_shard"));
         Assert.True(result.EquipmentDrops.Count <= 2);
+    }
+
+    [Fact]
+    public void BuildDungeonOfflineSettlement_TruncatesDropRewardsByRemainingDailyRolls()
+    {
+        CharacterStatBlock player = new(100, 30, 10, 100, 0.1, 1.6);
+        var monsters = new[]
+        {
+            new DungeonOfflineSettlementRules.WeightedMonsterProfile(new MonsterStatProfile("m1", "怪", new CharacterStatBlock(10, 1, 0, 80, 0.0, 1.5), 10), 100)
+        };
+
+        ActionSettlementResult result = DungeonOfflineSettlementRules.BuildDungeonOfflineSettlement(
+            actionTargetId: "lv_qi_001",
+            offlineInputBudget: 400,
+            dungeonProgressPerInput: 0.1,
+            encounterProgressThreshold: 10.0,
+            playerStats: player,
+            weightedMonsters: monsters,
+            averageLingqiPerVictory: 5.0,
+            averageInsightPerVictory: 2.0,
+            averageItemDropsPerVictory: new Dictionary<string, double> { ["lingqi_shard"] = 1.0 },
+            remainingDailyRolls: 2,
+            averageDropRollsPerVictory: 1.0,
+            equipmentDropCap: 5,
+            estimatedEquipmentDropsPerVictory: 1.0);
+
+        Assert.Equal(1, result.ItemDrops["lingqi_shard"]);
+        Assert.Empty(result.EquipmentDrops);
+        Assert.True(result.LingqiGain > 10.0);
+        Assert.True(result.BattleRoundsAdvanced > 0);
     }
 }

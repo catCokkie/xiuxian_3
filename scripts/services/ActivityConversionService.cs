@@ -21,12 +21,12 @@ namespace Xiuxian.Scripts.Services
         [Export] public NodePath ActionStatePath = "/root/PlayerActionState";
 
         [Export] public double SettlementIntervalSeconds = 10.0;
-        [Export] public double LingqiFactor = 0.9;
-        [Export] public double InsightFactor = 0.08;
-        [Export] public double PetAffinityFactor = 0.03;
-        [Export] public double RealmExpFromLingqiRate = 0.25;
+        [Export] public double LingqiFactor = GameBalanceConstants.ResourceConversion.LingqiFactor;
+        [Export] public double InsightFactor = GameBalanceConstants.ResourceConversion.InsightFactor;
+        [Export] public double PetAffinityFactor = GameBalanceConstants.ResourceConversion.PetAffinityFactor;
+        [Export] public double RealmExpFromLingqiRate = GameBalanceConstants.ResourceConversion.RealmExpFromLingqiRate;
         [Export] public bool CultivationInputExpEnabled = true;
-        [Export] public double CultivationExpPerInput = 0.35;
+        [Export] public double CultivationExpPerInput = GameBalanceConstants.ResourceConversion.CultivationExpPerInput;
 
         private InputActivityState _activityState = null!;
         private ResourceWalletState _walletState = null!;

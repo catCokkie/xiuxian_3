@@ -43,23 +43,26 @@ namespace Xiuxian.Scripts.Game
 
         public override void _Ready()
         {
+            ServiceLocator.Instance?.Refresh();
+
             _mainBar = GetNode<MainBarLayoutController>("MainBarWindow");
             _submenu = GetNode<SubmenuWindowController>("SubmenuBookWindow");
             _bookTabs = GetNode<BookTabsController>("SubmenuBookWindow/BookFrame");
 
-            _activityState = GetNodeOrNull<InputActivityState>("/root/InputActivityState");
-            _hookService = GetNodeOrNull<InputHookService>("/root/InputHookService");
-            _backpackState = GetNodeOrNull<BackpackState>("/root/BackpackState");
-            _alchemyState = GetNodeOrNull<AlchemyState>("/root/AlchemyState");
-            _potionInventoryState = GetNodeOrNull<PotionInventoryState>("/root/PotionInventoryState");
-            _smithingState = GetNodeOrNull<SmithingState>("/root/SmithingState");
-            _resourceWalletState = GetNodeOrNull<ResourceWalletState>("/root/ResourceWalletState");
-            _playerProgressState = GetNodeOrNull<PlayerProgressState>("/root/PlayerProgressState");
-            _playerActionState = GetNodeOrNull<PlayerActionState>("/root/PlayerActionState");
-            _equippedItemsState = GetNodeOrNull<EquippedItemsState>("/root/EquippedItemsState");
-            _levelConfigLoader = GetNodeOrNull<LevelConfigLoader>("/root/LevelConfigLoader");
+            ServiceLocator? services = ServiceLocator.Instance;
+            _activityState = services?.InputActivityState;
+            _hookService = services?.InputHookService;
+            _backpackState = services?.BackpackState;
+            _alchemyState = services?.AlchemyState;
+            _potionInventoryState = services?.PotionInventoryState;
+            _smithingState = services?.SmithingState;
+            _resourceWalletState = services?.ResourceWalletState;
+            _playerProgressState = services?.PlayerProgressState;
+            _playerActionState = services?.PlayerActionState;
+            _equippedItemsState = services?.EquippedItemsState;
+            _levelConfigLoader = services?.LevelConfigLoader;
             _exploreProgressController = GetNodeOrNull<ExploreProgressController>("ExploreProgressController");
-            _cloudSaveSyncService = GetNodeOrNull<CloudSaveSyncService>("/root/CloudSaveSyncService");
+            _cloudSaveSyncService = services?.CloudSaveSyncService;
 
             _mainBar.BookButtonPressed += _submenu.ToggleVisible;
             _mainBar.LayoutChanged += (_, _) => MarkDirty();
@@ -380,11 +383,11 @@ namespace Xiuxian.Scripts.Game
             ActionSettlementResult result = isCultivation
                 ? OfflineSettlementRules.BuildCultivationOfflineSettlement(
                     evaluation.EffectiveOfflineSeconds,
-                    apPerInput: 1.0,
-                    lingqiFactor: 0.9,
-                    insightFactor: 0.08,
-                    petAffinityFactor: 0.03,
-                    realmExpFromLingqiRate: 0.25,
+                    apPerInput: GameBalanceConstants.Offline.ApPerInput,
+                    lingqiFactor: GameBalanceConstants.ResourceConversion.LingqiFactor,
+                    insightFactor: GameBalanceConstants.ResourceConversion.InsightFactor,
+                    petAffinityFactor: GameBalanceConstants.ResourceConversion.PetAffinityFactor,
+                    realmExpFromLingqiRate: GameBalanceConstants.ResourceConversion.RealmExpFromLingqiRate,
                     moodMultiplier: _playerProgressState.GetMoodMultiplier(),
                     realmMultiplier: _playerProgressState.GetRealmMultiplier(),
                     inputExpActive: false,
@@ -435,19 +438,22 @@ namespace Xiuxian.Scripts.Game
                 _levelConfigLoader.PlayerBaseHp,
                 _levelConfigLoader.PlayerAttackPerRound);
             CharacterStatBlock playerStats = CharacterStatRules.BuildFinalStats(baseStats, _equippedItemsState.GetEquippedProfiles());
+            string targetLevelId = _playerActionState?.ActionTargetId ?? _levelConfigLoader.ActiveLevelId;
 
             return DungeonOfflineSettlementRules.BuildDungeonOfflineSettlement(
-                actionTargetId: _playerActionState?.ActionTargetId ?? _levelConfigLoader.ActiveLevelId,
+                actionTargetId: targetLevelId,
                 offlineInputBudget: offlineInputBudget,
                 dungeonProgressPerInput: _levelConfigLoader.ProgressPer100Inputs / 100.0,
                 encounterProgressThreshold: _levelConfigLoader.EncounterCheckIntervalProgress,
                 playerStats: playerStats,
-                weightedMonsters: _levelConfigLoader.GetOfflineWeightedMonsters(),
-                averageLingqiPerVictory: _levelConfigLoader.GetOfflineAverageLingqiPerVictory(),
-                averageInsightPerVictory: _levelConfigLoader.GetOfflineAverageInsightPerVictory(),
-                averageItemDropsPerVictory: _levelConfigLoader.GetOfflineAverageItemDropsPerVictory(),
+                weightedMonsters: _levelConfigLoader.GetOfflineWeightedMonsters(targetLevelId),
+                averageLingqiPerVictory: _levelConfigLoader.GetOfflineAverageLingqiPerVictory(targetLevelId),
+                averageInsightPerVictory: _levelConfigLoader.GetOfflineAverageInsightPerVictory(targetLevelId),
+                averageItemDropsPerVictory: _levelConfigLoader.GetOfflineAverageItemDropsPerVictory(targetLevelId),
+                remainingDailyRolls: _levelConfigLoader.GetOfflineRemainingDailyRolls(targetLevelId),
+                averageDropRollsPerVictory: _levelConfigLoader.GetOfflineAverageDropRollsPerVictory(targetLevelId),
                 equipmentDropCap: 2,
-                estimatedEquipmentDropsPerVictory: _levelConfigLoader.GetOfflineAverageEquipmentDropsPerVictory());
+                estimatedEquipmentDropsPerVictory: _levelConfigLoader.GetOfflineAverageEquipmentDropsPerVictory(targetLevelId));
         }
 
         private void LoadLegacyState()

@@ -84,10 +84,10 @@ namespace Xiuxian.Scripts.Services
         {
             int targetCount = rarity switch
             {
-                EquipmentRarityTier.CommonTool => 0,
-                EquipmentRarityTier.Artifact => 1,
-                EquipmentRarityTier.Spirit => 1,
-                EquipmentRarityTier.Treasure => 2,
+                EquipmentRarityTier.CommonTool => GameBalanceConstants.EquipmentGeneration.CommonToolSubStatCount,
+                EquipmentRarityTier.Artifact => GameBalanceConstants.EquipmentGeneration.ArtifactSubStatCount,
+                EquipmentRarityTier.Spirit => GameBalanceConstants.EquipmentGeneration.SpiritSubStatCount,
+                EquipmentRarityTier.Treasure => GameBalanceConstants.EquipmentGeneration.TreasureSubStatCount,
                 _ => 0,
             };
 

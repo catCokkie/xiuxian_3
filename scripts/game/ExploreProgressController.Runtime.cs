@@ -1,4 +1,5 @@
 ﻿using Godot;
+using System;
 using System.Collections.Generic;
 using System.Text;
 using Xiuxian.Scripts.Services;
@@ -49,14 +50,14 @@ namespace Xiuxian.Scripts.Game
         [Export] public NodePath ActionStatePath = "/root/PlayerActionState";
 
         // Explore progress is input-event driven (percent per input event), not AP-driven.
-        [Export] public float ProgressPerInput = 0.02f;
-        [Export] public int InputsPerMoveFrame = 4;
-        [Export] public int InputsPerBattleRound = 18;
-        [Export] public int MaxBossBattleRounds = 20;
+        [Export] public float ProgressPerInput = GameBalanceConstants.Explore.ProgressPerInput;
+        [Export] public int InputsPerMoveFrame = GameBalanceConstants.Explore.InputsPerMoveFrame;
+        [Export] public int InputsPerBattleRound = GameBalanceConstants.Explore.InputsPerBattleRound;
+        [Export] public int MaxBossBattleRounds = GameBalanceConstants.Explore.MaxBossBattleRounds;
         [Export] public float MaxProgress = 100.0f;
 
-        [Export] public float MonsterMovePxPerFrame = 3.8f;
-        [Export] public float MonsterRespawnSpacing = 110.0f;
+        [Export] public float MonsterMovePxPerFrame = GameBalanceConstants.Explore.MonsterMovePxPerFrame;
+        [Export] public float MonsterRespawnSpacing = GameBalanceConstants.Explore.MonsterRespawnSpacing;
         [Export] public float BattleTriggerX = 220.0f;
 
         private ProgressBar _progressBar = null!;
@@ -660,14 +661,31 @@ namespace Xiuxian.Scripts.Game
                 return;
             }
 
-            AdvanceExploreByInput(inputEvents);
+            if (!AdvanceExploreByInput(inputEvents))
+            {
+                return;
+            }
+
             TryStartBattle();
         }
 
-        private void AdvanceExploreByInput(int inputEvents)
+        private bool AdvanceExploreByInput(int inputEvents)
         {
+            double afkSeconds = _activityState?.SecondsSinceLastInputBeforeLatestBatch ?? 0.0;
+            double progressMultiplier = AfkDetectionRules.GetProgressMultiplier(afkSeconds);
+            if (progressMultiplier <= 0.0)
+            {
+                _battleInfoLabel.Text = "主行为：副本（AFK 暂停）";
+                _battleInfoLabel.Visible = true;
+                _roundInfoLabel.Text = $"空闲 {afkSeconds:0}s，探索暂停";
+                _progressBar.Value = _exploreProgress;
+                RefreshMoveDebugLabel();
+                RefreshDebugPanel();
+                return false;
+            }
+
             SyncLogicFromControllerState();
-            ExploreGameLogic.ExploreAdvanceResult result = _logic.AdvanceExploreByInput(inputEvents, ProgressPerInput, MaxProgress);
+            ExploreGameLogic.ExploreAdvanceResult result = _logic.AdvanceExploreByInput(inputEvents, (float)(ProgressPerInput * progressMultiplier), MaxProgress);
             _progressBar.Value = _exploreProgress;
             int frames = MoveMonsterQueueByInputs(inputEvents);
             _logic.RegisterTrackMovement(frames, _battleTrackVisualizer.QueueMoveInputPending);
@@ -676,14 +694,16 @@ namespace Xiuxian.Scripts.Game
 
             _battleInfoLabel.Text = UiText.ExploreFrame(_moveFrameCounter);
             _battleInfoLabel.Visible = false;
-            _roundInfoLabel.Text = $"{UiText.ExploreProgress(_exploreProgress)} | {BuildFrontMoveStatus()}";
+            _roundInfoLabel.Text = progressMultiplier < 1.0
+                ? $"{UiText.ExploreProgress(_exploreProgress)} | {BuildFrontMoveStatus()} | 反挂机 {progressMultiplier:0.0}x"
+                : $"{UiText.ExploreProgress(_exploreProgress)} | {BuildFrontMoveStatus()}";
             RefreshMoveDebugLabel();
 
             if (result.CompletedLevel)
             {
                 if (TryStartBossChallenge())
                 {
-                    return;
+                    return true;
                 }
 
                 _battleInfoLabel.Text = UiText.ZoneComplete;
@@ -693,6 +713,7 @@ namespace Xiuxian.Scripts.Game
             UpdateHpLabels();
             RefreshActorSlots();
             RefreshDebugPanel();
+            return true;
         }
 
         private int MoveMonsterQueueByInputs(int inputEvents)
@@ -780,7 +801,17 @@ namespace Xiuxian.Scripts.Game
             }
 
             SyncLogicFromControllerState();
-            if (!_logic.TryStartEncounter(front.Index, front.X, BattleTriggerX, front.MonsterId, profile, InputsPerBattleRound))
+            if (!_logic.TryStartEncounter(
+                front.Index,
+                front.X,
+                BattleTriggerX,
+                front.MonsterId,
+                profile,
+                InputsPerBattleRound,
+                _levelConfigLoader?.BaseEncounterRate ?? 0.18,
+                _playerProgressState?.RealmLevel ?? 1,
+                _levelConfigLoader?.ActiveLevelDangerLevel ?? 1,
+                Random.Shared.NextDouble()))
             {
                 return;
             }

@@ -59,6 +59,8 @@ namespace Xiuxian.Scripts.Services
             double averageLingqiPerVictory,
             double averageInsightPerVictory,
             IReadOnlyDictionary<string, double> averageItemDropsPerVictory,
+            int remainingDailyRolls,
+            double averageDropRollsPerVictory,
             int equipmentDropCap,
             double estimatedEquipmentDropsPerVictory)
         {
@@ -66,18 +68,19 @@ namespace Xiuxian.Scripts.Services
             int estimatedEncounters = CalculateEstimatedEncounters(offlineInputBudget, dungeonProgressPerInput, encounterProgressThreshold);
             double weightedVictoryFactor = CalculateWeightedVictoryFactor(playerStats, weightedMonsters);
             double effectiveVictories = estimatedEncounters * weightedVictoryFactor;
+            double dropQuotaScale = CalculateDropQuotaScale(remainingDailyRolls, averageDropRollsPerVictory, effectiveVictories);
 
             var itemDrops = new Dictionary<string, int>();
             foreach (KeyValuePair<string, double> entry in averageItemDropsPerVictory)
             {
-                int qty = (int)Math.Floor(Math.Max(0.0, entry.Value) * effectiveVictories);
+                int qty = (int)Math.Floor(Math.Max(0.0, entry.Value) * effectiveVictories * dropQuotaScale);
                 if (qty > 0)
                 {
                     itemDrops[entry.Key] = qty;
                 }
             }
 
-            int equipmentCount = Math.Min(Math.Max(0, equipmentDropCap), (int)Math.Floor(Math.Max(0.0, estimatedEquipmentDropsPerVictory) * effectiveVictories));
+            int equipmentCount = Math.Min(Math.Max(0, equipmentDropCap), (int)Math.Floor(Math.Max(0.0, estimatedEquipmentDropsPerVictory) * effectiveVictories * dropQuotaScale));
             var equipmentDrops = new List<EquipmentInstanceData>(equipmentCount);
 
             return ActionSettlementRules.BuildDungeonRewardSettlement(
@@ -89,6 +92,27 @@ namespace Xiuxian.Scripts.Services
                 equipmentDrops: equipmentDrops,
                 lingqiGain: averageLingqiPerVictory * effectiveVictories,
                 insightGain: averageInsightPerVictory * effectiveVictories);
+        }
+
+        private static double CalculateDropQuotaScale(int remainingDailyRolls, double averageDropRollsPerVictory, double effectiveVictories)
+        {
+            if (remainingDailyRolls == int.MaxValue)
+            {
+                return 1.0;
+            }
+
+            if (remainingDailyRolls <= 0)
+            {
+                return 0.0;
+            }
+
+            double projectedDropRolls = Math.Max(0.0, averageDropRollsPerVictory) * Math.Max(0.0, effectiveVictories);
+            if (projectedDropRolls <= 0.0)
+            {
+                return 1.0;
+            }
+
+            return Math.Clamp(remainingDailyRolls / projectedDropRolls, 0.0, 1.0);
         }
 
         private static double CalculateMonsterVictoryFactor(CharacterStatBlock playerStats, CharacterStatBlock monsterStats)

@@ -33,6 +33,8 @@ namespace Xiuxian.Scripts.Services
         public long TotalJoypadButtonCount { get; private set; }
         public long TotalJoypadAxisInputCount { get; private set; }
         public double TotalActiveSeconds { get; private set; }
+        public double SecondsSinceLastInput { get; private set; }
+        public double SecondsSinceLastInputBeforeLatestBatch { get; private set; }
 
         // AP results
         public double ApThisSecond { get; private set; }
@@ -40,7 +42,7 @@ namespace Xiuxian.Scripts.Services
         public double ApAccumulator { get; private set; }
         public int InputEventsThisSecond { get; private set; }
 
-        [Export] public double ApBaseline { get; set; } = 6.0;
+        [Export] public double ApBaseline { get; set; } = GameBalanceConstants.InputDecay.ApBaseline;
         [Export] public double KeyDownWeight { get; set; } = 1.0;
         [Export] public double MouseClickWeight { get; set; } = 1.2;
         [Export] public double ScrollStepWeight { get; set; } = 0.4;
@@ -48,9 +50,9 @@ namespace Xiuxian.Scripts.Services
         [Export] public double JoypadButtonWeight { get; set; } = 1.0;
         [Export] public double JoypadAxisWeight { get; set; } = 0.8;
 
-        [Export] public double DecayThreshold { get; set; } = 1.0;
-        [Export] public double DecayRate { get; set; } = 0.25;
-        [Export] public double MinDecayMultiplier { get; set; } = 0.45;
+        [Export] public double DecayThreshold { get; set; } = GameBalanceConstants.InputDecay.DecayThreshold;
+        [Export] public double DecayRate { get; set; } = GameBalanceConstants.InputDecay.DecayRate;
+        [Export] public double MinDecayMultiplier { get; set; } = GameBalanceConstants.InputDecay.MinDecayMultiplier;
 
         [Export] public double RollingWindowSeconds { get; set; } = 10.0;
         [Export] public double SoftCapPerMinute { get; set; } = 420.0;
@@ -73,10 +75,13 @@ namespace Xiuxian.Scripts.Services
         private double _runtimeSeconds;
         private double _minuteWindowStartSeconds;
         private double _apFinalThisMinute;
+        private double _pendingIdleSecondsBeforeBatch;
+        private bool _hasPendingIdleSnapshot;
 
         public override void _Process(double delta)
         {
             _runtimeSeconds += delta;
+            SecondsSinceLastInput += delta;
 
             if (_runtimeSeconds - _minuteWindowStartSeconds >= 60.0)
             {
@@ -105,6 +110,7 @@ namespace Xiuxian.Scripts.Services
             JoypadButtonCount = joypadButtonBatch;
             JoypadAxisInputCount = joypadAxisBatch;
             InputEventsThisSecond = inputBatch;
+            SecondsSinceLastInputBeforeLatestBatch = inputBatch > 0 ? _pendingIdleSecondsBeforeBatch : SecondsSinceLastInput;
             TotalActiveSeconds += delta;
 
             PushRollingWindow(apRawBatch);
@@ -133,6 +139,7 @@ namespace Xiuxian.Scripts.Services
         {
             lock (_pendingLock)
             {
+                MarkInputActivity();
                 _pendingKeyDown++;
                 _pendingInputEvents++;
                 _pendingRawAp += KeyDownWeight;
@@ -144,6 +151,7 @@ namespace Xiuxian.Scripts.Services
         {
             lock (_pendingLock)
             {
+                MarkInputActivity();
                 _pendingMouseClick++;
                 _pendingInputEvents++;
                 _pendingRawAp += MouseClickWeight;
@@ -160,6 +168,7 @@ namespace Xiuxian.Scripts.Services
 
             lock (_pendingLock)
             {
+                MarkInputActivity();
                 _pendingMouseScroll += steps;
                 _pendingInputEvents += steps;
                 _pendingRawAp += steps * ScrollStepWeight;
@@ -176,6 +185,7 @@ namespace Xiuxian.Scripts.Services
 
             lock (_pendingLock)
             {
+                MarkInputActivity();
                 _pendingMouseMove += distancePx;
                 _pendingRawAp += distancePx / MovePxDivider;
                 TotalMouseMoveDistancePx += distancePx;
@@ -186,6 +196,7 @@ namespace Xiuxian.Scripts.Services
         {
             lock (_pendingLock)
             {
+                MarkInputActivity();
                 _pendingJoypadButton++;
                 _pendingInputEvents++;
                 _pendingRawAp += JoypadButtonWeight;
@@ -197,6 +208,7 @@ namespace Xiuxian.Scripts.Services
         {
             lock (_pendingLock)
             {
+                MarkInputActivity();
                 _pendingJoypadAxis++;
                 _pendingInputEvents++;
                 _pendingRawAp += JoypadAxisWeight;
@@ -233,7 +245,20 @@ namespace Xiuxian.Scripts.Services
                 _pendingMouseMove = 0.0;
                 _pendingJoypadButton = 0;
                 _pendingJoypadAxis = 0;
+                _pendingIdleSecondsBeforeBatch = _hasPendingIdleSnapshot ? _pendingIdleSecondsBeforeBatch : SecondsSinceLastInput;
+                _hasPendingIdleSnapshot = false;
             }
+        }
+
+        private void MarkInputActivity()
+        {
+            if (!_hasPendingIdleSnapshot)
+            {
+                _pendingIdleSecondsBeforeBatch = SecondsSinceLastInput;
+                _hasPendingIdleSnapshot = true;
+            }
+
+            SecondsSinceLastInput = 0.0;
         }
 
         private void PushRollingWindow(double apRawBatch)
@@ -305,6 +330,7 @@ namespace Xiuxian.Scripts.Services
             ApThisSecond = 0.0;
             ApFinal = 0.0;
             InputEventsThisSecond = 0;
+            SecondsSinceLastInputBeforeLatestBatch = SecondsSinceLastInput;
 
             _rollingEvents.Clear();
             _rollingRawApSum = 0.0;

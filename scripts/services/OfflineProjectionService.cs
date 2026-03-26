@@ -103,6 +103,51 @@ namespace Xiuxian.Scripts.Services
             return result;
         }
 
+        public double CalculateAverageDropRollsPerVictory(string levelId = "")
+        {
+            if (_provider.Levels.Count == 0)
+            {
+                return 0.0;
+            }
+
+            int levelIndex = _getActiveLevelIndex();
+            if (!string.IsNullOrEmpty(levelId) && _tryFindLevelIndex(levelId, out int found))
+            {
+                levelIndex = found;
+            }
+
+            var level = _provider.Levels[Math.Clamp(levelIndex, 0, _provider.Levels.Count - 1)];
+            if (!level.ContainsKey("spawn_table") || level["spawn_table"].VariantType != Variant.Type.Array)
+            {
+                return 0.0;
+            }
+
+            double totalWeight = 0.0;
+            double weightedRolls = 0.0;
+            string resolvedLevelId = LevelConfigProvider.GetString(level, "level_id", "");
+            var spawnTable = (Godot.Collections.Array<Variant>)level["spawn_table"];
+            foreach (Variant item in spawnTable)
+            {
+                if (item.VariantType != Variant.Type.Dictionary)
+                {
+                    continue;
+                }
+
+                var dict = (Godot.Collections.Dictionary<string, Variant>)item;
+                string monsterId = LevelConfigProvider.GetString(dict, "monster_id", "");
+                int weight = Math.Max(0, dict.ContainsKey("weight") ? dict["weight"].AsInt32() : 0);
+                if (string.IsNullOrEmpty(monsterId) || weight <= 0)
+                {
+                    continue;
+                }
+
+                totalWeight += weight;
+                weightedRolls += weight * BuildOfflineDropRollCount(resolvedLevelId, monsterId);
+            }
+
+            return totalWeight > 0.0 ? weightedRolls / totalWeight : 0.0;
+        }
+
         private Dictionary<string, double> BuildOfflineAverageItemDrops(string levelId, string monsterId)
         {
             var result = new Dictionary<string, double>();
@@ -161,6 +206,23 @@ namespace Xiuxian.Scripts.Services
             }
 
             return result;
+        }
+
+        private int BuildOfflineDropRollCount(string levelId, string monsterId)
+        {
+            if (!_tryGetMonster(monsterId, out var monster) || !LevelConfigProvider.TryGetChildDictionary(monster, "drops", out var drops))
+            {
+                return 0;
+            }
+
+            string configuredDropTableId = LevelConfigProvider.GetString(drops, "drop_table_id", "");
+            string dropTableId = _resolveDropTableForActiveLevel(levelId, monsterId, configuredDropTableId);
+            if (string.IsNullOrEmpty(dropTableId) || !_tryGetDropTable(dropTableId, out _))
+            {
+                return 0;
+            }
+
+            return Math.Max(0, drops.ContainsKey("drop_roll_count") ? drops["drop_roll_count"].AsInt32() : 1);
         }
 
         private double BuildOfflineAverageEquipmentDrops(string levelId, string monsterId)

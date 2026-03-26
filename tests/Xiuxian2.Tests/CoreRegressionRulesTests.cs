@@ -580,6 +580,46 @@ public sealed class CoreRegressionRulesTests
     }
 
     [Fact]
+    public void CalculateEncounterRate_ScalesWithRealmDifferenceAndClamps()
+    {
+        double boosted = BattleStartRules.CalculateEncounterRate(0.26, 8, 2);
+        double reduced = BattleStartRules.CalculateEncounterRate(0.26, 1, 5);
+        double clampedLow = BattleStartRules.CalculateEncounterRate(0.02, 1, 9);
+
+        Assert.Equal(0.338, boosted, 3);
+        Assert.Equal(0.208, reduced, 3);
+        Assert.Equal(0.05, clampedLow, 3);
+    }
+
+    [Fact]
+    public void DetermineEncounterStart_BlocksWhenScaledEncounterRollFails()
+    {
+        BattleEncounterDecision blocked = BattleStartRules.DetermineEncounterStart(
+            1,
+            320.0f,
+            360.0f,
+            "monster_alpha",
+            0.18,
+            1,
+            5,
+            0.25);
+
+        BattleEncounterDecision allowed = BattleStartRules.DetermineEncounterStart(
+            1,
+            320.0f,
+            360.0f,
+            "monster_alpha",
+            0.18,
+            8,
+            2,
+            0.20);
+
+        Assert.False(blocked.ShouldStart);
+        Assert.True(allowed.ShouldStart);
+        Assert.Equal("monster_alpha", allowed.MonsterId);
+    }
+
+    [Fact]
     public void BuildStartSetup_UsesMonsterProfileWhenAvailable()
     {
         MonsterStatProfile profile = new(

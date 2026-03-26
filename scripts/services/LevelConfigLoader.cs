@@ -38,6 +38,7 @@ namespace Xiuxian.Scripts.Services
         public double ProgressPer100Inputs => _activeLevelManager.ProgressPer100Inputs;
         public double EncounterCheckIntervalProgress => _activeLevelManager.EncounterCheckIntervalProgress;
         public double BaseEncounterRate => _activeLevelManager.BaseEncounterRate;
+        public int ActiveLevelDangerLevel => _activeLevelManager.DangerLevel;
         public double BattlePauseFactor => _activeLevelManager.BattlePauseFactor;
         public int PlayerBaseHp => _activeLevelManager.PlayerBaseHp;
         public int PlayerAttackPerRound => _activeLevelManager.PlayerAttackPerRound;
@@ -126,7 +127,9 @@ namespace Xiuxian.Scripts.Services
         public double GetOfflineAverageLingqiPerVictory(string levelId = "") => DungeonOfflineProjectionRules.CalculateAverageLingqiPerVictory(_offlineProjectionService.BuildOfflineMonsterSettlementSpecs(levelId));
         public double GetOfflineAverageInsightPerVictory(string levelId = "") => DungeonOfflineProjectionRules.CalculateAverageInsightPerVictory(_offlineProjectionService.BuildOfflineMonsterSettlementSpecs(levelId));
         public Dictionary<string, double> GetOfflineAverageItemDropsPerVictory(string levelId = "") => DungeonOfflineProjectionRules.CalculateAverageItemDropsPerVictory(_offlineProjectionService.BuildOfflineMonsterSettlementSpecs(levelId));
+        public double GetOfflineAverageDropRollsPerVictory(string levelId = "") => _offlineProjectionService.CalculateAverageDropRollsPerVictory(levelId);
         public double GetOfflineAverageEquipmentDropsPerVictory(string levelId = "") => DungeonOfflineProjectionRules.CalculateAverageEquipmentDropsPerVictory(_offlineProjectionService.BuildOfflineMonsterSettlementSpecs(levelId));
+        public int GetOfflineRemainingDailyRolls(string levelId = "") => _runtimeStateService.GetRemainingDailyRollsForLevel(string.IsNullOrEmpty(levelId) ? ActiveLevelId : levelId);
 
         public Godot.Collections.Dictionary<string, Variant> ToRuntimeDictionary()
         {

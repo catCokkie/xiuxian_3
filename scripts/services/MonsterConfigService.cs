@@ -23,7 +23,7 @@ namespace Xiuxian.Scripts.Services
         {
             monsterName = "Enemy";
             hp = 24;
-            inputsPerRound = 18;
+            inputsPerRound = GameBalanceConstants.Explore.InputsPerBattleRound;
             attack = 4;
 
             if (!TryGetMonsterStatProfile(monsterId, out MonsterStatProfile profile))

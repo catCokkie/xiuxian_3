@@ -41,8 +41,8 @@ namespace Xiuxian.Scripts.UI
         private readonly List<int> _monsterMoveInputThreshold = new();
 
         private int _defaultInputsPerMoveFrame = 4;
-        private float _monsterMovePxPerFrame = 3.8f;
-        private float _monsterRespawnSpacing = 110.0f;
+        private float _monsterMovePxPerFrame = GameBalanceConstants.Explore.MonsterMovePxPerFrame;
+        private float _monsterRespawnSpacing = GameBalanceConstants.Explore.MonsterRespawnSpacing;
         private string _activeEnemyVisualMonsterId = string.Empty;
         private string _enemySlotAnimType = "none";
         private float _enemySlotAnimSpeed;

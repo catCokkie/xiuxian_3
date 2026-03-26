@@ -138,6 +138,8 @@ public partial class BookTabsController : Control
 
     public override void _Ready()
     {
+        ServiceLocator.Instance?.Refresh();
+
         _leftContentLabel = GetNode<RichTextLabel>("SpreadBody/LeftPage/LeftContentLabel");
         _leftTitleLabel = GetNode<Label>("SpreadBody/LeftPage/LeftTitle");
         _coinLabel = GetNode<Label>("BottomBar/CoinLabel");
@@ -145,15 +147,16 @@ public partial class BookTabsController : Control
         _rightPage = GetNode<Control>("SpreadBody/RightPage");
         _closeButton = GetNode<Button>("CloseButton");
         _closeButton.Pressed += CloseWindow;
-        _activityState = GetNodeOrNull<InputActivityState>("/root/InputActivityState");
-        _backpackState = GetNodeOrNull<BackpackState>("/root/BackpackState");
-        _alchemyState = GetNodeOrNull<AlchemyState>("/root/AlchemyState");
-        _potionInventoryState = GetNodeOrNull<PotionInventoryState>("/root/PotionInventoryState");
-        _smithingState = GetNodeOrNull<SmithingState>("/root/SmithingState");
-        _resourceWalletState = GetNodeOrNull<ResourceWalletState>("/root/ResourceWalletState");
-        _playerProgressState = GetNodeOrNull<PlayerProgressState>("/root/PlayerProgressState");
-        _equippedItemsState = GetNodeOrNull<EquippedItemsState>("/root/EquippedItemsState");
-        _levelConfigLoader = GetNodeOrNull<LevelConfigLoader>("/root/LevelConfigLoader");
+        ServiceLocator? services = ServiceLocator.Instance;
+        _activityState = services?.InputActivityState;
+        _backpackState = services?.BackpackState;
+        _alchemyState = services?.AlchemyState;
+        _potionInventoryState = services?.PotionInventoryState;
+        _smithingState = services?.SmithingState;
+        _resourceWalletState = services?.ResourceWalletState;
+        _playerProgressState = services?.PlayerProgressState;
+        _equippedItemsState = services?.EquippedItemsState;
+        _levelConfigLoader = services?.LevelConfigLoader;
         _exploreProgressController = GetNodeOrNull<ExploreProgressController>("../../ExploreProgressController");
         _simulationLevelFilterId = _levelConfigLoader?.ActiveLevelId ?? "";
 

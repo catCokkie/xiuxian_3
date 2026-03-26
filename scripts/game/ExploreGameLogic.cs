@@ -31,7 +31,7 @@ namespace Xiuxian.Scripts.Game
             public int EnemyHp { get; init; } = 24;
             public int EnemyMaxHp { get; init; } = 24;
             public int EnemyAttackPower { get; init; } = 4;
-            public int InputsPerBattleRoundRuntime { get; init; } = 18;
+        public int InputsPerBattleRoundRuntime { get; init; } = GameBalanceConstants.Explore.InputsPerBattleRound;
             public int PlayerAttackPerRoundRuntime { get; init; } = 4;
             public int EnemyDamageDividerRuntime { get; init; } = 4;
             public int EnemyMinDamageRuntime { get; init; } = 1;
@@ -66,7 +66,7 @@ namespace Xiuxian.Scripts.Game
         public int PlayerHp { get; set; } = 36;
         public int PlayerMaxHp { get; set; } = 36;
         public int EnemyAttackPower { get; set; } = 4;
-        public int InputsPerBattleRoundRuntime { get; set; } = 18;
+        public int InputsPerBattleRoundRuntime { get; set; } = GameBalanceConstants.Explore.InputsPerBattleRound;
         public int PlayerAttackPerRoundRuntime { get; set; } = 4;
         public int EnemyDamageDividerRuntime { get; set; } = 4;
         public int EnemyMinDamageRuntime { get; set; } = 1;
@@ -124,14 +124,18 @@ namespace Xiuxian.Scripts.Game
             float battleTriggerX,
             string monsterId,
             MonsterStatProfile? profile,
-            int defaultInputsPerBattleRound)
+            int defaultInputsPerBattleRound,
+            double baseEncounterRate = 1.0,
+            int playerRealmLevel = 1,
+            int zoneDangerLevel = 1,
+            double randomRoll = 0.0)
         {
             if (InBattle)
             {
                 return false;
             }
 
-            BattleEncounterDecision encounter = BattleStartRules.DetermineEncounterStart(candidateIndex, candidateX, battleTriggerX, monsterId);
+            BattleEncounterDecision encounter = BattleStartRules.DetermineEncounterStart(candidateIndex, candidateX, battleTriggerX, monsterId, baseEncounterRate, playerRealmLevel, zoneDangerLevel, randomRoll);
             if (!encounter.ShouldStart)
             {
                 return false;

@@ -17,6 +17,7 @@ config/icon="res://icon.svg"
 
 [autoload]
 
+ServiceLocator="*res://scripts/services/ServiceLocator.cs"
 LevelConfigLoader="*res://scripts/services/LevelConfigLoader.cs"
 InputActivityState="*res://scripts/services/InputActivityState.cs"
 InputHookService="*res://scripts/services/InputHookService.cs"

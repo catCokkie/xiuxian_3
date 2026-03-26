@@ -26,6 +26,7 @@ namespace Xiuxian.Scripts.Services
         public double ProgressPer100Inputs { get; private set; } = 2.0;
         public double EncounterCheckIntervalProgress { get; private set; } = 20.0;
         public double BaseEncounterRate { get; private set; } = 0.18;
+        public int DangerLevel { get; private set; } = 1;
         public double BattlePauseFactor { get; private set; }
         public int PlayerBaseHp { get; private set; } = 36;
         public int PlayerAttackPerRound { get; private set; } = 4;
@@ -474,6 +475,7 @@ namespace Xiuxian.Scripts.Services
                 ProgressPer100Inputs = 2.0;
                 EncounterCheckIntervalProgress = 20.0;
                 BaseEncounterRate = 0.18;
+                DangerLevel = 1;
                 BattlePauseFactor = 0.0;
                 PlayerBaseHp = 36;
                 PlayerAttackPerRound = 4;
@@ -493,6 +495,7 @@ namespace Xiuxian.Scripts.Services
                 ProgressPer100Inputs = 2.0;
                 EncounterCheckIntervalProgress = 20.0;
                 BaseEncounterRate = 0.18;
+                DangerLevel = 1;
                 BattlePauseFactor = 0.0;
                 _activeMoveInputsByCategory.Clear();
                 _activeMoveInputsByCategory["default"] = 4;
@@ -502,6 +505,7 @@ namespace Xiuxian.Scripts.Services
                 ProgressPer100Inputs = LevelConfigProvider.GetDouble(explore, "progress_per_100_inputs", 2.0);
                 EncounterCheckIntervalProgress = LevelConfigProvider.GetDouble(explore, "encounter_check_interval_progress", 20.0);
                 BaseEncounterRate = LevelConfigProvider.GetDouble(explore, "base_encounter_rate", 0.18);
+                DangerLevel = Math.Max(1, level.ContainsKey("danger_level") ? level["danger_level"].AsInt32() : 1);
                 BattlePauseFactor = LevelConfigProvider.GetDouble(explore, "battle_pause_factor", 0.0);
                 _activeMoveInputsByCategory.Clear();
                 _activeMoveInputsByCategory["default"] = 4;

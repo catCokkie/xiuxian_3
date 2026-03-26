@@ -4,13 +4,31 @@ namespace Xiuxian.Scripts.Services
 {
     public static class BattleStartRules
     {
+        public static double CalculateEncounterRate(double baseEncounterRate, int playerRealmLevel, int zoneDangerLevel)
+        {
+            int levelDiff = playerRealmLevel - zoneDangerLevel;
+            double scaledRate = baseEncounterRate * (1.0 + (levelDiff * 0.05));
+            return Math.Clamp(scaledRate, 0.05, 0.95);
+        }
+
         public static BattleEncounterDecision DetermineEncounterStart(
             int candidateIndex,
             float candidateX,
             float battleTriggerX,
-            string monsterId)
+            string monsterId,
+            double baseEncounterRate,
+            int playerRealmLevel,
+            int zoneDangerLevel,
+            double randomRoll)
         {
-            return BattleLifecycleRules.DetermineEncounterStart(candidateIndex, candidateX, battleTriggerX, monsterId);
+            BattleEncounterDecision decision = BattleLifecycleRules.DetermineEncounterStart(candidateIndex, candidateX, battleTriggerX, monsterId);
+            if (!decision.ShouldStart)
+            {
+                return decision;
+            }
+
+            double encounterRate = CalculateEncounterRate(baseEncounterRate, playerRealmLevel, zoneDangerLevel);
+            return randomRoll <= encounterRate ? decision : new BattleEncounterDecision(false, -1, string.Empty);
         }
 
         public static BattleEncounterDecision BuildBossEncounter(string bossMonsterId)
