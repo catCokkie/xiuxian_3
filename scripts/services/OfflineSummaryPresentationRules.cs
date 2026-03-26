@@ -18,54 +18,84 @@ namespace Xiuxian.Scripts.Services
 
         public static string BuildBody(ActionSettlementResult result)
         {
-            List<string> parts = new();
+            List<string> labels = new();
+            List<string> gains = new();
+
+            if (result.ActionId == PlayerActionState.ActionDungeon)
+            {
+                labels.Add(result.BattleRoundsAdvanced > 0 ? "结果：副本有推进" : "结果：副本收益偏少");
+            }
+            else if (result.ActionId == PlayerActionState.ActionAlchemy)
+            {
+                labels.Add("结果：炼丹进度已结算");
+            }
+            else if (result.ActionId == PlayerActionState.ActionSmithing)
+            {
+                labels.Add("结果：炼器进度已结算");
+            }
+            else
+            {
+                labels.Add("结果：修炼收益已结算");
+            }
+
             if (result.LingqiGain > 0.0)
             {
-                parts.Add($"灵气+{result.LingqiGain:0}");
+                gains.Add($"灵气+{result.LingqiGain:0}");
             }
             if (result.InsightGain > 0.0)
             {
-                parts.Add($"悟性+{result.InsightGain:0}");
+                gains.Add($"悟性+{result.InsightGain:0}");
             }
             if (result.PetAffinityGain > 0.0)
             {
-                parts.Add($"灵宠亲和+{result.PetAffinityGain:0}");
+                gains.Add($"灵宠亲和+{result.PetAffinityGain:0}");
             }
             if (result.RealmExpGain > 0.0)
             {
-                parts.Add($"境界经验+{result.RealmExpGain:0}");
+                gains.Add($"境界经验+{result.RealmExpGain:0}");
             }
             if (result.ExploreProgressGain > 0.0)
             {
-                parts.Add($"探索推进+{result.ExploreProgressGain:0.0}");
+                gains.Add($"探索推进+{result.ExploreProgressGain:0.0}");
             }
             if (result.BattleRoundsAdvanced > 0)
             {
-                parts.Add($"遭遇{result.BattleRoundsAdvanced}次");
+                gains.Add($"遭遇{result.BattleRoundsAdvanced}次");
             }
             foreach (KeyValuePair<string, int> drop in result.ItemDrops)
             {
-                parts.Add($"{drop.Key}+{drop.Value}");
+                gains.Add($"{drop.Key}+{drop.Value}");
             }
             if (result.EquipmentDrops.Count > 0)
             {
-                parts.Add($"装备+{result.EquipmentDrops.Count}");
+                gains.Add($"装备+{result.EquipmentDrops.Count}");
             }
 
-            if (parts.Count == 0)
+            if (gains.Count == 0)
             {
-                return "本次离线未获得可结算收益。";
+                return string.Join(" | ", labels) + " | 本次离线未获得可结算收益。";
             }
 
             var sb = new StringBuilder();
-            for (int i = 0; i < parts.Count; i++)
+            for (int i = 0; i < labels.Count; i++)
             {
                 if (i > 0)
                 {
                     sb.Append(" | ");
                 }
-                sb.Append(parts[i]);
+                sb.Append(labels[i]);
             }
+
+            sb.Append("\n收益：");
+            for (int i = 0; i < gains.Count; i++)
+            {
+                if (i > 0)
+                {
+                    sb.Append(" | ");
+                }
+                sb.Append(gains[i]);
+            }
+
             return sb.ToString();
         }
     }

@@ -17,6 +17,8 @@ public sealed class OfflineSummaryPresentationRulesTests
 
         Assert.Equal("离线修炼完成", OfflineSummaryPresentationRules.BuildTitle(result));
         string body = OfflineSummaryPresentationRules.BuildBody(result);
+        Assert.Contains("结果：修炼收益已结算", body);
+        Assert.Contains("收益：", body);
         Assert.Contains("灵气+120", body);
         Assert.Contains("悟性+8", body);
         Assert.Contains("境界经验+30", body);
@@ -40,6 +42,8 @@ public sealed class OfflineSummaryPresentationRulesTests
 
         Assert.Equal("离线副本完成", OfflineSummaryPresentationRules.BuildTitle(result));
         string body = OfflineSummaryPresentationRules.BuildBody(result);
+        Assert.Contains("结果：副本有推进", body);
+        Assert.Contains("收益：", body);
         Assert.Contains("探索推进+120.0", body);
         Assert.Contains("遭遇6次", body);
         Assert.Contains("lingqi_shard+3", body);

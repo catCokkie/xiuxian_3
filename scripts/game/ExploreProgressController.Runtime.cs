@@ -487,10 +487,10 @@ namespace Xiuxian.Scripts.Game
             }
 
             _actionModeOptionButton.Clear();
-            _actionModeOptionButton.AddItem(UiText.ActionModeDungeon, 0);
-            _actionModeOptionButton.AddItem(UiText.ActionModeCultivation, 1);
-            _actionModeOptionButton.AddItem(UiText.ActionModeAlchemy, 2);
-            _actionModeOptionButton.AddItem(UiText.ActionModeSmithing, 3);
+            _actionModeOptionButton.AddItem(ExploreProgressPresentationRules.GetActionModeOptionText(0), 0);
+            _actionModeOptionButton.AddItem(ExploreProgressPresentationRules.GetActionModeOptionText(1), 1);
+            _actionModeOptionButton.AddItem(ExploreProgressPresentationRules.GetActionModeOptionText(2), 2);
+            _actionModeOptionButton.AddItem(ExploreProgressPresentationRules.GetActionModeOptionText(3), 3);
             _actionModeOptionButton.TooltipText = "切换主行为（等同 F4）";
             _actionModeOptionButton.ItemSelected -= OnActionModeOptionSelected;
             _actionModeOptionButton.ItemSelected += OnActionModeOptionSelected;

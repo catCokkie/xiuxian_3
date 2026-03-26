@@ -97,6 +97,7 @@ public partial class BookTabsController : Control
     private SmithingState? _smithingState;
     private ResourceWalletState? _resourceWalletState;
     private PlayerProgressState? _playerProgressState;
+    private PlayerActionState? _playerActionState;
     private EquippedItemsState? _equippedItemsState;
     private LevelConfigLoader? _levelConfigLoader;
     private ExploreProgressController? _exploreProgressController;
@@ -155,6 +156,7 @@ public partial class BookTabsController : Control
         _smithingState = services?.SmithingState;
         _resourceWalletState = services?.ResourceWalletState;
         _playerProgressState = services?.PlayerProgressState;
+        _playerActionState = services?.PlayerActionState;
         _equippedItemsState = services?.EquippedItemsState;
         _levelConfigLoader = services?.LevelConfigLoader;
         _exploreProgressController = GetNodeOrNull<ExploreProgressController>("../../ExploreProgressController");
@@ -557,41 +559,263 @@ public partial class BookTabsController : Control
         double expRequired = _playerProgressState.RealmExpRequired;
         double expPercent = expRequired > 0.0 ? _playerProgressState.RealmExp / expRequired * 100.0 : 0.0;
 
-        string summary = UiText.CultivationOverview(
-                _playerProgressState.RealmLevel,
-                _playerProgressState.RealmExp,
-                expRequired,
-                expPercent,
-                _resourceWalletState.Lingqi,
-                _resourceWalletState.Insight,
-                _resourceWalletState.PetAffinity,
-                _resourceWalletState.SpiritStones);
+        var sb = new StringBuilder();
+        sb.AppendLine(UiText.LeftTabCultivation);
+        sb.AppendLine("当前状态");
+        sb.AppendLine($"- 主行为: {BuildCultivationActionSummary()}");
+        sb.AppendLine($"- 当前重心: {BuildCultivationFocusSummary()}");
+        sb.AppendLine();
+        sb.AppendLine("成长状态");
+        sb.AppendLine($"- 当前境界: 炼气{_playerProgressState.RealmLevel}层");
+        sb.AppendLine($"- 境界经验: {_playerProgressState.RealmExp:0.0}/{expRequired:0.0} ({expPercent:0}%)");
+        sb.AppendLine($"- 突破状态: {UiText.CultivationBreakthroughStatus(_playerProgressState.CanBreakthrough, Mathf.Max(0.0f, (float)(expRequired - _playerProgressState.RealmExp)))}");
+        sb.AppendLine($"- 悟性储备: {_resourceWalletState.Insight:0.0}（{BuildInsightStatusSummary()}）");
+        sb.AppendLine();
+        sb.AppendLine("战斗准备");
+        sb.AppendLine($"- 当前区域: {BuildZoneReadinessSummary()}");
+        sb.AppendLine($"- 装备概况: {BuildEquipmentReadinessSummary()}");
+        sb.AppendLine($"- 丹药储备: {BuildPotionReadinessSummary()}");
+        sb.AppendLine();
+        sb.AppendLine("资源判断");
+        sb.AppendLine($"- 灵气: {_resourceWalletState.Lingqi:0.0}（{BuildLingqiStatusSummary()}）");
+        sb.AppendLine($"- 灵石: {_resourceWalletState.SpiritStones}（{BuildSpiritStoneStatusSummary()}）");
 
         if (_playerProgressState.HasUnlockedAdvancedAlchemyStudy)
         {
-            summary += "\n- 高阶丹方参悟: 已解锁";
+            sb.AppendLine("- 高阶丹方参悟: 已解锁");
         }
 
         if (_alchemyState != null && _alchemyState.HasSelectedRecipe && AlchemyRules.TryGetRecipe(_alchemyState.SelectedRecipeId, out AlchemyRules.RecipeSpec recipe))
         {
             double percent = _alchemyState.RequiredProgress > 0.0f ? _alchemyState.CurrentProgress / _alchemyState.RequiredProgress * 100.0 : 0.0;
-            summary += $"\n- 当前丹方: {recipe.DisplayName} ({percent:0}%)";
+            sb.AppendLine($"- 当前丹方: {recipe.DisplayName} ({percent:0}%)");
         }
 
-        if (_potionInventoryState != null)
+        if (_smithingState != null && _smithingState.HasTarget && _equippedItemsState != null && _equippedItemsState.TryGetEquippedProfileById(_smithingState.TargetEquipmentId, out EquipmentStatProfile target))
         {
-            Dictionary<string, int> potions = _potionInventoryState.GetPotionEntries();
-            if (potions.Count > 0)
-            {
-                summary += "\n- 丹药库存:";
-                foreach ((string potionId, int amount) in potions)
-                {
-                    summary += $"\n  - {UiText.BackpackItemName(potionId)} x{amount}";
-                }
-            }
+            double percent = _smithingState.RequiredProgress > 0.0f ? _smithingState.CurrentProgress / _smithingState.RequiredProgress * 100.0 : 0.0;
+            sb.AppendLine($"- 强化目标: {target.DisplayName} +{target.EnhanceLevel} ({percent:0}%)");
         }
 
-        return summary;
+        sb.AppendLine();
+        sb.AppendLine("当前判断");
+        sb.AppendLine($"- 核心判断: {BuildPrimaryCultivationAssessment()}");
+
+        string alternate = BuildSecondaryCultivationAssessment();
+        if (!string.IsNullOrEmpty(alternate))
+        {
+            sb.AppendLine($"- 补充判断: {alternate}");
+        }
+
+        return sb.ToString().TrimEnd();
+    }
+
+    private string BuildCultivationActionSummary()
+    {
+        string actionId = _playerActionState?.ActionId ?? PlayerActionState.ActionDungeon;
+        string actionName = ExploreProgressPresentationRules.GetActionModeDisplayName(actionId);
+        return actionId == PlayerActionState.ActionDungeon
+            ? $"{actionName}（目标：{BuildActiveZoneName()}）"
+            : actionName;
+    }
+
+    private string BuildCultivationFocusSummary()
+    {
+        string actionId = _playerActionState?.ActionId ?? PlayerActionState.ActionDungeon;
+        return actionId switch
+        {
+            PlayerActionState.ActionCultivation => "稳定积累灵气、悟性与境界经验",
+            PlayerActionState.ActionAlchemy => BuildAlchemyFocusSummary(),
+            PlayerActionState.ActionSmithing => BuildSmithingFocusSummary(),
+            _ => $"刷取 {BuildActiveZoneName()} 的材料、装备与过区进度",
+        };
+    }
+
+    private string BuildAlchemyFocusSummary()
+    {
+        if (_alchemyState != null && _alchemyState.HasSelectedRecipe && AlchemyRules.TryGetRecipe(_alchemyState.SelectedRecipeId, out AlchemyRules.RecipeSpec recipe))
+        {
+            return $"炼制{recipe.DisplayName}，为后续战斗补充消耗品";
+        }
+
+        return "准备战斗消耗品，当前尚未指定丹方";
+    }
+
+    private string BuildSmithingFocusSummary()
+    {
+        if (_smithingState != null && _smithingState.HasTarget && _equippedItemsState != null && _equippedItemsState.TryGetEquippedProfileById(_smithingState.TargetEquipmentId, out EquipmentStatProfile target))
+        {
+            return $"强化{target.DisplayName}，提升当前主力战斗强度";
+        }
+
+        return "强化当前装备，当前尚未指定强化目标";
+    }
+
+    private string BuildInsightStatusSummary()
+    {
+        if (_playerProgressState == null || _resourceWalletState == null)
+        {
+            return "暂不可用";
+        }
+
+        if (_exploreProgressController != null && _exploreProgressController.CanApplyBossWeaknessInsight(_resourceWalletState.Insight))
+        {
+            return "状态：可用于当前 Boss 弱点参悟";
+        }
+
+        if (InsightSpendRules.CanUnlockAdvancedAlchemy(_playerProgressState.HasUnlockedAdvancedAlchemyStudy, _resourceWalletState.Insight))
+        {
+            return "状态：可用于参悟高阶丹方";
+        }
+
+        return _playerProgressState.CanBreakthrough ? "状态：可作为突破后的下阶段储备" : "状态：继续积累，兼顾突破与参悟";
+    }
+
+    private string BuildZoneReadinessSummary()
+    {
+        string zoneName = BuildActiveZoneName();
+        int dangerLevel = _levelConfigLoader?.ActiveLevelDangerLevel ?? 1;
+        int realmLevel = _playerProgressState?.RealmLevel ?? 1;
+        int diff = realmLevel - dangerLevel;
+        string readiness = diff >= 2
+            ? "当前战力明显占优，可加快清图"
+            : diff >= 0
+                ? "可稳定推进，适合准备 Boss 挑战"
+                : "区域压力偏高，更适合先补强后再推进";
+        return $"{zoneName}（危险度 {dangerLevel}）— {readiness}";
+    }
+
+    private string BuildEquipmentReadinessSummary()
+    {
+        EquipmentStatProfile[] profiles = _equippedItemsState?.GetEquippedProfiles() ?? System.Array.Empty<EquipmentStatProfile>();
+        if (profiles.Length == 0)
+        {
+            return "当前未装备物品，战斗强度会明显受限";
+        }
+
+        int maxEnhance = 0;
+        for (int i = 0; i < profiles.Length; i++)
+        {
+            maxEnhance = Mathf.Max(maxEnhance, profiles[i].EnhanceLevel);
+        }
+
+        return maxEnhance > 0
+            ? $"已装备 {profiles.Length} 件，当前最高强化 +{maxEnhance}"
+            : $"已装备 {profiles.Length} 件，仍有明显强化空间";
+    }
+
+    private string BuildPotionReadinessSummary()
+    {
+        Dictionary<string, int> potions = _potionInventoryState?.GetPotionEntries() ?? new Dictionary<string, int>();
+        int huiqi = potions.TryGetValue("potion_huiqi_dan", out int huiqiCount) ? huiqiCount : 0;
+        int juling = potions.TryGetValue("potion_juling_san", out int julingCount) ? julingCount : 0;
+
+        if (huiqi <= 0 && juling <= 0)
+        {
+            return "结果：当前无战斗丹药，续航与战斗容错偏弱";
+        }
+
+        if (huiqi < 2)
+        {
+            return $"回气丹 {huiqi}，聚灵散 {juling}，续航略紧";
+        }
+
+        return $"回气丹 {huiqi}，聚灵散 {juling}，可支撑连续战斗";
+    }
+
+    private string BuildLingqiStatusSummary()
+    {
+        double lingqi = _resourceWalletState?.Lingqi ?? 0.0;
+        if (lingqi < 50.0)
+        {
+            return "偏紧，优先修炼或减少强化消耗";
+        }
+
+        if (lingqi < 150.0)
+        {
+            return "可用，够支撑一轮炼丹或低阶强化";
+        }
+
+        return "充足，可同时覆盖炼丹、强化与推进消耗";
+    }
+
+    private string BuildSpiritStoneStatusSummary()
+    {
+        int spiritStones = _resourceWalletState?.SpiritStones ?? 0;
+        if (spiritStones < 30)
+        {
+            return "偏少，先以副本与出售材料补充";
+        }
+
+        if (spiritStones < 100)
+        {
+            return "状态：可用于少量便利消费或兑换";
+        }
+
+        return "储备充足，可作为应急便利资金";
+    }
+
+    private string BuildPrimaryCultivationAssessment()
+    {
+        if (_playerProgressState?.CanBreakthrough == true)
+        {
+            return "结果：当前已满足突破条件，进入下一境界的门槛已经打开。";
+        }
+
+        Dictionary<string, int> potions = _potionInventoryState?.GetPotionEntries() ?? new Dictionary<string, int>();
+        int huiqi = potions.TryGetValue("potion_huiqi_dan", out int huiqiCount) ? huiqiCount : 0;
+        if (huiqi < 2 && _resourceWalletState != null && _backpackState != null && AlchemyRules.CanStartRecipe("potion_huiqi_dan", _resourceWalletState.Lingqi, _backpackState.GetItemEntries(), _playerProgressState?.HasUnlockedAdvancedAlchemyStudy ?? false))
+        {
+            return "结果：当前已经具备补充回气丹的条件，战斗容错仍有提升空间。";
+        }
+
+        if (_smithingState != null && _smithingState.HasTarget && _equippedItemsState != null && _equippedItemsState.TryGetEquippedProfileById(_smithingState.TargetEquipmentId, out EquipmentStatProfile target))
+        {
+            return $"结果：当前强化重心集中在 {target.DisplayName}，装备成长链路已经建立。";
+        }
+
+        if (_resourceWalletState != null && _resourceWalletState.Lingqi < 50.0)
+        {
+            return "结果：当前灵气偏紧，炼丹、强化和持续推进都会受到约束。";
+        }
+
+        return $"结果：当前主循环仍围绕 {BuildActiveZoneName()} 展开，资源与过区进度保持同步增长。";
+    }
+
+    private string BuildSecondaryCultivationAssessment()
+    {
+        if (_playerProgressState != null && !_playerProgressState.HasUnlockedAdvancedAlchemyStudy && _resourceWalletState != null && InsightSpendRules.CanUnlockAdvancedAlchemy(_playerProgressState.HasUnlockedAdvancedAlchemyStudy, _resourceWalletState.Insight))
+        {
+            return "状态：当前悟性已经足够支撑一次高阶丹方参悟。";
+        }
+
+        if (_exploreProgressController != null && _resourceWalletState != null && _exploreProgressController.CanApplyBossWeaknessInsight(_resourceWalletState.Insight))
+        {
+            return "状态：当前已具备 Boss 弱点参悟条件，Boss 战准备度较高。";
+        }
+
+        if (_resourceWalletState != null && _resourceWalletState.SpiritStones >= 50)
+        {
+            return "状态：当前灵石储备已能覆盖一定便利消费和兑换操作。";
+        }
+
+        return string.Empty;
+    }
+
+    private string BuildActiveZoneName()
+    {
+        if (_levelConfigLoader == null)
+        {
+            return UiText.DefaultZoneName;
+        }
+
+        string actionTargetId = _playerActionState?.ActionTargetId ?? string.Empty;
+        if (!string.IsNullOrEmpty(actionTargetId))
+        {
+            return _levelConfigLoader.GetLevelName(actionTargetId);
+        }
+
+        return _levelConfigLoader.ActiveLevelName;
     }
 
     private void RefreshCultivationPanelContent()

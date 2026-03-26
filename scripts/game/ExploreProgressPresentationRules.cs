@@ -10,10 +10,10 @@ namespace Xiuxian.Scripts.Game
         {
             return selected switch
             {
-                1 => UiText.ActionModeCultivation,
-                2 => UiText.ActionModeAlchemy,
-                3 => UiText.ActionModeSmithing,
-                _ => UiText.ActionModeDungeon,
+                1 => "修炼｜灵气悟性",
+                2 => "炼丹｜战斗丹药",
+                3 => "炼器｜装备强化",
+                _ => "副本｜材料装备",
             };
         }
 
@@ -79,8 +79,9 @@ namespace Xiuxian.Scripts.Game
             for (int i = 0; i < entries.Count; i++)
             {
                 var entry = entries[i];
-                sb.Append($"\n[{entry.TimeLabel}] {entry.ZoneName} | {entry.MonsterName} | {entry.BattleResult}");
-                sb.Append($"\n{entry.RewardSummary}");
+                sb.Append($"\n[{entry.TimeLabel}] {entry.ZoneName} | {entry.MonsterName}");
+                sb.Append($"\n结果：{entry.BattleResult}");
+                sb.Append($"\n收益：{entry.RewardSummary}");
             }
 
             return sb.ToString();

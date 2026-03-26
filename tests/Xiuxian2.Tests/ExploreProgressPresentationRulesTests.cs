@@ -8,8 +8,8 @@ public sealed class ExploreProgressPresentationRulesTests
     [Fact]
     public void ActionModeTexts_MapAllFourModes()
     {
-        Assert.Equal(UiText.ActionModeDungeon, ExploreProgressPresentationRules.GetActionModeOptionText(0));
-        Assert.Equal(UiText.ActionModeAlchemy, ExploreProgressPresentationRules.GetActionModeOptionText(2));
+        Assert.Equal("副本｜材料装备", ExploreProgressPresentationRules.GetActionModeOptionText(0));
+        Assert.Equal("炼丹｜战斗丹药", ExploreProgressPresentationRules.GetActionModeOptionText(2));
         Assert.Equal("主行为：炼器", ExploreProgressPresentationRules.GetPausedModeLabel(PlayerActionState.ActionSmithing));
     }
 
@@ -27,6 +27,8 @@ public sealed class ExploreProgressPresentationRulesTests
             new[] { ("12:34", "幽泉洞窟", "苔痕史莱姆", "胜利", "灵气+12") });
 
         Assert.Contains("最近战斗日志", text);
-        Assert.Contains("[12:34] 幽泉洞窟 | 苔痕史莱姆 | 胜利", text);
+        Assert.Contains("[12:34] 幽泉洞窟 | 苔痕史莱姆", text);
+        Assert.Contains("结果：胜利", text);
+        Assert.Contains("收益：灵气+12", text);
     }
 }
