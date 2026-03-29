@@ -917,6 +917,9 @@ public partial class BookTabsController : Control
         bool canBreakthrough = _playerProgressState.CanBreakthrough;
 
         _cultivationStatusLabel.Text = UiText.CultivationBreakthroughStatus(canBreakthrough, remainingExp);
+        _cultivationStatusLabel.AddThemeColorOverride("font_color", canBreakthrough
+            ? new Color(0.3f, 0.7f, 0.3f)
+            : new Color(0.8f, 0.6f, 0.2f));
         _cultivationBreakthroughButton.Disabled = !canBreakthrough;
         _cultivationBreakthroughButton.Text = canBreakthrough
             ? UiText.BreakthroughButtonReadyLabel
@@ -1720,6 +1723,7 @@ public partial class BookTabsController : Control
 
         Button quitButton = new();
         quitButton.Text = UiText.Quit;
+        quitButton.AddThemeColorOverride("font_color", new Color(0.78f, 0.31f, 0.31f));
         quitButton.Pressed += () => GetTree().Quit();
         _settingsActionRoot.AddChild(quitButton);
 
@@ -1873,6 +1877,7 @@ public partial class BookTabsController : Control
         _equipmentRoot.AddChild(hint);
 
         _equipmentContentLabel = new RichTextLabel();
+        _equipmentContentLabel.BbcodeEnabled = true;
         _equipmentContentLabel.FitContent = false;
         _equipmentContentLabel.ScrollActive = true;
         _equipmentContentLabel.SizeFlagsVertical = Control.SizeFlags.ExpandFill;

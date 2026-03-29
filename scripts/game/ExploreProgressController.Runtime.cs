@@ -172,6 +172,8 @@ namespace Xiuxian.Scripts.Game
             public long TimestampUnix { get; init; }
             public string ZoneName { get; init; } = "";
             public string MonsterName { get; init; } = "";
+            public string MonsterType { get; init; } = "normal";
+            public int RoundCount { get; init; }
             public string BattleResult { get; init; } = "胜利";
             public string RewardSummary { get; init; } = "无掉落";
 
@@ -182,6 +184,8 @@ namespace Xiuxian.Scripts.Game
                     ["timestamp_unix"] = TimestampUnix,
                     ["zone_name"] = ZoneName,
                     ["monster_name"] = MonsterName,
+                    ["monster_type"] = MonsterType,
+                    ["round_count"] = RoundCount,
                     ["battle_result"] = BattleResult,
                     ["reward_summary"] = RewardSummary,
                 };
@@ -194,6 +198,8 @@ namespace Xiuxian.Scripts.Game
                     TimestampUnix = data.ContainsKey("timestamp_unix") ? data["timestamp_unix"].AsInt64() : 0,
                     ZoneName = data.ContainsKey("zone_name") ? data["zone_name"].AsString() : "",
                     MonsterName = data.ContainsKey("monster_name") ? data["monster_name"].AsString() : "",
+                    MonsterType = data.ContainsKey("monster_type") ? data["monster_type"].AsString() : "normal",
+                    RoundCount = data.ContainsKey("round_count") ? data["round_count"].AsInt32() : 0,
                     BattleResult = data.ContainsKey("battle_result") ? data["battle_result"].AsString() : "胜利",
                     RewardSummary = data.ContainsKey("reward_summary") ? data["reward_summary"].AsString() : "无掉落",
                 };
@@ -1002,6 +1008,10 @@ namespace Xiuxian.Scripts.Game
         {
             bool isBossBattle = IsBossChallengeBattle();
             int defeatedMonsterIndex = _battleMonsterIndex;
+
+            string defeatResult = _lastBattleEndedByBossTimeout ? "超时" : "失败";
+            AppendBattleLog(0, 0, 0, "none", defeatResult);
+
             SyncLogicFromControllerState();
             BattleDefeatDecision defeat = _logic.HandleBattleDefeat(_levelConfigLoader?.ActiveLevelId ?? string.Empty, isBossBattle);
             SyncControllerStateFromLogic();
@@ -2381,13 +2391,13 @@ namespace Xiuxian.Scripts.Game
                 return UiText.BattleLogEmpty;
             }
 
-            var entries = new List<(string TimeLabel, string ZoneName, string MonsterName, string BattleResult, string RewardSummary)>();
+            var entries = new List<(string TimeLabel, string ZoneName, string MonsterName, string MonsterType, int RoundCount, string BattleResult, string RewardSummary)>();
             foreach (BattleLogEntry entry in _recentBattleLogs)
             {
                 string timeLabel = entry.TimestampUnix > 0
                     ? Time.GetDatetimeStringFromUnixTime(entry.TimestampUnix, true).Substring(11, 5)
                     : "--:--";
-                entries.Add((timeLabel, entry.ZoneName, entry.MonsterName, entry.BattleResult, entry.RewardSummary));
+                entries.Add((timeLabel, entry.ZoneName, entry.MonsterName, entry.MonsterType, entry.RoundCount, entry.BattleResult, entry.RewardSummary));
             }
 
             return ExploreProgressPresentationRules.BuildRecentBattleLogText(entries);
@@ -2396,17 +2406,31 @@ namespace Xiuxian.Scripts.Game
         public int TotalBattleCount => _totalBattleCount;
         public int TotalBattleWinCount => _totalBattleWinCount;
 
-        private void AppendBattleLog(double lingqi, double insight, int spiritStones, string itemPart)
+        private void AppendBattleLog(double lingqi, double insight, int spiritStones, string itemPart, string result = "胜利")
         {
             string potionSummary = _consumedPotionsThisBattle.Count > 0
                 ? $" | 丹药:{string.Join(',', _consumedPotionsThisBattle)}"
                 : string.Empty;
+            string monsterType = "normal";
+            if (IsBossChallengeBattle())
+            {
+                monsterType = "boss";
+            }
+            else if (_levelConfigLoader != null && !string.IsNullOrEmpty(_battleMonsterId)
+                && _levelConfigLoader.TryGetMonsterStatProfile(_battleMonsterId, out MonsterStatProfile mProfile)
+                && mProfile.MoveCategory == "elite")
+            {
+                monsterType = "elite";
+            }
+
             _recentBattleLogs.Insert(0, new BattleLogEntry
             {
                 TimestampUnix = (long)Time.GetUnixTimeFromSystem(),
                 ZoneName = _currentZone,
                 MonsterName = string.IsNullOrEmpty(_battleMonsterName) ? UiText.DefaultMonsterName : _battleMonsterName,
-                BattleResult = "胜利",
+                MonsterType = monsterType,
+                RoundCount = _battleRoundCounter,
+                BattleResult = result,
                 RewardSummary = RewardRules.BuildBattleRewardSummary(lingqi, insight, spiritStones, itemPart) + potionSummary,
             });
 

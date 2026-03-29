@@ -5,7 +5,7 @@ public static class UiText
 {
     public const string DragHandle = "↕";
     public const string ResizeHandle = "↔";
-    public const string BookButton = "书";
+    public const string BookButton = "📖";
     public const string SpiritStoneLabelPrefix = "灵石";
     public const string DefaultZoneName = "幽泉洞窟";
     public const string DefaultMonsterName = "妖物";
@@ -30,16 +30,16 @@ public static class UiText
     public const string Open = "打开";
     public const string DevHintCloudSync = "说明：云端同步功能仍在开发中，当前仅保存开关状态。";
     public const string Language = "语言";
-    public const string KeepOnTop = "保持窗口置顶";
+    public const string KeepOnTop = "窗口置顶";
     public const string TaskbarIcon = "任务栏图标";
     public const string StartupAnimation = "开机启动动画";
     public const string AdminMode = "管理员模式";
     public const string HandwritingSupport = "手写支持";
     public const string Vsync = "垂直同步";
-    public const string MaxFps = "帧率";
+    public const string MaxFps = "帧率上限";
     public const string Resolution = "主界面分辨率";
     public const string ShowControlMarkers = "显示界面控制标记";
-    public const string LogFolder = "显示日志文件夹";
+    public const string LogFolder = "日志文件夹";
     public const string ShowValidationPanel = "显示配置校验面板";
     public const string GameScale = "游戏缩放比例";
     public const string UiScale = "界面缩放比例";
@@ -156,8 +156,8 @@ public static class UiText
     public static string CultivationBreakthroughStatus(bool canBreakthrough, double remainingExp)
     {
         return canBreakthrough
-            ? "境界经验已满，可以立即突破。"
-            : $"境界经验未满，还需 {remainingExp:0.0} 经验。";
+            ? "境界经验已满，可以尝试突破！"
+            : $"距离突破还需 {remainingExp:0.0} 经验";
     }
 
     public static string CultivationBreakthroughTooltip(bool canBreakthrough, double remainingExp)
@@ -183,20 +183,24 @@ public static class UiText
         int totalSpiritStones)
     {
         return
-            $"{LeftTabStats}\n" +
-            $"- 总键盘按下: {keyCount:N0}\n" +
-            $"- 总鼠标点击: {clickCount:N0}\n" +
-            $"- 总滚轮步数: {scrollSteps:N0}\n" +
-            $"- 总移动距离: {moveDistance:N0}px\n" +
-            $"- 累计活跃时间: {FormatDuration(activeSeconds)}\n" +
-            $"- 当前境界: 炼气{realmLevel}层\n" +
-            $"- 当前境界停留: {currentRealmDays:0.0} 天\n" +
-            $"- 累计战斗: {battleCount} 场\n" +
-            $"- 战斗胜率: {winRate:0}%\n" +
-            $"- 累计获得灵气: {totalLingqi:0.0}\n" +
-            $"- 累计获得悟性: {totalInsight:0.0}\n" +
-            $"- 累计获得灵宠亲和: {totalPetAffinity:0.0}\n" +
-            $"- 累计获得灵石: {totalSpiritStones}";
+            $"{LeftTabStats}\n\n" +
+            $"输入统计\n" +
+            $"● 累计按键次数：{keyCount:N0}\n" +
+            $"● 累计鼠标点击：{clickCount:N0}\n" +
+            $"● 累计滚轮刻度：{scrollSteps:N0}\n" +
+            $"● 累计鼠标移动距离：{moveDistance:N0} 像素\n" +
+            $"● 累计在线时长：{activeSeconds:N0} 秒 (≈{activeSeconds / 3600.0:0.0} 小时)\n\n" +
+            $"成长统计\n" +
+            $"● 历史最高境界：炼气 {realmLevel} 层\n" +
+            $"● 当前境界天数：{currentRealmDays:0.0} 天\n\n" +
+            $"战斗统计\n" +
+            $"● 累计战斗场次：{battleCount}\n" +
+            $"● 战斗胜率：{winRate * 100.0:0.0}%\n\n" +
+            $"资源统计\n" +
+            $"● 累计获得灵气：{totalLingqi:N0}\n" +
+            $"● 累计获得悟性：{totalInsight:0.0}\n" +
+            $"● 累计获得亲密度：{totalPetAffinity:0.0}\n" +
+            $"● 累计获得灵石：{totalSpiritStones}";
     }
 
     private static string FormatDuration(double totalSeconds)
@@ -220,7 +224,7 @@ public static class UiText
         $"{LeftTabEquipment}\n当前未装备任何物品。\n默认测试装会在空存档时自动注入。";
 
     public static string BattleLogEmpty =>
-        $"{LeftTabBattleLog}\n当前暂无战斗记录。\n继续探索后，最近 10 次战斗会显示在这里。";
+        $"{LeftTabBattleLog}\n暂无战斗记录。开始探索后，战斗日志将显示在此处。";
 
     public static string StatsTemplate =>
         $"{LeftTabStats}\n- 总输入次数\n- 累计探索时长\n- 战斗胜率";

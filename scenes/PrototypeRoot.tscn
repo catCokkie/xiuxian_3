@@ -18,8 +18,8 @@ script = ExtResource("1")
 layout_mode = 0
 offset_left = 1.0
 offset_top = 433.0
-offset_right = 1128.0
-offset_bottom = 639.0
+offset_right = 1153.0
+offset_bottom = 643.0
 
 [node name="SubmenuBookWindow" parent="." instance=ExtResource("3")]
 layout_mode = 0

@@ -31,11 +31,31 @@ public sealed class ExploreProgressPresentationRulesTests
     public void BuildRecentBattleLogText_FormatsEntries()
     {
         string text = ExploreProgressPresentationRules.BuildRecentBattleLogText(
-            new[] { ("12:34", "幽泉洞窟", "苔痕史莱姆", "胜利", "灵气+12") });
+            new[] { ("12:34", "幽泉洞窟", "苔痕史莱姆", "normal", 3, "胜利", "灵气+12") });
 
         Assert.Contains("最近战斗日志", text);
-        Assert.Contains("[12:34] 幽泉洞窟 | 苔痕史莱姆", text);
-        Assert.Contains("结果：胜利", text);
-        Assert.Contains("收益：灵气+12", text);
+        Assert.Contains("遭遇 苔痕史莱姆", text);
+        Assert.Contains("战斗胜利", text);
+        Assert.Contains("3 回合", text);
+        Assert.Contains("灵气+12", text);
+    }
+
+    [Fact]
+    public void BuildRecentBattleLogText_EliteBadge()
+    {
+        string text = ExploreProgressPresentationRules.BuildRecentBattleLogText(
+            new[] { ("12:34", "幽泉洞窟", "暗穴蛛", "elite", 5, "胜利", "灵草x2") });
+
+        Assert.Contains("(精英)", text);
+    }
+
+    [Fact]
+    public void BuildRecentBattleLogText_DefeatRedColor()
+    {
+        string text = ExploreProgressPresentationRules.BuildRecentBattleLogText(
+            new[] { ("12:34", "幽泉洞窟", "阴潮蛇", "normal", 2, "失败", "none") });
+
+        Assert.Contains("战斗失败", text);
+        Assert.Contains("#c85050", text);
     }
 }

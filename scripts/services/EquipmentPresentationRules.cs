@@ -15,15 +15,22 @@ namespace Xiuxian.Scripts.Services
             var sb = new StringBuilder();
             sb.AppendLine(UiText.LeftTabEquipment);
             sb.AppendLine($"当前已穿戴 {equippedProfiles.Count} 件");
-            sb.AppendLine($"基础属性：HP {baseStats.MaxHp} / 攻击 {baseStats.Attack} / 防御 {baseStats.Defense}");
-            sb.AppendLine($"装备后：HP {finalStats.MaxHp} / 攻击 {finalStats.Attack} / 防御 {finalStats.Defense}");
+
+            int hpDiff = finalStats.MaxHp - baseStats.MaxHp;
+            int atkDiff = finalStats.Attack - baseStats.Attack;
+            int defDiff = finalStats.Defense - baseStats.Defense;
+            sb.AppendLine($"气血(HP)　基础 {baseStats.MaxHp}　装备后 {finalStats.MaxHp} [color=#6aaf6a]+{hpDiff}[/color]");
+            sb.AppendLine($"攻击　　　基础 {baseStats.Attack}　装备后 {finalStats.Attack} [color=#6aaf6a]+{atkDiff}[/color]");
+            sb.AppendLine($"防御　　　基础 {baseStats.Defense}　装备后 {finalStats.Defense} [color=#6aaf6a]+{defDiff}[/color]");
 
             for (int i = 0; i < equippedProfiles.Count; i++)
             {
                 EquipmentStatProfile profile = equippedProfiles[i];
+                string slotIcon = GetSlotIcon(profile.Slot);
+                string rarityColor = GetRarityColor(profile.Modifier);
                 sb.AppendLine();
-                sb.AppendLine($"[{BuildSlotLabel(profile.Slot)}] {profile.DisplayName}");
-                sb.AppendLine(BuildModifierSummary(profile.Modifier));
+                sb.AppendLine($"{slotIcon} [color={rarityColor}]{profile.DisplayName}[/color]");
+                sb.AppendLine($"　主属性：{BuildModifierSummary(profile.Modifier)}");
             }
 
             sb.AppendLine();
@@ -196,6 +203,26 @@ namespace Xiuxian.Scripts.Services
         public static string BuildSlotLabel(EquipmentSlotType slot)
         {
             return UiText.SlotLabel(slot);
+        }
+
+        public static string GetSlotIcon(EquipmentSlotType slot)
+        {
+            return slot switch
+            {
+                EquipmentSlotType.Weapon => "⚔",
+                EquipmentSlotType.Armor => "🛡",
+                EquipmentSlotType.Accessory => "💎",
+                _ => "●"
+            };
+        }
+
+        public static string GetRarityColor(CharacterStatModifier modifier)
+        {
+            double score = ScoreModifier(modifier);
+            if (score >= 40.0) return "#bf8c40";
+            if (score >= 25.0) return "#8c66b3";
+            if (score >= 12.0) return "#6689b3";
+            return "#8c8072";
         }
     }
 }

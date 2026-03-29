@@ -22,10 +22,14 @@ public sealed class UiTextStatsTests
             totalPetAffinity: 22.0,
             totalSpiritStones: 40);
 
-        Assert.Contains("累计活跃时间: 1小时30分", text);
-        Assert.Contains("当前境界: 炼气3层", text);
-        Assert.Contains("战斗胜率:", text);
-        Assert.Contains("累计获得灵石: 40", text);
+        Assert.Contains("累计在线时长", text);
+        Assert.Contains("历史最高境界：炼气 3 层", text);
+        Assert.Contains("战斗胜率：", text);
+        Assert.Contains("累计获得灵石：40", text);
+        Assert.Contains("输入统计", text);
+        Assert.Contains("成长统计", text);
+        Assert.Contains("战斗统计", text);
+        Assert.Contains("资源统计", text);
     }
 
     [Fact]

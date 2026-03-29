@@ -8,7 +8,7 @@
 > 约定：修改后必须通过 `dotnet test tests/Xiuxian2.Tests/Xiuxian2.Tests.csproj` 零失败。
 > 维护规则：`docs/design/10_todo.md` 是任务状态唯一真源；`AGENTS.md` 仅保留流程规则，不重复维护任务进度。
 
-## 当前进度记录（更新：2026-03-29）
+## 当前进度记录（更新：2026-03-30）
 
 ### 总览
 - 代码任务：Phase 1–8 全部实现项除 `TASK-06` 外已全部落地并通过 `dotnet test tests/Xiuxian2.Tests/Xiuxian2.Tests.csproj`（317/317）
@@ -49,6 +49,19 @@
   - 重写 `MainBarLayoutController.cs` `UpdateRightAnchoredLayout()` 匹配新布局
   - `project.godot` 新增 `[display]` 段，视口 1152×648
   - `dotnet build` 零错误
+- **UI 设计提示词逐项实现（2026-03-30）**：
+  - 依据 `15_ui_prompts.md` 12 个页面提示词逐一对照代码实现
+  - #1 主底栏：MainBarWindow.tscn 颜色改暖棕色（#986244），圆角/边框/尺寸调整，新增第 5 怪物槽位，中文占位文本，金色境界标签
+  - #2 书本外框：SubmenuBookWindow.tscn 添加阴影（shadow_size=6），BottomBar 颜色修正为 #745038
+  - #3 修炼概况：状态标签绿/琥珀色着色（可突破=绿，距离突破=琥珀）
+  - #4 战斗日志：BBCode 格式化，精英琥珀/Boss 红色类型徽章，胜负着色，分隔线，失败/超时记录
+  - #5 装备情况：BBCode 表格式属性显示，绿色 +XX 提升，槽位图标（⚔/🛡/💎），稀有度着色
+  - #6 背包格子：已匹配无需修改
+  - #7 统计概览：四段式（输入/成长/战斗/资源）+ ● 项目符号 + 全角冒号
+  - #8 配置校验：已匹配无需修改
+  - #9 Bug 反馈：已匹配无需修改
+  - #10-12 设置三子页：标签文案对齐（窗口置顶/帧率上限/日志文件夹），退出按钮添加红色色调
+  - 全部 319 测试通过，0 编译错误
 - **背包格子化重构（2026-03-29）**：
   - 新增 `BackpackGridController.cs`：ScrollContainer + GridContainer 三分区（材料/丹药/装备），64px 格子带悬浮详情 tooltip
   - `BookTabsController.BuildBackpackUi()` 替换为挂载 BackpackGridController，移除旧 RichTextLabel 列表
@@ -65,6 +78,14 @@
   - 新增 `docs/design/15_ui_prompts.md`：包含通用风格前缀 + 12 个页面的 v0.dev 兼容提示词
   - 覆盖：主底栏、书本外框、修炼概况、战斗日志、装备情况、背包格子、统计概览、配置校验、Bug 反馈、设置三子页
   - 颜色/尺寸/布局均从项目实际代码提取，可直接用于外部 UI 生成工具
+- **装备子系统关联扩充（2026-03-29）**：
+  - `11_equipment_content_system.md` 新增 §15 子系统装备关联设计：12 系统 × 装备关联矩阵、新增 5 个装备系列（寒铁锻造系/灵蕊滋养系/沉渊灵珠系/符文铭刻系/毒雾深渊系）
+  - `12_equipment_sample_qi_refining.json` 装备模板从 4 个扩充至 25 个，覆盖 7 个系列 × 3 槽位
+  - 新增炼器锻造子路线（10 个锻造配方）：矿脉/灵田/符箓材料 → 炼器消耗 → 产出新装备
+  - 新增灵渔沉水装备规则：垂钓 2-3% 概率捞出饰品/武器
+  - 新增装备相关丹药（洗练丹/铸魂丹）+ 附魔符（锋锐/坚壁/疾影）
+  - 强化辅料链扩充：+4 以上强化需矿脉/灵田/灵渔跨系统材料
+  - 12 个子系统中 8 个对装备成长链有直接或间接贡献（副本、修炼、炼丹、炼器、灵田、矿脉、灵渔、符箓）
 
 ### 已完成- `TASK-01 拆分 LevelConfigLoader 上帝对象` ✅
   - `LevelConfigLoader.cs` 已瘦身为 159 行兼容门面，保留 `/root/LevelConfigLoader` 访问路径

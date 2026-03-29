@@ -117,7 +117,7 @@ namespace Xiuxian.Scripts.Game
             };
         }
 
-        public static string BuildRecentBattleLogText(IReadOnlyList<(string TimeLabel, string ZoneName, string MonsterName, string BattleResult, string RewardSummary)> entries)
+        public static string BuildRecentBattleLogText(IReadOnlyList<(string TimeLabel, string ZoneName, string MonsterName, string MonsterType, int RoundCount, string BattleResult, string RewardSummary)> entries)
         {
             if (entries.Count == 0)
             {
@@ -131,9 +131,25 @@ namespace Xiuxian.Scripts.Game
             for (int i = 0; i < entries.Count; i++)
             {
                 var entry = entries[i];
-                sb.Append($"\n[{entry.TimeLabel}] {entry.ZoneName} | {entry.MonsterName}");
-                sb.Append($"\n结果：{entry.BattleResult}");
-                sb.Append($"\n收益：{entry.RewardSummary}");
+                string typeBadge = entry.MonsterType switch
+                {
+                    "elite" => " [color=#c8a050](精英)[/color]",
+                    "boss" => " [color=#c85050](Boss)[/color]",
+                    _ => ""
+                };
+                sb.Append($"\n[{entry.TimeLabel}] 遭遇 {entry.MonsterName}{typeBadge}");
+
+                bool isWin = entry.BattleResult == "胜利";
+                string resultColor = isWin ? "#6aaf6a" : "#c85050";
+                string roundText = entry.RoundCount > 0 ? $" — {entry.RoundCount} 回合" : "";
+                sb.Append($"\n[color={resultColor}]战斗{entry.BattleResult}{roundText}[/color]");
+
+                if (isWin && entry.RewardSummary != "无掉落")
+                {
+                    sb.Append($"\n掉落：{entry.RewardSummary}");
+                }
+
+                sb.Append("\n[color=#b8a080]────────────────────[/color]");
             }
 
             return sb.ToString();

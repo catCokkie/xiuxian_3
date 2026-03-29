@@ -11,6 +11,7 @@ public partial class BackpackGridController : VBoxContainer
     private const int CellSize = 64;
     private const int CellGap = 4;
     private const int SectionGap = 8;
+    private const int DefaultColumns = 12;
 
     private static readonly Color MaterialColor = new(0.42f, 0.58f, 0.38f, 0.85f);
     private static readonly Color PotionColor = new(0.35f, 0.48f, 0.65f, 0.85f);
@@ -214,7 +215,7 @@ public partial class BackpackGridController : VBoxContainer
     private static GridContainer CreateGridContainer()
     {
         GridContainer grid = new();
-        grid.Columns = 0; // will be set by UpdateColumns
+        grid.Columns = DefaultColumns;
         grid.AddThemeConstantOverride("h_separation", CellGap);
         grid.AddThemeConstantOverride("v_separation", CellGap);
         grid.SizeFlagsHorizontal = SizeFlags.ExpandFill;
