@@ -6,7 +6,7 @@ namespace Xiuxian.Scripts.Services
     /// <summary>
     /// Player growth state and realm progression.
     /// </summary>
-    public partial class PlayerProgressState : Node
+    public partial class PlayerProgressState : Node, IDictionaryPersistable
     {
         [Signal]
         public delegate void RealmProgressChangedEventHandler(int realmLevel, double realmExp, double realmExpRequired);

@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace Xiuxian.Scripts.Services
 {
-    public partial class EquippedItemsState : Node
+    public partial class EquippedItemsState : Node, IDictionaryPersistable
     {
         [Signal]
         public delegate void EquippedItemsChangedEventHandler();

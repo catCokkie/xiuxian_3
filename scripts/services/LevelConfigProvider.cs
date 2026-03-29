@@ -26,9 +26,20 @@ namespace Xiuxian.Scripts.Services
             EquipmentExchangeRecipesByLevelId.Clear();
             LastLoadedConfigText = string.Empty;
 
-            Variant parsed = Json.ParseString(text);
+            Variant parsed;
+            try
+            {
+                parsed = Json.ParseString(text);
+            }
+            catch (Exception ex)
+            {
+                GD.PushError($"LevelConfigProvider: JSON parse failed: {ex.Message}");
+                return false;
+            }
+
             if (parsed.VariantType != Variant.Type.Dictionary)
             {
+                GD.PushError("LevelConfigProvider: root JSON is not a dictionary");
                 return false;
             }
 
@@ -325,10 +336,21 @@ namespace Xiuxian.Scripts.Services
             var indexes = EquipmentConfigTextParser.ParseIndexes(LastLoadedConfigText);
             foreach (var kv in indexes.SeriesJsonById)
             {
-                Variant parsed = Json.ParseString(kv.Value);
-                if (parsed.VariantType == Variant.Type.Dictionary)
+                try
                 {
-                    EquipmentSeriesById[kv.Key] = (Godot.Collections.Dictionary<string, Variant>)parsed;
+                    Variant parsed = Json.ParseString(kv.Value);
+                    if (parsed.VariantType == Variant.Type.Dictionary)
+                    {
+                        EquipmentSeriesById[kv.Key] = (Godot.Collections.Dictionary<string, Variant>)parsed;
+                    }
+                    else
+                    {
+                        GD.PushWarning($"LevelConfigProvider: equipment series '{kv.Key}' JSON is not a dictionary");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    GD.PushError($"LevelConfigProvider: failed to parse equipment series '{kv.Key}': {ex.Message}");
                 }
             }
         }
@@ -339,10 +361,21 @@ namespace Xiuxian.Scripts.Services
             var indexes = EquipmentConfigTextParser.ParseIndexes(LastLoadedConfigText);
             foreach (var kv in indexes.TemplateJsonById)
             {
-                Variant parsed = Json.ParseString(kv.Value);
-                if (parsed.VariantType == Variant.Type.Dictionary)
+                try
                 {
-                    EquipmentTemplateById[kv.Key] = (Godot.Collections.Dictionary<string, Variant>)parsed;
+                    Variant parsed = Json.ParseString(kv.Value);
+                    if (parsed.VariantType == Variant.Type.Dictionary)
+                    {
+                        EquipmentTemplateById[kv.Key] = (Godot.Collections.Dictionary<string, Variant>)parsed;
+                    }
+                    else
+                    {
+                        GD.PushWarning($"LevelConfigProvider: equipment template '{kv.Key}' JSON is not a dictionary");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    GD.PushError($"LevelConfigProvider: failed to parse equipment template '{kv.Key}': {ex.Message}");
                 }
             }
         }
@@ -356,10 +389,21 @@ namespace Xiuxian.Scripts.Services
                 var list = new List<Godot.Collections.Dictionary<string, Variant>>();
                 foreach (string recipeJson in kv.Value)
                 {
-                    Variant parsed = Json.ParseString(recipeJson);
-                    if (parsed.VariantType == Variant.Type.Dictionary)
+                    try
                     {
-                        list.Add((Godot.Collections.Dictionary<string, Variant>)parsed);
+                        Variant parsed = Json.ParseString(recipeJson);
+                        if (parsed.VariantType == Variant.Type.Dictionary)
+                        {
+                            list.Add((Godot.Collections.Dictionary<string, Variant>)parsed);
+                        }
+                        else
+                        {
+                            GD.PushWarning($"LevelConfigProvider: exchange recipe in level '{kv.Key}' JSON is not a dictionary");
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        GD.PushError($"LevelConfigProvider: failed to parse exchange recipe in level '{kv.Key}': {ex.Message}");
                     }
                 }
 

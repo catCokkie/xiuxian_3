@@ -64,42 +64,90 @@ namespace Xiuxian.Scripts.Services
             int version = NormalizeStartingVersion(fromVersion);
             while (version < LatestVersion)
             {
-                switch (version)
+                int previousVersion = version;
+                try
                 {
-                    case 1:
-                        MigrateV1ToV2(cfg);
-                        version = 2;
-                        break;
-                    case 2:
-                        MigrateV2ToV3(cfg);
-                        version = 3;
-                        break;
-                    case 3:
-                        MigrateV3ToV4(cfg);
-                        version = 4;
-                        break;
-                    case 4:
-                        MigrateV4ToV5(cfg);
-                        version = 5;
-                        break;
-                    case 5:
-                        MigrateV5ToV6(cfg);
-                        version = 6;
-                        break;
-                    case 6:
-                        MigrateV6ToV7(cfg);
-                        version = 7;
-                        break;
-                    case 7:
-                        MigrateV7ToV8(cfg);
-                        version = 8;
-                        break;
-                    default:
-                        version = LatestVersion;
-                        break;
+                    switch (version)
+                    {
+                        case 1:
+                            MigrateV1ToV2(cfg);
+                            version = 2;
+                            break;
+                        case 2:
+                            MigrateV2ToV3(cfg);
+                            version = 3;
+                            break;
+                        case 3:
+                            MigrateV3ToV4(cfg);
+                            version = 4;
+                            break;
+                        case 4:
+                            MigrateV4ToV5(cfg);
+                            version = 5;
+                            break;
+                        case 5:
+                            MigrateV5ToV6(cfg);
+                            version = 6;
+                            break;
+                        case 6:
+                            MigrateV6ToV7(cfg);
+                            version = 7;
+                            break;
+                        case 7:
+                            MigrateV7ToV8(cfg);
+                            version = 8;
+                            break;
+                        default:
+                            version = LatestVersion;
+                            break;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    cfg.SetValue("meta", "version", previousVersion);
+                    throw new SaveMigrationException(previousVersion, previousVersion + 1, ex);
                 }
 
                 cfg.SetValue("meta", "version", version);
+            }
+
+            ValidatePostMigration(cfg, fromVersion);
+        }
+
+        /// <summary>
+        /// Lightweight check that critical sections/keys exist after the full migration chain.
+        /// Only validates sections created by migration steps that were actually executed.
+        /// Throws SaveMigrationException if the final state is incoherent.
+        /// </summary>
+        private static void ValidatePostMigration(IMigrationStore cfg, int migratedFrom)
+        {
+            int finalVersion = ReadInt(cfg.GetValue("meta", "version", 0), 0);
+            if (finalVersion != LatestVersion)
+            {
+                throw new SaveMigrationException(finalVersion, LatestVersion,
+                    new InvalidOperationException($"Post-migration version is {finalVersion}, expected {LatestVersion}"));
+            }
+
+            // Each entry: (minStartVersion, section, key) — section/key must exist if migration ran from <= minStartVersion
+            (int fromMax, string section, string key)[] requiredKeys =
+            {
+                (1, "ui", "submenu_active_left_tab"),         // v1→v2
+                (2, "action", "mode"),                         // v2→v3
+                (3, "settings", "system"),                     // v3→v4
+                (4, "backpack", "items"),                       // v4→v5
+                (4, "equipment", "equipped"),                   // v4→v5
+                (5, "resource", "wallet"),                      // v5→v6
+                (6, "mastery", "levels"),                       // v6→v7
+                (7, "progress", "player"),                      // v7→v8
+            };
+
+            foreach (var (fromMax, section, key) in requiredKeys)
+            {
+                if (migratedFrom <= fromMax && !cfg.HasSectionKey(section, key))
+                {
+                    throw new SaveMigrationException(migratedFrom, LatestVersion,
+                        new InvalidOperationException($"Required key '{section}/{key}' missing after migration from v{migratedFrom}"));
+                }
             }
         }
 
@@ -565,6 +613,23 @@ namespace Xiuxian.Scripts.Services
                 default:
                     return value.ToString();
             }
+        }
+    }
+
+    /// <summary>
+    /// Thrown when a save migration step fails. The save version is rolled back to
+    /// <see cref="FromVersion"/> so the next load does not skip the failed step.
+    /// </summary>
+    public sealed class SaveMigrationException : Exception
+    {
+        public int FromVersion { get; }
+        public int ToVersion { get; }
+
+        public SaveMigrationException(int fromVersion, int toVersion, Exception inner)
+            : base($"Save migration v{fromVersion}→v{toVersion} failed: {inner.Message}", inner)
+        {
+            FromVersion = fromVersion;
+            ToVersion = toVersion;
         }
     }
 }

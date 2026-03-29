@@ -81,7 +81,7 @@
 
 ---
 
-## 预写迁移：v6 -> v7（子系统熟练度 INSIGHT-MASTERY-CHANGE）
+## 已实现迁移：v6 -> v7（子系统熟练度 INSIGHT-MASTERY-CHANGE）
 
 > 关联任务：TASK-31
 > 核心变更：新增 `mastery.*` 存档字段，支持 12 系统熟练度持久化。
@@ -102,7 +102,7 @@
 
 ---
 
-## 预写迁移：v7 -> v8（12 子系统横向扩展 SUBSYSTEM-EXPAND）
+## 已实现迁移：v7 -> v8（12 子系统横向扩展 SUBSYSTEM-EXPAND）
 
 > 关联任务：TASK-40
 > 核心变更：8 个新子系统的状态字段 + 8 个新精通字段。

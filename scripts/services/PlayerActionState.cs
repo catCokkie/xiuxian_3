@@ -7,7 +7,7 @@ namespace Xiuxian.Scripts.Services
     /// - dungeon: explore + battle loop
     /// - cultivation: pause dungeon progression and focus on cultivation conversion
     /// </summary>
-    public partial class PlayerActionState : Node
+    public partial class PlayerActionState : Node, IDictionaryPersistable
     {
         [Signal]
         public delegate void ModeChangedEventHandler(string modeId);

@@ -11,6 +11,8 @@ namespace Xiuxian.Scripts.Game
     public partial class PrototypeRootController : Control
     {
         private const string UnifiedStatePath = "user://save_state.cfg";
+        private const string UnifiedStateBackupPath = "user://save_state.cfg.backup";
+        private const string UnifiedStateTempPath = "user://save_state.cfg.tmp";
         private const string LegacyUiStatePath = "user://ui_state.cfg";
         private const string LegacyGameStatePath = "user://game_state.cfg";
         private const int SaveSchemaVersion = SaveMigrationRules.LatestVersion;
@@ -42,6 +44,7 @@ namespace Xiuxian.Scripts.Game
         private LevelConfigLoader? _levelConfigLoader;
         private ExploreProgressController? _exploreProgressController;
         private CloudSaveSyncService? _cloudSaveSyncService;
+        private StatePersistenceManager _persistenceManager = new();
         private bool _cloudSyncEnabled;
         private long _lastLoadedSavedUnix;
 
@@ -82,14 +85,30 @@ namespace Xiuxian.Scripts.Game
             _exploreProgressController = GetNodeOrNull<ExploreProgressController>("ExploreProgressController");
             _cloudSaveSyncService = services?.CloudSaveSyncService;
 
+            _persistenceManager = new StatePersistenceManager();
+            _persistenceManager.Register("input", "stats", _activityState);
+            _persistenceManager.Register("backpack", "items", _backpackState);
+            _persistenceManager.Register("backpack", "potions", _potionInventoryState);
+            _persistenceManager.Register("alchemy", "state", _alchemyState);
+            _persistenceManager.Register("smithing", "state", _smithingState);
+            _persistenceManager.Register("garden", "state", _gardenState);
+            _persistenceManager.Register("mining", "state", _miningState);
+            _persistenceManager.Register("fishing", "state", _fishingState);
+            _persistenceManager.Register("talisman", "state", _talismanState);
+            _persistenceManager.Register("cooking", "state", _cookingState);
+            _persistenceManager.Register("formation", "state", _formationState);
+            _persistenceManager.Register("enlightenment", "state", _enlightenmentState);
+            _persistenceManager.Register("body_cultivation", "state", _bodyCultivationState);
+            _persistenceManager.Register("resource", "wallet", _resourceWalletState);
+            _persistenceManager.Register("progress", "player", _playerProgressState);
+            _persistenceManager.Register("mastery", "levels", _subsystemMasteryState);
+            _persistenceManager.Register("action", "mode", _playerActionState);
+            _persistenceManager.Register("equipment", "equipped", _equippedItemsState);
+
             _mainBar.BookButtonPressed += _submenu.ToggleVisible;
-            _mainBar.LayoutChanged += (_, _) => MarkDirty();
-            _submenu.VisibilityChanged += _ => MarkDirty();
-            _bookTabs.ActiveTabsChanged += (_, _) =>
-            {
-                RefreshRuntimeSettingsFromBookTabs();
-                MarkDirty();
-            };
+            _mainBar.LayoutChanged += OnMainBarLayoutChanged;
+            _submenu.VisibilityChanged += OnSubmenuVisibilityChanged;
+            _bookTabs.ActiveTabsChanged += OnBookTabsActiveTabsChanged;
 
             if (_activityState != null)
             {
@@ -199,6 +218,11 @@ namespace Xiuxian.Scripts.Game
 
         public override void _ExitTree()
         {
+            _mainBar.BookButtonPressed -= _submenu.ToggleVisible;
+            _mainBar.LayoutChanged -= OnMainBarLayoutChanged;
+            _submenu.VisibilityChanged -= OnSubmenuVisibilityChanged;
+            _bookTabs.ActiveTabsChanged -= OnBookTabsActiveTabsChanged;
+
             if (_activityState != null)
             {
                 _activityState.ActivityTick -= OnActivityTick;
@@ -281,6 +305,16 @@ namespace Xiuxian.Scripts.Game
             {
                 SaveAllState();
             }
+        }
+
+        private void OnMainBarLayoutChanged(float x, float width) => MarkDirty();
+
+        private void OnSubmenuVisibilityChanged(bool isVisible) => MarkDirty();
+
+        private void OnBookTabsActiveTabsChanged(string leftTab, string rightTab)
+        {
+            RefreshRuntimeSettingsFromBookTabs();
+            MarkDirty();
         }
 
         private void OnActivityTick(double apThisSecond, double apFinal)
@@ -392,27 +426,53 @@ namespace Xiuxian.Scripts.Game
             config.SetValue("meta", "version", SaveSchemaVersion);
             config.SetValue("meta", "last_saved_unix", Time.GetUnixTimeFromSystem());
 
-            WriteUiState(config);
-            WriteInputState(config);
-            WriteBackpackState(config);
-            WriteAlchemyState(config);
-            WriteSmithingState(config);
-            WriteGatheringState(config);
-            WriteGenericRecipeState(config);
-            WriteResourceState(config);
-            WritePlayerProgressState(config);
-            WriteMasteryState(config);
-            WriteActionModeState(config);
-            WriteEquippedItemsState(config);
-            WriteExploreRuntimeState(config);
-            WriteLevelRuntimeState(config);
-            WriteSystemSettings(config);
+            try
+            {
+                WriteUiState(config);
+                WriteInputHookState(config);
+                _persistenceManager.WriteAll(config);
+                WriteExploreRuntimeState(config);
+                WriteLevelRuntimeState(config);
+                WriteSystemSettings(config);
+            }
+            catch (Exception ex)
+            {
+                GD.PushError($"PrototypeRootController: failed to serialize state — save aborted: {ex.Message}");
+                return;
+            }
 
-            Error err = config.Save(UnifiedStatePath);
+            Error err = config.Save(UnifiedStateTempPath);
             if (err != Error.Ok)
             {
-                GD.PushWarning($"PrototypeRootController: failed to save unified state ({err})");
+                GD.PushWarning($"PrototypeRootController: failed to save unified state to temp ({err})");
                 return;
+            }
+
+            using var dir = DirAccess.Open("user://");
+            if (dir != null)
+            {
+                if (dir.FileExists(UnifiedStatePath))
+                {
+                    dir.Remove(UnifiedStateBackupPath);
+                    Error backupErr = dir.Rename(UnifiedStatePath, UnifiedStateBackupPath);
+                    if (backupErr != Error.Ok)
+                    {
+                        GD.PushWarning($"PrototypeRootController: failed to create backup ({backupErr}) — save aborted");
+                        return;
+                    }
+                }
+
+                Error renameErr = dir.Rename(UnifiedStateTempPath, UnifiedStatePath);
+                if (renameErr != Error.Ok)
+                {
+                    GD.PushWarning($"PrototypeRootController: failed to promote temp save ({renameErr}) — restoring backup");
+                    if (dir.FileExists(UnifiedStateBackupPath))
+                    {
+                        dir.Rename(UnifiedStateBackupPath, UnifiedStatePath);
+                    }
+
+                    return;
+                }
             }
 
             _cloudSaveSyncService?.TryUploadLocal(_cloudSyncEnabled);
@@ -451,8 +511,15 @@ namespace Xiuxian.Scripts.Game
                 return;
             }
 
-            SaveMigrationRules.MigrateToLatest(config, version);
-            migrated = true;
+            try
+            {
+                SaveMigrationRules.MigrateToLatest(config, version);
+                migrated = true;
+            }
+            catch (SaveMigrationException ex)
+            {
+                GD.PushError($"PrototypeRootController: {ex.Message} — save version rolled back to v{ex.FromVersion}");
+            }
         }
 
         private void ReadUnifiedState(ConfigFile config)
@@ -460,21 +527,24 @@ namespace Xiuxian.Scripts.Game
             _lastLoadedSavedUnix = config.GetValue("meta", "last_saved_unix", 0L).AsInt64();
             int version = config.GetValue("meta", "version", SaveSchemaVersion).AsInt32();
 
-            ReadUiState(config, version);
-            ReadInputState(config);
-            ReadBackpackState(config);
-            ReadAlchemyState(config);
-            ReadSmithingState(config);
-            ReadGatheringState(config);
-            ReadGenericRecipeState(config);
-            ReadResourceState(config);
-            ReadPlayerProgressState(config);
-            ReadMasteryState(config);
-            ReadActionModeState(config);
-            ReadEquippedItemsState(config);
-            ReadLevelRuntimeState(config);
-            ReadExploreRuntimeState(config);
-            ReadSystemSettings(config);
+            ReadStateSafe("UiState", () => ReadUiState(config, version));
+            ReadStateSafe("InputHookState", () => ReadInputHookState(config));
+            _persistenceManager.ReadAll(config);
+            ReadStateSafe("LevelRuntimeState", () => ReadLevelRuntimeState(config));
+            ReadStateSafe("ExploreRuntimeState", () => ReadExploreRuntimeState(config));
+            ReadStateSafe("SystemSettings", () => ReadSystemSettings(config));
+        }
+
+        private static void ReadStateSafe(string name, Action readAction)
+        {
+            try
+            {
+                readAction();
+            }
+            catch (Exception ex)
+            {
+                GD.PushError($"PrototypeRootController: failed to read {name} — section skipped: {ex.Message}");
+            }
         }
 
         private bool ApplyOfflineSettlementIfNeeded()
@@ -612,7 +682,8 @@ namespace Xiuxian.Scripts.Game
             ConfigFile gameConfig = new();
             if (gameConfig.Load(LegacyGameStatePath) == Error.Ok)
             {
-                ReadInputState(gameConfig);
+                _persistenceManager.ReadAll(gameConfig);
+                ReadInputHookState(gameConfig);
             }
         }
 
@@ -646,19 +717,8 @@ namespace Xiuxian.Scripts.Game
             config.SetValue("ui", "submenu_active_right_tab", _bookTabs.ActiveRightTabName);
         }
 
-        private void ReadInputState(ConfigFile config)
+        private void ReadInputHookState(ConfigFile config)
         {
-            if (_activityState == null)
-            {
-                return;
-            }
-
-            Variant inputData = config.GetValue("input", "stats", new Godot.Collections.Dictionary<string, Variant>());
-            if (inputData.VariantType == Variant.Type.Dictionary)
-            {
-                _activityState.FromDictionary((Godot.Collections.Dictionary<string, Variant>)inputData);
-            }
-
             bool hookPaused = config.GetValue("input", "hook_paused", false).AsBool();
             if (hookPaused)
             {
@@ -667,308 +727,9 @@ namespace Xiuxian.Scripts.Game
             _hookService?.SetPaused(false);
         }
 
-        private void WriteInputState(ConfigFile config)
+        private void WriteInputHookState(ConfigFile config)
         {
-            if (_activityState == null)
-            {
-                return;
-            }
-
-            config.SetValue("input", "stats", _activityState.ToDictionary());
             config.SetValue("input", "hook_paused", _hookService?.IsPaused ?? false);
-        }
-
-        private void ReadBackpackState(ConfigFile config)
-        {
-            if (_backpackState == null)
-            {
-                return;
-            }
-
-            Variant backpackData = config.GetValue("backpack", "items", new Godot.Collections.Dictionary<string, Variant>());
-            if (backpackData.VariantType == Variant.Type.Dictionary)
-            {
-                _backpackState.FromDictionary((Godot.Collections.Dictionary<string, Variant>)backpackData);
-            }
-
-            if (_potionInventoryState != null)
-            {
-                Variant potionData = config.GetValue("backpack", "potions", new Godot.Collections.Dictionary<string, Variant>());
-                if (potionData.VariantType == Variant.Type.Dictionary)
-                {
-                    _potionInventoryState.FromDictionary((Godot.Collections.Dictionary<string, Variant>)potionData);
-                }
-            }
-        }
-
-        private void WriteBackpackState(ConfigFile config)
-        {
-            if (_backpackState == null)
-            {
-                return;
-            }
-
-            config.SetValue("backpack", "items", _backpackState.ToDictionary());
-            if (_potionInventoryState != null)
-            {
-                config.SetValue("backpack", "potions", _potionInventoryState.ToDictionary());
-            }
-        }
-
-        private void ReadAlchemyState(ConfigFile config)
-        {
-            if (_alchemyState == null)
-            {
-                return;
-            }
-
-            Variant alchemyData = config.GetValue("alchemy", "state", new Godot.Collections.Dictionary<string, Variant>());
-            if (alchemyData.VariantType == Variant.Type.Dictionary)
-            {
-                _alchemyState.FromDictionary((Godot.Collections.Dictionary<string, Variant>)alchemyData);
-            }
-        }
-
-        private void WriteAlchemyState(ConfigFile config)
-        {
-            if (_alchemyState == null)
-            {
-                return;
-            }
-
-            config.SetValue("alchemy", "state", _alchemyState.ToDictionary());
-        }
-
-        private void ReadSmithingState(ConfigFile config)
-        {
-            if (_smithingState == null)
-            {
-                return;
-            }
-
-            Variant smithingData = config.GetValue("smithing", "state", new Godot.Collections.Dictionary<string, Variant>());
-            if (smithingData.VariantType == Variant.Type.Dictionary)
-            {
-                _smithingState.FromDictionary((Godot.Collections.Dictionary<string, Variant>)smithingData);
-            }
-        }
-
-        private void WriteSmithingState(ConfigFile config)
-        {
-            if (_smithingState == null)
-            {
-                return;
-            }
-
-            config.SetValue("smithing", "state", _smithingState.ToDictionary());
-        }
-
-        private void ReadGatheringState(ConfigFile config)
-        {
-            if (_gardenState != null)
-            {
-                Variant gardenData = config.GetValue("garden", "state", new Godot.Collections.Dictionary<string, Variant>());
-                if (gardenData.VariantType == Variant.Type.Dictionary)
-                {
-                    _gardenState.FromDictionary((Godot.Collections.Dictionary<string, Variant>)gardenData);
-                }
-            }
-
-            if (_miningState != null)
-            {
-                Variant miningData = config.GetValue("mining", "state", new Godot.Collections.Dictionary<string, Variant>());
-                if (miningData.VariantType == Variant.Type.Dictionary)
-                {
-                    _miningState.FromDictionary((Godot.Collections.Dictionary<string, Variant>)miningData);
-                }
-            }
-
-            if (_fishingState != null)
-            {
-                Variant fishingData = config.GetValue("fishing", "state", new Godot.Collections.Dictionary<string, Variant>());
-                if (fishingData.VariantType == Variant.Type.Dictionary)
-                {
-                    _fishingState.FromDictionary((Godot.Collections.Dictionary<string, Variant>)fishingData);
-                }
-            }
-        }
-
-        private void WriteGatheringState(ConfigFile config)
-        {
-            if (_gardenState != null)
-            {
-                config.SetValue("garden", "state", _gardenState.ToDictionary());
-            }
-
-            if (_miningState != null)
-            {
-                config.SetValue("mining", "state", _miningState.ToDictionary());
-            }
-
-            if (_fishingState != null)
-            {
-                config.SetValue("fishing", "state", _fishingState.ToDictionary());
-            }
-        }
-
-        private void ReadGenericRecipeState(ConfigFile config)
-        {
-            ReadGenericRecipeStateSection(config, "talisman", _talismanState);
-            ReadGenericRecipeStateSection(config, "cooking", _cookingState);
-            ReadGenericRecipeStateSection(config, "formation", _formationState);
-            ReadGenericRecipeStateSection(config, "enlightenment", _enlightenmentState);
-            ReadGenericRecipeStateSection(config, "body_cultivation", _bodyCultivationState);
-        }
-
-        private void WriteGenericRecipeState(ConfigFile config)
-        {
-            WriteGenericRecipeStateSection(config, "talisman", _talismanState);
-            WriteGenericRecipeStateSection(config, "cooking", _cookingState);
-            WriteGenericRecipeStateSection(config, "formation", _formationState);
-            WriteGenericRecipeStateSection(config, "enlightenment", _enlightenmentState);
-            WriteGenericRecipeStateSection(config, "body_cultivation", _bodyCultivationState);
-        }
-
-        private static void ReadGenericRecipeStateSection(ConfigFile config, string section, RecipeProgressState? state)
-        {
-            if (state == null)
-            {
-                return;
-            }
-
-            Variant data = config.GetValue(section, "state", new Godot.Collections.Dictionary<string, Variant>());
-            if (data.VariantType == Variant.Type.Dictionary)
-            {
-                state.FromDictionary((Godot.Collections.Dictionary<string, Variant>)data);
-            }
-        }
-
-        private static void WriteGenericRecipeStateSection(ConfigFile config, string section, RecipeProgressState? state)
-        {
-            if (state != null)
-            {
-                config.SetValue(section, "state", state.ToDictionary());
-            }
-        }
-
-        private void ReadResourceState(ConfigFile config)
-        {
-            if (_resourceWalletState == null)
-            {
-                return;
-            }
-
-            Variant walletData = config.GetValue("resource", "wallet", new Godot.Collections.Dictionary<string, Variant>());
-            if (walletData.VariantType == Variant.Type.Dictionary)
-            {
-                _resourceWalletState.FromDictionary((Godot.Collections.Dictionary<string, Variant>)walletData);
-            }
-        }
-
-        private void WriteResourceState(ConfigFile config)
-        {
-            if (_resourceWalletState == null)
-            {
-                return;
-            }
-
-            config.SetValue("resource", "wallet", _resourceWalletState.ToDictionary());
-        }
-
-        private void ReadPlayerProgressState(ConfigFile config)
-        {
-            if (_playerProgressState == null)
-            {
-                return;
-            }
-
-            Variant progressData = config.GetValue("progress", "player", new Godot.Collections.Dictionary<string, Variant>());
-            if (progressData.VariantType == Variant.Type.Dictionary)
-            {
-                _playerProgressState.FromDictionary((Godot.Collections.Dictionary<string, Variant>)progressData);
-            }
-        }
-
-        private void WritePlayerProgressState(ConfigFile config)
-        {
-            if (_playerProgressState == null)
-            {
-                return;
-            }
-
-            config.SetValue("progress", "player", _playerProgressState.ToDictionary());
-        }
-
-        private void ReadMasteryState(ConfigFile config)
-        {
-            if (_subsystemMasteryState == null)
-            {
-                return;
-            }
-
-            Variant masteryData = config.GetValue("mastery", "levels", new Godot.Collections.Dictionary<string, Variant>());
-            if (masteryData.VariantType == Variant.Type.Dictionary)
-            {
-                _subsystemMasteryState.FromDictionary((Godot.Collections.Dictionary<string, Variant>)masteryData);
-            }
-        }
-
-        private void WriteMasteryState(ConfigFile config)
-        {
-            if (_subsystemMasteryState == null)
-            {
-                return;
-            }
-
-            config.SetValue("mastery", "levels", _subsystemMasteryState.ToDictionary());
-        }
-
-        private void ReadActionModeState(ConfigFile config)
-        {
-            if (_playerActionState == null)
-            {
-                return;
-            }
-
-            Variant modeData = config.GetValue("action", "mode", new Godot.Collections.Dictionary<string, Variant>());
-            if (modeData.VariantType == Variant.Type.Dictionary)
-            {
-                _playerActionState.FromDictionary((Godot.Collections.Dictionary<string, Variant>)modeData);
-            }
-        }
-
-        private void WriteActionModeState(ConfigFile config)
-        {
-            if (_playerActionState == null)
-            {
-                return;
-            }
-
-            config.SetValue("action", "mode", _playerActionState.ToDictionary());
-        }
-
-        private void ReadEquippedItemsState(ConfigFile config)
-        {
-            if (_equippedItemsState == null)
-            {
-                return;
-            }
-
-            Variant data = config.GetValue("equipment", "equipped", new Godot.Collections.Dictionary<string, Variant>());
-            if (data.VariantType == Variant.Type.Dictionary)
-            {
-                _equippedItemsState.FromDictionary((Godot.Collections.Dictionary<string, Variant>)data);
-            }
-        }
-
-        private void WriteEquippedItemsState(ConfigFile config)
-        {
-            if (_equippedItemsState == null)
-            {
-                return;
-            }
-
-            config.SetValue("equipment", "equipped", _equippedItemsState.ToDictionary());
         }
 
         private void ReadExploreRuntimeState(ConfigFile config)

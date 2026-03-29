@@ -5,19 +5,13 @@ public partial class MainBarLayoutController : Control
     private const float DefaultMinWidth = 800.0f;
     private const float DefaultMaxWidth = 1500.0f;
     private const float RightMargin = 12.0f;
-    private const float OptionRowOffsetY = 10.0f;
-    private const float TextRowOffsetY = 34.0f;
-    private const float BarRowOffsetY = 22.0f;
-    private const float LeftPanelPadding = 8.0f;
-    private const float PanelGap = 20.0f;
-    private const float ControlGap = 10.0f;
-    private const float BreakthroughRowOffsetY = -2.0f;
+    private const float LeftPadding = 8.0f;
+    private const float ControlGap = 8.0f;
+    private const float ControlRowHeight = 26.0f;
+    private const float ControlRowY = 172.0f;
+    private const float BattleTrackTopY = 6.0f;
+    private const float BattleTrackBottomY = 164.0f;
     private const float MinBattleTrackWidth = 220.0f;
-    private const float MaxBattleTrackWidth = 432.0f;
-    private const float MinExploreBarWidth = 140.0f;
-    private const float DefaultExploreBarWidth = 228.0f;
-    private const float MinCultivationBarWidth = 150.0f;
-    private const float DefaultCultivationBarWidth = 240.0f;
     private const float MinOptionButtonWidth = 92.0f;
 
     [Signal]
@@ -162,76 +156,83 @@ public partial class MainBarLayoutController : Control
 
     private void UpdateRightAnchoredLayout()
     {
-        float optionRowY = _battleTrack.Position.Y + _battleTrack.Size.Y + OptionRowOffsetY;
-        float textRowY = optionRowY + TextRowOffsetY;
-        float barRowY = textRowY + BarRowOffsetY;
-        float availableContentWidth = Mathf.Max(0.0f, Size.X - _battleTrack.Position.X - RightMargin);
-        float breakthroughWidth = _breakthroughButton.Size.X > 0.0f ? _breakthroughButton.Size.X : (_breakthroughButton.CustomMinimumSize.X > 0.0f ? _breakthroughButton.CustomMinimumSize.X : 78.0f);
-        float minBarsWidth = MinExploreBarWidth + MinCultivationBarWidth;
-        float defaultBarsWidth = DefaultExploreBarWidth + DefaultCultivationBarWidth;
-        float barsWidthBudget = Mathf.Clamp(
-            availableContentWidth - MinBattleTrackWidth - PanelGap - breakthroughWidth - (ControlGap * 2.0f),
-            minBarsWidth,
-            defaultBarsWidth);
-        float exploreWidth = Mathf.Clamp(barsWidthBudget * (DefaultExploreBarWidth / defaultBarsWidth), MinExploreBarWidth, DefaultExploreBarWidth);
-        float cultivationWidth = Mathf.Max(MinCultivationBarWidth, barsWidthBudget - exploreWidth);
-        float battleTrackWidth = Mathf.Clamp(
-            availableContentWidth - PanelGap - breakthroughWidth - (ControlGap * 2.0f) - exploreWidth - cultivationWidth,
-            MinBattleTrackWidth,
-            MaxBattleTrackWidth);
+        float panelWidth = Size.X;
+        float dragW = 44.0f;
 
-        float exploreX = Size.X - RightMargin - exploreWidth;
-        float breakthroughX = exploreX - ControlGap - breakthroughWidth;
-        float cultivationX = breakthroughX - ControlGap - cultivationWidth;
+        // --- Row 1: BattleTrack fills width between drag handle and right margin ---
+        float trackLeft = dragW + ControlGap;
+        float trackRight = panelWidth - RightMargin;
+        float trackWidth = Mathf.Max(MinBattleTrackWidth, trackRight - trackLeft);
+        _battleTrack.Position = new Vector2(trackLeft, BattleTrackTopY);
+        _battleTrack.Size = new Vector2(trackWidth, BattleTrackBottomY - BattleTrackTopY);
 
-        _battleTrack.Size = new Vector2(battleTrackWidth, _battleTrack.Size.Y);
-        _zoneLabel.Size = new Vector2(exploreWidth, _zoneLabel.Size.Y);
-        _zoneLabel.Position = new Vector2(exploreX, textRowY);
-        _exploreProgressBar.Size = new Vector2(exploreWidth, _exploreProgressBar.Size.Y);
-        _exploreProgressBar.Position = new Vector2(exploreX, barRowY);
-        _realmStageLabel.Position = new Vector2(_battleTrack.Position.X + LeftPanelPadding, textRowY);
-        _activityRateLabel.Visible = false;
+        // --- Row 2: Bottom control strip ---
+        // Left side: RealmStageLabel + ActionMode + Level
+        float controlX = LeftPadding;
+        _realmStageLabel.Position = new Vector2(controlX, ControlRowY);
+        controlX += _realmStageLabel.Size.X + ControlGap;
 
-        _breakthroughButton.Position = new Vector2(breakthroughX, barRowY + BreakthroughRowOffsetY);
-        _cultivationProgressBar.Size = new Vector2(cultivationWidth, _cultivationProgressBar.Size.Y);
-        _cultivationProgressBar.Position = new Vector2(cultivationX, barRowY);
-        _cultivationLabel.Size = new Vector2(cultivationWidth, _cultivationLabel.Size.Y);
-        _cultivationLabel.Position = new Vector2(cultivationX, textRowY);
+        // Calculate right-side button widths first to know remaining space
+        float bookW = 42.0f;
+        float resizeW = 36.0f;
+        float rightButtonsWidth = bookW + ControlGap + resizeW + RightMargin;
+        float rightButtonsStartX = panelWidth - rightButtonsWidth;
 
-        float optionStartX = _battleTrack.Position.X + LeftPanelPadding;
-        float optionUsableWidth = Mathf.Max(0.0f, _battleTrack.Size.X - (LeftPanelPadding * 2.0f));
-        float actionButtonWidth = _actionModeOptionButton?.Size.X ?? 130.0f;
-        float levelButtonWidth = _levelOptionButton?.Size.X ?? 220.0f;
-        float totalDefaultOptionWidth = actionButtonWidth + levelButtonWidth + ControlGap;
-        if (totalDefaultOptionWidth > optionUsableWidth && optionUsableWidth > 0.0f)
-        {
-            float shrinkableWidth = Mathf.Max(0.0f, optionUsableWidth - ControlGap);
-            actionButtonWidth = Mathf.Max(MinOptionButtonWidth, shrinkableWidth * 0.38f);
-            levelButtonWidth = Mathf.Max(MinOptionButtonWidth, shrinkableWidth - actionButtonWidth);
-        }
+        // Allocate space for option buttons
+        float optionBudget = Mathf.Max(0.0f, rightButtonsStartX - controlX - ControlGap);
+        float actionButtonWidth = Mathf.Min(130.0f, optionBudget * 0.35f);
+        float levelButtonWidth = Mathf.Max(MinOptionButtonWidth, optionBudget - actionButtonWidth - ControlGap);
+        actionButtonWidth = Mathf.Max(MinOptionButtonWidth, actionButtonWidth);
 
         if (_actionModeOptionButton != null)
         {
-            _actionModeOptionButton.Size = new Vector2(actionButtonWidth, _actionModeOptionButton.Size.Y);
-            _actionModeOptionButton.Position = new Vector2(optionStartX, optionRowY);
+            _actionModeOptionButton.Position = new Vector2(controlX, ControlRowY);
+            _actionModeOptionButton.Size = new Vector2(actionButtonWidth, ControlRowHeight);
+            controlX += actionButtonWidth + ControlGap;
         }
 
         if (_levelOptionButton != null)
         {
-            float leftX = optionStartX;
-            if (_actionModeOptionButton != null)
-            {
-                leftX += _actionModeOptionButton.Size.X + ControlGap;
-            }
-            _levelOptionButton.Size = new Vector2(levelButtonWidth, _levelOptionButton.Size.Y);
-            _levelOptionButton.Position = new Vector2(leftX, optionRowY);
+            _levelOptionButton.Position = new Vector2(controlX, ControlRowY);
+            _levelOptionButton.Size = new Vector2(levelButtonWidth, ControlRowHeight);
         }
+
+        // Right side: Book + Resize anchored to right edge (handled by tscn anchors, just ensure Y)
+        _activityRateLabel.Visible = false;
 
         if (_validationPanel != null)
         {
-            _validationPanel.Size = new Vector2(Mathf.Max(220.0f, optionUsableWidth), _validationPanel.Size.Y);
             _validationPanel.Visible = false;
         }
+
+        // --- Progress bars: positioned inside the control row, right-aligned ---
+        float barAreaRight = rightButtonsStartX - ControlGap;
+        float breakthroughWidth = _breakthroughButton?.Size.X > 0.0f ? _breakthroughButton.Size.X : 78.0f;
+        float cultivationWidth = Mathf.Clamp(barAreaRight * 0.22f, 120.0f, 240.0f);
+        float exploreWidth = Mathf.Clamp(barAreaRight * 0.22f, 120.0f, 228.0f);
+
+        float exploreX = barAreaRight - exploreWidth;
+        float breakthroughX = exploreX - ControlGap - breakthroughWidth;
+        float cultivationX = breakthroughX - ControlGap - cultivationWidth;
+
+        float barRowY = ControlRowY;
+
+        _exploreProgressBar.Position = new Vector2(exploreX, barRowY);
+        _exploreProgressBar.Size = new Vector2(exploreWidth, _exploreProgressBar.Size.Y);
+
+        if (_breakthroughButton != null)
+        {
+            _breakthroughButton.Position = new Vector2(breakthroughX, barRowY - 2.0f);
+        }
+
+        _cultivationProgressBar.Position = new Vector2(cultivationX, barRowY);
+        _cultivationProgressBar.Size = new Vector2(cultivationWidth, _cultivationProgressBar.Size.Y);
+
+        _cultivationLabel.Position = new Vector2(cultivationX, barRowY - 18.0f);
+        _cultivationLabel.Size = new Vector2(cultivationWidth + breakthroughWidth + ControlGap + exploreWidth, _cultivationLabel.Size.Y);
+
+        _zoneLabel.Position = new Vector2(exploreX, barRowY - 18.0f);
+        _zoneLabel.Size = new Vector2(exploreWidth, _zoneLabel.Size.Y);
     }
 
     private float GetBottomLockedY()

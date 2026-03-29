@@ -9,6 +9,31 @@ namespace Xiuxian.Scripts.Services
         public const string DungeonBossWeaknessEffectId = "dungeon_boss_weakness_reduction";
         public const string CultivationLingqiBonusEffectId = "cultivation_lingqi_bonus";
 
+        public const string GardenGrowthSpeedBonusEffectId = "garden_growth_speed_bonus";
+        public const string GardenRareSpawnBonusEffectId = "garden_rare_spawn_bonus";
+        public const string GardenOfflineFullEffectId = "garden_offline_full";
+        public const string MiningDurabilityBonusEffectId = "mining_durability_bonus";
+        public const string MiningRareSpawnBonusEffectId = "mining_rare_spawn_bonus";
+        public const string MiningDoubleOutputEffectId = "mining_double_output_chance";
+        public const string FishingSpeedBonusEffectId = "fishing_speed_bonus";
+        public const string FishingRarePondUnlockEffectId = "fishing_rare_pond_unlock";
+        public const string FishingDoubleOutputEffectId = "fishing_double_output_chance";
+        public const string TalismanDoubleOutputEffectId = "talisman_double_output_chance";
+        public const string TalismanMaterialDiscountEffectId = "talisman_material_discount";
+        public const string TalismanEnchantChanceEffectId = "talisman_enchant_chance";
+        public const string CookingDurationBonusEffectId = "cooking_duration_bonus";
+        public const string CookingDoubleOutputEffectId = "cooking_double_output_chance";
+        public const string CookingExtraEffectId = "cooking_extra_effect";
+        public const string FormationEffectBonusEffectId = "formation_effect_bonus";
+        public const string FormationDualSlotEffectId = "formation_dual_slot";
+        public const string FormationSelfRepairEffectId = "formation_self_repair";
+        public const string EnlightenmentEfficiencyBonusEffectId = "enlightenment_efficiency_bonus";
+        public const string EnlightenmentMeditationCapBonusEffectId = "enlightenment_meditation_cap_bonus";
+        public const string EnlightenmentContemplationCapBonusEffectId = "enlightenment_contemplation_cap_bonus";
+        public const string BodyCultivationEfficiencyBonusEffectId = "body_cultivation_efficiency_bonus";
+        public const string BodyCultivationTemperCapBonusEffectId = "body_cultivation_temper_cap_bonus";
+        public const string BodyCultivationBoneforgeCapBonusEffectId = "body_cultivation_boneforge_cap_bonus";
+
         public readonly record struct MasteryDefinition(
             string SystemId,
             int Level,
@@ -177,44 +202,44 @@ namespace Xiuxian.Scripts.Services
                 Def(PlayerActionState.ModeSmithing, 4, 80, 3, "smithing_max_enhance_level", "炼器精通 Lv4", 9.0),
 
                 Def(PlayerActionState.ModeGarden, 1, 0, 1, "garden_base", "灵田精通 Lv1", 0.0),
-                Def(PlayerActionState.ModeGarden, 2, 20, 1, "garden_unlock_spirit_flower", "灵田精通 Lv2", 1.0),
-                Def(PlayerActionState.ModeGarden, 3, 45, 2, "garden_bonus_yield", "灵田精通 Lv3", 1.0),
-                Def(PlayerActionState.ModeGarden, 4, 75, 3, "garden_unlock_spirit_fruit", "灵田精通 Lv4", 1.0),
+                Def(PlayerActionState.ModeGarden, 2, 25, 1, GardenGrowthSpeedBonusEffectId, "灵田精通 Lv2 — 生长+15%", 0.15),
+                Def(PlayerActionState.ModeGarden, 3, 55, 2, GardenRareSpawnBonusEffectId, "灵田精通 Lv3 — 稀有+10%", 0.10),
+                Def(PlayerActionState.ModeGarden, 4, 95, 3, GardenOfflineFullEffectId, "灵田精通 Lv4 — 离线100%", 1.0),
 
                 Def(PlayerActionState.ModeMining, 1, 0, 1, "mining_base", "矿脉精通 Lv1", 0.0),
-                Def(PlayerActionState.ModeMining, 2, 25, 1, "mining_unlock_spirit_jade", "矿脉精通 Lv2", 1.0),
-                Def(PlayerActionState.ModeMining, 3, 55, 2, "mining_speed_bonus", "矿脉精通 Lv3", 0.15),
-                Def(PlayerActionState.ModeMining, 4, 85, 3, "mining_unlock_mithril", "矿脉精通 Lv4", 1.0),
+                Def(PlayerActionState.ModeMining, 2, 30, 1, MiningDurabilityBonusEffectId, "矿脉精通 Lv2 — 耐久+20%", 0.20),
+                Def(PlayerActionState.ModeMining, 3, 60, 2, MiningRareSpawnBonusEffectId, "矿脉精通 Lv3 — 稀有+10%", 0.10),
+                Def(PlayerActionState.ModeMining, 4, 95, 3, MiningDoubleOutputEffectId, "矿脉精通 Lv4 — 双倍10%", 0.10),
 
                 Def(PlayerActionState.ModeFishing, 1, 0, 1, "fishing_base", "灵渔精通 Lv1", 0.0),
-                Def(PlayerActionState.ModeFishing, 2, 20, 1, "fishing_unlock_deep_pond", "灵渔精通 Lv2", 1.0),
-                Def(PlayerActionState.ModeFishing, 3, 45, 2, "fishing_speed_bonus", "灵渔精通 Lv3", 0.15),
-                Def(PlayerActionState.ModeFishing, 4, 75, 3, "fishing_rare_bonus", "灵渔精通 Lv4", 1.0),
+                Def(PlayerActionState.ModeFishing, 2, 25, 1, FishingSpeedBonusEffectId, "灵渔精通 Lv2 — 速度+15%", 0.15),
+                Def(PlayerActionState.ModeFishing, 3, 55, 2, FishingRarePondUnlockEffectId, "灵渔精通 Lv3 — 稀有鱼塘", 1.0),
+                Def(PlayerActionState.ModeFishing, 4, 90, 3, FishingDoubleOutputEffectId, "灵渔精通 Lv4 — 双倍8%", 0.08),
 
                 Def(PlayerActionState.ModeTalisman, 1, 0, 1, "talisman_base", "符箓精通 Lv1", 0.0),
-                Def(PlayerActionState.ModeTalisman, 2, 25, 1, "talisman_unlock_haste", "符箓精通 Lv2", 1.0),
-                Def(PlayerActionState.ModeTalisman, 3, 55, 2, "talisman_material_discount", "符箓精通 Lv3", 0.10),
-                Def(PlayerActionState.ModeTalisman, 4, 85, 3, "talisman_unlock_burst", "符箓精通 Lv4", 1.0),
+                Def(PlayerActionState.ModeTalisman, 2, 30, 1, TalismanDoubleOutputEffectId, "符箓精通 Lv2 — 双出10%", 0.10),
+                Def(PlayerActionState.ModeTalisman, 3, 60, 2, TalismanMaterialDiscountEffectId, "符箓精通 Lv3 — 材料-10%", 0.10),
+                Def(PlayerActionState.ModeTalisman, 4, 95, 3, TalismanEnchantChanceEffectId, "符箓精通 Lv4 — 附魔概率", 0.10),
 
                 Def(PlayerActionState.ModeCooking, 1, 0, 1, "cooking_base", "烹饪精通 Lv1", 0.0),
-                Def(PlayerActionState.ModeCooking, 2, 20, 1, "cooking_unlock_sweet", "烹饪精通 Lv2", 1.0),
-                Def(PlayerActionState.ModeCooking, 3, 45, 2, "cooking_duration_bonus", "烹饪精通 Lv3", 1.0),
-                Def(PlayerActionState.ModeCooking, 4, 75, 3, "cooking_unlock_dragon_soup", "烹饪精通 Lv4", 1.0),
+                Def(PlayerActionState.ModeCooking, 2, 25, 1, CookingDurationBonusEffectId, "烹饪精通 Lv2 — 持续+1场", 1.0),
+                Def(PlayerActionState.ModeCooking, 3, 55, 2, CookingDoubleOutputEffectId, "烹饪精通 Lv3 — 双出15%", 0.15),
+                Def(PlayerActionState.ModeCooking, 4, 90, 3, CookingExtraEffectId, "烹饪精通 Lv4 — 额外效果", 1.0),
 
                 Def(PlayerActionState.ModeFormation, 1, 0, 1, "formation_base", "阵法精通 Lv1", 0.0),
-                Def(PlayerActionState.ModeFormation, 2, 25, 1, "formation_unlock_iron_wall", "阵法精通 Lv2", 1.0),
-                Def(PlayerActionState.ModeFormation, 3, 55, 2, "formation_slot_count", "阵法精通 Lv3", 2.0),
-                Def(PlayerActionState.ModeFormation, 4, 85, 3, "formation_unlock_spirit_eye", "阵法精通 Lv4", 1.0),
+                Def(PlayerActionState.ModeFormation, 2, 30, 1, FormationEffectBonusEffectId, "阵法精通 Lv2 — 效果+10%", 0.10),
+                Def(PlayerActionState.ModeFormation, 3, 60, 2, FormationDualSlotEffectId, "阵法精通 Lv3 — 双槽", 2.0),
+                Def(PlayerActionState.ModeFormation, 4, 100, 3, FormationSelfRepairEffectId, "阵法精通 Lv4 — 自修复", 1.0),
 
                 Def(PlayerActionState.ModeEnlightenment, 1, 0, 1, "enlightenment_base", "悟道精通 Lv1", 0.0),
-                Def(PlayerActionState.ModeEnlightenment, 2, 25, 1, "enlightenment_unlock_hp", "悟道精通 Lv2", 1.0),
-                Def(PlayerActionState.ModeEnlightenment, 3, 50, 2, "enlightenment_speed_bonus", "悟道精通 Lv3", 0.20),
-                Def(PlayerActionState.ModeEnlightenment, 4, 80, 3, "enlightenment_unlock_lingqi", "悟道精通 Lv4", 1.0),
+                Def(PlayerActionState.ModeEnlightenment, 2, 30, 1, EnlightenmentEfficiencyBonusEffectId, "悟道精通 Lv2 — 效率+10%", 0.10),
+                Def(PlayerActionState.ModeEnlightenment, 3, 60, 2, EnlightenmentMeditationCapBonusEffectId, "悟道精通 Lv3 — 冥想上限+10", 10.0),
+                Def(PlayerActionState.ModeEnlightenment, 4, 90, 3, EnlightenmentContemplationCapBonusEffectId, "悟道精通 Lv4 — 参悟上限+5", 5.0),
 
                 Def(PlayerActionState.ModeBodyCultivation, 1, 0, 1, "body_cultivation_base", "体修精通 Lv1", 0.0),
-                Def(PlayerActionState.ModeBodyCultivation, 2, 25, 1, "body_cultivation_unlock_spirit_skin", "体修精通 Lv2", 1.0),
-                Def(PlayerActionState.ModeBodyCultivation, 3, 50, 2, "body_cultivation_material_discount", "体修精通 Lv3", 0.15),
-                Def(PlayerActionState.ModeBodyCultivation, 4, 80, 3, "body_cultivation_unlock_blood_flow", "体修精通 Lv4", 1.0),
+                Def(PlayerActionState.ModeBodyCultivation, 2, 30, 1, BodyCultivationEfficiencyBonusEffectId, "体修精通 Lv2 — 效率+10%", 0.10),
+                Def(PlayerActionState.ModeBodyCultivation, 3, 65, 2, BodyCultivationTemperCapBonusEffectId, "体修精通 Lv3 — 淬体上限+10", 10.0),
+                Def(PlayerActionState.ModeBodyCultivation, 4, 90, 3, BodyCultivationBoneforgeCapBonusEffectId, "体修精通 Lv4 — 炼骨上限+5", 5.0),
             };
         }
 

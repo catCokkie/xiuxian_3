@@ -43,9 +43,9 @@ public partial class BookTabsController : Control
     private VBoxContainer _bugFeedbackRoot = null!;
     private VBoxContainer _equipmentRoot = null!;
     private VBoxContainer _validationRoot = null!;
-    private Panel _validationFilterPanel = null!;
-    private Panel _validationResultPanel = null!;
-    private Panel _simulationResultPanel = null!;
+    private Control _validationFilterPanel = null!;
+    private Control _validationResultPanel = null!;
+    private Control _simulationResultPanel = null!;
     private Button _settingsSystemBtn = null!;
     private Button _settingsDisplayBtn = null!;
     private Button _settingsProgressBtn = null!;
@@ -80,7 +80,7 @@ public partial class BookTabsController : Control
     private OptionButton _cultivationFishingOption = null!;
     private Button _cultivationFishingStartButton = null!;
     private RichTextLabel _cultivationContentLabel = null!;
-    private RichTextLabel _backpackContentLabel = null!;
+    private BackpackGridController _backpackGrid = null!;
     private TextEdit _bugFeedbackInput = null!;
     private Label _bugFeedbackStatusLabel = null!;
     private RichTextLabel _equipmentContentLabel = null!;
@@ -448,7 +448,7 @@ public partial class BookTabsController : Control
             }
             else if (ActiveLeftTabName == "BackpackTab")
             {
-                _backpackContentLabel.Text = content;
+                RefreshBackpackGrid();
             }
             else if (ActiveLeftTabName == "ValidationTab")
             {
@@ -468,7 +468,7 @@ public partial class BookTabsController : Control
             "CultivationTab" => BuildCultivationOverviewText(),
             "BattleLogTab" => BuildBattleLogText(),
             "EquipmentTab" => BuildEquipmentOverviewText(),
-            "BackpackTab" => BuildBackpackOverviewText(),
+            "BackpackTab" => UiText.BackpackTemplate,
             "StatsTab" => BuildStatsOverviewText(),
             "ValidationTab" => BuildValidationOverviewText(),
             _ => _leftTabContentMap[tabName]
@@ -546,73 +546,27 @@ public partial class BookTabsController : Control
         }
     }
 
-    private string BuildBackpackOverviewText()
+    private void RefreshBackpackGrid()
     {
-        if (_backpackState == null)
-        {
-            return UiText.BackpackTemplate;
-        }
+        _backpackGrid.Refresh();
+        _backpackGrid.UpdateGridColumns();
+    }
 
-        var sb = new StringBuilder();
-        sb.AppendLine(UiText.LeftTabBackpack);
-
-        Dictionary<string, int> items = _backpackState.GetItemEntries();
-        Dictionary<string, int> potions = _potionInventoryState?.GetPotionEntries() ?? new Dictionary<string, int>();
-        EquipmentInstanceData[] backpackInstances = _backpackState.GetEquipmentInstances();
-        EquipmentStatProfile[] backpackProfiles = _backpackState.GetEquipmentProfiles();
-
-        sb.AppendLine();
-        sb.AppendLine(UiText.BackpackSectionMaterials);
-        if (items.Count == 0)
+    private void OnBackpackGridCellClicked(string equipmentId)
+    {
+        if (equipmentId.StartsWith("__equip_slot__"))
         {
-            sb.AppendLine($"- {UiText.BackpackNoMaterials}");
-        }
-        else
-        {
-            foreach ((string itemId, int amount) in items)
+            string slotName = equipmentId.Replace("__equip_slot__", "");
+            if (System.Enum.TryParse<EquipmentSlotType>(slotName, out EquipmentSlotType slot))
             {
-                sb.AppendLine($"- {UiText.BackpackItemName(itemId)} x{amount}");
+                EquipFromBackpack(slot);
+                RefreshBackpackGrid();
             }
+            return;
         }
 
-        sb.AppendLine();
-        sb.AppendLine("丹药库存");
-        if (potions.Count == 0)
-        {
-            sb.AppendLine("- 当前背包中没有丹药。");
-        }
-        else
-        {
-            foreach ((string itemId, int amount) in potions)
-            {
-                sb.AppendLine($"- {UiText.BackpackItemName(itemId)} x{amount}");
-            }
-        }
-
-        sb.AppendLine();
-        sb.AppendLine(UiText.BackpackSectionEquipment);
-        if (backpackInstances.Length == 0 && backpackProfiles.Length == 0)
-        {
-            sb.AppendLine($"- {UiText.BackpackNoEquipment}");
-            return sb.ToString().TrimEnd();
-        }
-
-        for (int i = 0; i < backpackInstances.Length; i++)
-        {
-            EquipmentInstanceData instance = backpackInstances[i];
-            sb.AppendLine($"- [{UiText.SlotLabel(instance.Slot)}] {instance.DisplayName} | {UiText.EquipmentRarityLabel(instance.RarityTier)} | {UiText.EquipmentSourceLabel(instance.SourceStage)}");
-            sb.AppendLine($"  主属性：{EquipmentPresentationRules.BuildSingleStatLine(instance.MainStatKey, instance.MainStatValue)}");
-            sb.AppendLine($"  副属性：{EquipmentPresentationRules.BuildSubStatSummary(instance.SubStats)}");
-        }
-
-        for (int i = 0; i < backpackProfiles.Length; i++)
-        {
-            EquipmentStatProfile profile = backpackProfiles[i];
-            sb.AppendLine($"- [{UiText.SlotLabel(profile.Slot)}] {profile.DisplayName} | 旧版装备");
-            sb.AppendLine($"  属性：{EquipmentPresentationRules.BuildModifierSummary(profile.Modifier)}");
-        }
-
-        return sb.ToString().TrimEnd();
+        // Clicking an equipment cell — for now just refresh (future: show detail panel)
+        RefreshBackpackGrid();
     }
 
     private string BuildBattleLogText()
@@ -1938,45 +1892,40 @@ public partial class BookTabsController : Control
         _backpackRoot.AddThemeConstantOverride("separation", 10);
         _leftPage.AddChild(_backpackRoot);
 
-        HBoxContainer actionRow = new();
-        actionRow.AddThemeConstantOverride("separation", 8);
-        _backpackRoot.AddChild(actionRow);
-
-        Button equipWeaponButton = new();
-        equipWeaponButton.Text = UiText.BackpackEquipWeapon;
-        equipWeaponButton.Pressed += () => EquipFromBackpack(EquipmentSlotType.Weapon);
-        actionRow.AddChild(equipWeaponButton);
-
-        Button equipArmorButton = new();
-        equipArmorButton.Text = UiText.BackpackEquipArmor;
-        equipArmorButton.Pressed += () => EquipFromBackpack(EquipmentSlotType.Armor);
-        actionRow.AddChild(equipArmorButton);
-
-        Button equipAccessoryButton = new();
-        equipAccessoryButton.Text = UiText.BackpackEquipAccessory;
-        equipAccessoryButton.Pressed += () => EquipFromBackpack(EquipmentSlotType.Accessory);
-        actionRow.AddChild(equipAccessoryButton);
-
-        _backpackContentLabel = new RichTextLabel();
-        _backpackContentLabel.FitContent = false;
-        _backpackContentLabel.ScrollActive = true;
-        _backpackContentLabel.SizeFlagsVertical = Control.SizeFlags.ExpandFill;
-        _backpackRoot.AddChild(_backpackContentLabel);
+        _backpackGrid = new BackpackGridController();
+        _backpackGrid.Name = "BackpackGrid";
+        _backpackGrid.SizeFlagsVertical = SizeFlags.ExpandFill;
+        _backpackGrid.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+        _backpackGrid.Initialize(_backpackState, _potionInventoryState);
+        _backpackGrid.EquipmentCellClicked += OnBackpackGridCellClicked;
+        _backpackRoot.AddChild(_backpackGrid);
     }
 
     private void BuildValidationUi()
     {
         _validationRoot = new VBoxContainer();
         _validationRoot.Name = "ValidationRoot";
+        _validationRoot.Visible = false;
         _validationRoot.SetAnchorsPreset(LayoutPreset.FullRect);
         _validationRoot.OffsetLeft = 20.0f;
         _validationRoot.OffsetTop = 42.0f;
         _validationRoot.OffsetRight = -20.0f;
         _validationRoot.OffsetBottom = -18.0f;
-        _validationRoot.AddThemeConstantOverride("separation", 10);
+        _validationRoot.AddThemeConstantOverride("separation", 8);
         _leftPage.AddChild(_validationRoot);
 
-        _validationFilterPanel = CreateValidationSectionPanel("筛选信息", out VBoxContainer filterContent);
+        ScrollContainer scroll = new();
+        scroll.SizeFlagsVertical = Control.SizeFlags.ExpandFill;
+        scroll.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
+        scroll.HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled;
+        _validationRoot.AddChild(scroll);
+
+        VBoxContainer scrollInner = new();
+        scrollInner.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
+        scrollInner.AddThemeConstantOverride("separation", 10);
+        scroll.AddChild(scrollInner);
+
+        _validationFilterPanel = CreateValidationSectionPanel(scrollInner, "筛选信息", out VBoxContainer filterContent);
 
         HBoxContainer filterRow = new();
         filterRow.AddThemeConstantOverride("separation", 8);
@@ -1992,22 +1941,25 @@ public partial class BookTabsController : Control
 
         _validationFilterInfoLabel = new Label();
         _validationFilterInfoLabel.AutowrapMode = TextServer.AutowrapMode.WordSmart;
+        _validationFilterInfoLabel.AddThemeFontSizeOverride("font_size", 12);
         filterContent.AddChild(_validationFilterInfoLabel);
 
-        _validationResultPanel = CreateValidationSectionPanel("校验结果", out VBoxContainer validationContent);
+        _validationResultPanel = CreateValidationSectionPanel(scrollInner, "校验结果", out VBoxContainer validationContent);
 
         _validationStatusLabel = new Label();
         _validationStatusLabel.AutowrapMode = TextServer.AutowrapMode.WordSmart;
+        _validationStatusLabel.AddThemeFontSizeOverride("font_size", 12);
         validationContent.AddChild(_validationStatusLabel);
 
         _validationContentLabel = new RichTextLabel();
-        _validationContentLabel.FitContent = false;
-        _validationContentLabel.ScrollActive = true;
-        _validationContentLabel.CustomMinimumSize = new Vector2(0.0f, 150.0f);
-        _validationContentLabel.SizeFlagsVertical = Control.SizeFlags.ExpandFill;
+        _validationContentLabel.BbcodeEnabled = true;
+        _validationContentLabel.FitContent = true;
+        _validationContentLabel.ScrollActive = false;
+        _validationContentLabel.AddThemeFontSizeOverride("normal_font_size", 12);
+        _validationContentLabel.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
         validationContent.AddChild(_validationContentLabel);
 
-        _simulationResultPanel = CreateValidationSectionPanel("模拟结果", out VBoxContainer simulationContent);
+        _simulationResultPanel = CreateValidationSectionPanel(scrollInner, "模拟结果", out VBoxContainer simulationContent);
 
         HBoxContainer simulationFilterRow = new();
         simulationFilterRow.AddThemeConstantOverride("separation", 8);
@@ -2037,37 +1989,37 @@ public partial class BookTabsController : Control
 
         _simulationStatusLabel = new Label();
         _simulationStatusLabel.AutowrapMode = TextServer.AutowrapMode.WordSmart;
+        _simulationStatusLabel.AddThemeFontSizeOverride("font_size", 12);
         simulationContent.AddChild(_simulationStatusLabel);
 
         _simulationContentLabel = new RichTextLabel();
-        _simulationContentLabel.FitContent = false;
-        _simulationContentLabel.ScrollActive = true;
-        _simulationContentLabel.CustomMinimumSize = new Vector2(0.0f, 110.0f);
+        _simulationContentLabel.BbcodeEnabled = true;
+        _simulationContentLabel.FitContent = true;
+        _simulationContentLabel.ScrollActive = false;
+        _simulationContentLabel.AddThemeFontSizeOverride("normal_font_size", 12);
+        _simulationContentLabel.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
         simulationContent.AddChild(_simulationContentLabel);
     }
 
-    private Panel CreateValidationSectionPanel(string title, out VBoxContainer wrapper)
+    private Control CreateValidationSectionPanel(VBoxContainer parent, string title, out VBoxContainer wrapper)
     {
-        Panel panel = new();
-        panel.SizeFlagsVertical = Control.SizeFlags.ShrinkBegin;
-        panel.AddThemeStyleboxOverride("panel", CreateValidationSectionStyle());
-        _validationRoot.AddChild(panel);
+        PanelContainer panelContainer = new();
+        panelContainer.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
+        panelContainer.AddThemeStyleboxOverride("panel", CreateValidationSectionStyle());
+        parent.AddChild(panelContainer);
 
         wrapper = new VBoxContainer();
-        wrapper.AddThemeConstantOverride("separation", 8);
-        wrapper.SetAnchorsPreset(LayoutPreset.FullRect);
-        wrapper.OffsetLeft = 12.0f;
-        wrapper.OffsetTop = 10.0f;
-        wrapper.OffsetRight = -12.0f;
-        wrapper.OffsetBottom = -10.0f;
-        panel.AddChild(wrapper);
+        wrapper.AddThemeConstantOverride("separation", 6);
+        wrapper.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
+        panelContainer.AddChild(wrapper);
 
         Label heading = new();
         heading.Text = title;
         heading.AddThemeColorOverride("font_color", new Color(0.36f, 0.24f, 0.16f, 1.0f));
+        heading.AddThemeFontSizeOverride("font_size", 14);
         wrapper.AddChild(heading);
 
-        return panel;
+        return panelContainer;
     }
 
     private static StyleBoxFlat CreateValidationSectionStyle()
@@ -2582,7 +2534,7 @@ public partial class BookTabsController : Control
         }
         if (ActiveLeftTabName == "BackpackTab")
         {
-            _backpackContentLabel.Text = GetLeftTabContent(ActiveLeftTabName);
+            RefreshBackpackGrid();
             UpdateSettingsUiVisibility();
             return;
         }

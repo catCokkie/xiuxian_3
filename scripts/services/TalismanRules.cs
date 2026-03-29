@@ -14,5 +14,20 @@ namespace Xiuxian.Scripts.Services
                 _ => default,
             };
         }
+
+        public static double GetDoubleOutputChance(int masteryLevel)
+        {
+            return SubsystemMasteryRules.GetEffectValue(PlayerActionState.ModeTalisman, masteryLevel, SubsystemMasteryRules.TalismanDoubleOutputEffectId);
+        }
+
+        public static double GetMaterialDiscount(int masteryLevel)
+        {
+            return SubsystemMasteryRules.GetEffectValue(PlayerActionState.ModeTalisman, masteryLevel, SubsystemMasteryRules.TalismanMaterialDiscountEffectId);
+        }
+
+        public static double GetEnchantChance(int masteryLevel)
+        {
+            return SubsystemMasteryRules.GetEffectValue(PlayerActionState.ModeTalisman, masteryLevel, SubsystemMasteryRules.TalismanEnchantChanceEffectId);
+        }
     }
 }

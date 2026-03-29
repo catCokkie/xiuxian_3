@@ -42,6 +42,11 @@ SubsystemMasteryState="*res://scripts/services/SubsystemMasteryState.cs"
 ActivityConversionService="*res://scripts/services/ActivityConversionService.cs"
 CloudSaveSyncService="*res://scripts/services/CloudSaveSyncService.cs"
 
+[display]
+
+window/size/viewport_width=1152
+window/size/viewport_height=648
+
 [dotnet]
 
 project/assembly_name="xiuxian2"

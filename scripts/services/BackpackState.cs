@@ -6,7 +6,7 @@ namespace Xiuxian.Scripts.Services
     /// <summary>
     /// Lightweight backpack state for loot settlement and persistence.
     /// </summary>
-    public partial class BackpackState : Node
+    public partial class BackpackState : Node, IDictionaryPersistable
     {
         [Signal]
         public delegate void InventoryChangedEventHandler(string itemId, int amount, int newTotal);

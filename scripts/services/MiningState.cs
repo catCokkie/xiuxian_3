@@ -2,7 +2,7 @@ using Godot;
 
 namespace Xiuxian.Scripts.Services
 {
-    public partial class MiningState : Node
+    public partial class MiningState : Node, IDictionaryPersistable
     {
         [Signal]
         public delegate void MiningChangedEventHandler(string selectedRecipeId, float currentProgress, float requiredProgress, int currentDurability);

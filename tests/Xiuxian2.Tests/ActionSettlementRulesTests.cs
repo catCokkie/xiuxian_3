@@ -62,4 +62,45 @@ public sealed class ActionSettlementRulesTests
         Assert.Equal(2, result.ItemDrops["lingqi_shard"]);
         Assert.Single(result.EquipmentDrops);
     }
+
+    [Fact]
+    public void BuildCultivationSettlement_ClampsNegativeValuesToZero()
+    {
+        ActionSettlementResult result = ActionSettlementRules.BuildCultivationSettlement(
+            actionTargetId: null!,
+            apConsumed: -5,
+            lingqiGain: -1,
+            insightGain: -2,
+            petAffinityGain: -3,
+            realmExpGain: -4);
+
+        Assert.Equal(string.Empty, result.ActionTargetId);
+        Assert.Equal(0.0, result.ApConsumed);
+        Assert.Equal(0.0, result.LingqiGain);
+        Assert.Equal(0.0, result.InsightGain);
+        Assert.Equal(0.0, result.PetAffinityGain);
+        Assert.Equal(0.0, result.RealmExpGain);
+        Assert.False(result.HasAnyReward);
+    }
+
+    [Fact]
+    public void BuildDungeonRewardSettlement_ClampsAndDefaultsNullParameters()
+    {
+        ActionSettlementResult result = ActionSettlementRules.BuildDungeonRewardSettlement(
+            actionTargetId: null!,
+            sourceTag: null!,
+            exploreProgressGain: -10,
+            battleRoundsAdvanced: -1,
+            itemDrops: null!,
+            equipmentDrops: null!,
+            lingqiGain: -5);
+
+        Assert.Equal(string.Empty, result.ActionTargetId);
+        Assert.Equal(string.Empty, result.SourceTag);
+        Assert.Equal(0.0, result.ExploreProgressGain);
+        Assert.Equal(0, result.BattleRoundsAdvanced);
+        Assert.Equal(0.0, result.LingqiGain);
+        Assert.Empty(result.ItemDrops);
+        Assert.Empty(result.EquipmentDrops);
+    }
 }

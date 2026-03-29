@@ -348,4 +348,35 @@ public sealed class SaveRoundTripTests
             Assert.Equal(expectedSubStats[i].Value, actualSubStats[i].Value, 6);
         }
     }
+
+    [Fact]
+    public void EquipmentProfileCodec_FromEmptyDictionary_ReturnsDefaults()
+    {
+        var emptyData = new Dictionary<string, object>();
+        EquipmentStatProfile profile = EquipmentProfileCodec.FromPlainDictionary(emptyData);
+
+        Assert.Equal(string.Empty, profile.EquipmentId);
+        Assert.Equal(string.Empty, profile.DisplayName);
+        Assert.Equal(0, profile.Modifier.AttackFlat);
+        Assert.Equal(0.0, profile.Modifier.AttackRate);
+    }
+
+    [Fact]
+    public void EquipmentProfileCodec_FromMissingModifier_ReturnsDefaultModifier()
+    {
+        var data = new Dictionary<string, object>
+        {
+            ["equipment_id"] = "test_sword",
+            ["display_name"] = "Test Sword",
+            ["slot"] = "Weapon",
+            ["set_tag"] = "",
+            ["rarity"] = 1,
+            ["enhance_level"] = 0,
+        };
+        EquipmentStatProfile profile = EquipmentProfileCodec.FromPlainDictionary(data);
+
+        Assert.Equal("test_sword", profile.EquipmentId);
+        Assert.Equal(0, profile.Modifier.AttackFlat);
+        Assert.Equal(0.0, profile.Modifier.DefenseRate);
+    }
 }

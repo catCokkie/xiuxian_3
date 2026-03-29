@@ -2,7 +2,7 @@ using Godot;
 
 namespace Xiuxian.Scripts.Services
 {
-    public partial class AlchemyState : Node
+    public partial class AlchemyState : Node, IDictionaryPersistable
     {
         [Signal]
         public delegate void AlchemyChangedEventHandler(string selectedRecipeId, float currentProgress, float requiredProgress);

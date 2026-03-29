@@ -41,5 +41,17 @@ namespace Xiuxian.Scripts.Services
             public const float MonsterMovePxPerFrame = 3.8f;
             public const float MonsterRespawnSpacing = 110.0f;
         }
+
+        public static class LevelDefaults
+        {
+            public const double ProgressPer100Inputs = 2.0;
+            public const double EncounterCheckIntervalProgress = 20.0;
+            public const double BaseEncounterRate = 0.18;
+            public const int DangerLevel = 1;
+            public const int PlayerBaseHp = 36;
+            public const int PlayerAttackPerRound = 4;
+            public const int EnemyDamageDivider = 4;
+            public const int EnemyMinDamagePerRound = 1;
+        }
     }
 }

@@ -222,4 +222,53 @@ public sealed class SaveMigrationRulesTests
         Assert.Equal(0.0, System.Convert.ToDouble(progress["enlightenment_lingqi_bonus_rate"]));
         Assert.Equal(0L, System.Convert.ToInt64(progress["body_cultivation_boneforge_count"]));
     }
+
+    [Fact]
+    public void SaveMigrationException_ContainsVersionInfo()
+    {
+        var inner = new System.InvalidOperationException("test corruption");
+        var ex = new SaveMigrationException(5, 6, inner);
+
+        Assert.Equal(5, ex.FromVersion);
+        Assert.Equal(6, ex.ToVersion);
+        Assert.Contains("v5", ex.Message);
+        Assert.Contains("v6", ex.Message);
+        Assert.Same(inner, ex.InnerException);
+    }
+
+    [Fact]
+    public void MigrateToLatest_VersionRemainsStableOnSuccessfulMigration()
+    {
+        // Verify that after full migration, version is LatestVersion
+        SaveMigrationRules.MigrationStore cfg = new();
+        cfg.SetValue("meta", "version", 1);
+
+        SaveMigrationRules.MigrateToLatest(cfg, 1);
+
+        Assert.Equal(SaveMigrationRules.LatestVersion, System.Convert.ToInt32(cfg.GetValue("meta", "version", 0)));
+    }
+
+    [Fact]
+    public void MigrateToLatest_PostValidation_AllRequiredSectionsExistFromV1()
+    {
+        SaveMigrationRules.MigrationStore cfg = new();
+        cfg.SetValue("meta", "version", 1);
+        cfg.SetValue("ui", "submenu_active_tab", "CultivationTab");
+        cfg.SetValue("action", "mode", new System.Collections.Generic.Dictionary<string, object>
+        {
+            ["mode_id"] = PlayerActionState.ModeCultivation,
+        });
+
+        SaveMigrationRules.MigrateToLatest(cfg, 1);
+
+        // All critical sections must exist after full v1→v8 chain
+        Assert.True(cfg.HasSectionKey("ui", "submenu_active_left_tab"));
+        Assert.True(cfg.HasSectionKey("action", "mode"));
+        Assert.True(cfg.HasSectionKey("settings", "system"));
+        Assert.True(cfg.HasSectionKey("backpack", "items"));
+        Assert.True(cfg.HasSectionKey("equipment", "equipped"));
+        Assert.True(cfg.HasSectionKey("resource", "wallet"));
+        Assert.True(cfg.HasSectionKey("mastery", "levels"));
+        Assert.True(cfg.HasSectionKey("progress", "player"));
+    }
 }

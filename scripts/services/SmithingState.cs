@@ -2,7 +2,7 @@ using Godot;
 
 namespace Xiuxian.Scripts.Services
 {
-    public partial class SmithingState : Node
+    public partial class SmithingState : Node, IDictionaryPersistable
     {
         [Signal]
         public delegate void SmithingChangedEventHandler(string targetEquipmentId, float currentProgress, float requiredProgress);

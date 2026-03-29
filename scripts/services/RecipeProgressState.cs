@@ -2,7 +2,7 @@ using Godot;
 
 namespace Xiuxian.Scripts.Services
 {
-    public partial class RecipeProgressState : Node
+    public partial class RecipeProgressState : Node, IDictionaryPersistable
     {
         [Signal]
         public delegate void RecipeProgressChangedEventHandler(string selectedRecipeId, float currentProgress, float requiredProgress);

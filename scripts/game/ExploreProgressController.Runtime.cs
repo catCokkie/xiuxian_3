@@ -134,6 +134,8 @@ namespace Xiuxian.Scripts.Game
         private bool _validationOnlyActiveLevel;
         private bool _syncingActionModeOption;
         private bool _syncingLevelOption;
+        private bool _actionModeOptionConnected;
+        private bool _levelOptionConnected;
         private CharacterStatModifier _battleConsumableModifier;
         private static readonly string[] ActionModeIds =
         {
@@ -535,8 +537,12 @@ namespace Xiuxian.Scripts.Game
                 _actionModeOptionButton.AddItem(ExploreProgressPresentationRules.GetActionModeOptionText(i), i);
             }
             _actionModeOptionButton.TooltipText = "切换主行为（等同 F4）";
-            _actionModeOptionButton.ItemSelected -= OnActionModeOptionSelected;
+            if (_actionModeOptionConnected)
+            {
+                _actionModeOptionButton.ItemSelected -= OnActionModeOptionSelected;
+            }
             _actionModeOptionButton.ItemSelected += OnActionModeOptionSelected;
+            _actionModeOptionConnected = true;
         }
 
         private void ConfigureLevelOptionButton()
@@ -546,8 +552,12 @@ namespace Xiuxian.Scripts.Game
                 return;
             }
 
-            _levelOptionButton.ItemSelected -= OnLevelOptionSelected;
+            if (_levelOptionConnected)
+            {
+                _levelOptionButton.ItemSelected -= OnLevelOptionSelected;
+            }
             _levelOptionButton.ItemSelected += OnLevelOptionSelected;
+            _levelOptionConnected = true;
             _levelOptionButton.TooltipText = "切换已解锁副本";
         }
 

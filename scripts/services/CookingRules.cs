@@ -22,5 +22,21 @@ namespace Xiuxian.Scripts.Services
         {
             return recipeId == "food_dragon_soup" ? DragonSoupLingqiRate : 0.0;
         }
+
+        public static int GetEffectiveDuration(int masteryLevel)
+        {
+            double durationBonus = SubsystemMasteryRules.GetEffectValue(PlayerActionState.ModeCooking, masteryLevel, SubsystemMasteryRules.CookingDurationBonusEffectId);
+            return DefaultDurationBattles + (int)durationBonus;
+        }
+
+        public static double GetDoubleOutputChance(int masteryLevel)
+        {
+            return SubsystemMasteryRules.GetEffectValue(PlayerActionState.ModeCooking, masteryLevel, SubsystemMasteryRules.CookingDoubleOutputEffectId);
+        }
+
+        public static bool HasExtraEffect(int masteryLevel)
+        {
+            return SubsystemMasteryRules.GetEffectValue(PlayerActionState.ModeCooking, masteryLevel, SubsystemMasteryRules.CookingExtraEffectId) >= 1.0;
+        }
     }
 }

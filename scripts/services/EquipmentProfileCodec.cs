@@ -40,8 +40,10 @@ namespace Xiuxian.Scripts.Services
                 modifier = ModifierFromPlainDictionary(modifierData);
             }
 
+            string equipmentId = SaveValueConversionRules.GetString(data, "equipment_id", "");
+
             return EquipmentProfilePersistenceRules.FromData(new EquipmentProfilePersistenceData(
-                SaveValueConversionRules.GetString(data, "equipment_id", ""),
+                equipmentId,
                 SaveValueConversionRules.GetString(data, "display_name", ""),
                 SaveValueConversionRules.GetString(data, "slot", EquipmentSlotType.Weapon.ToString()),
                 SaveValueConversionRules.GetString(data, "set_tag", ""),

@@ -97,10 +97,74 @@ public sealed class SubsystemMasteryRulesTests
     }
 
     [Fact]
+    public void GetEffectValue_ReturnsGardenGrowthSpeedBonusAtLevel2()
+    {
+        double effect = SubsystemMasteryRules.GetEffectValue(PlayerActionState.ModeGarden, 2, SubsystemMasteryRules.GardenGrowthSpeedBonusEffectId);
+
+        Assert.Equal(0.15, effect);
+    }
+
+    [Fact]
+    public void GetEffectValue_ReturnsMiningDurabilityBonusAtLevel2()
+    {
+        double effect = SubsystemMasteryRules.GetEffectValue(PlayerActionState.ModeMining, 2, SubsystemMasteryRules.MiningDurabilityBonusEffectId);
+
+        Assert.Equal(0.20, effect);
+    }
+
+    [Fact]
+    public void GetEffectValue_ReturnsFishingSpeedBonusAtLevel2()
+    {
+        double effect = SubsystemMasteryRules.GetEffectValue(PlayerActionState.ModeFishing, 2, SubsystemMasteryRules.FishingSpeedBonusEffectId);
+
+        Assert.Equal(0.15, effect);
+    }
+
+    [Fact]
+    public void GetEffectValue_ReturnsTalismanDoubleOutputAtLevel2()
+    {
+        double effect = SubsystemMasteryRules.GetEffectValue(PlayerActionState.ModeTalisman, 2, SubsystemMasteryRules.TalismanDoubleOutputEffectId);
+
+        Assert.Equal(0.10, effect);
+    }
+
+    [Fact]
+    public void GetEffectValue_ReturnsCookingDurationBonusAtLevel2()
+    {
+        double effect = SubsystemMasteryRules.GetEffectValue(PlayerActionState.ModeCooking, 2, SubsystemMasteryRules.CookingDurationBonusEffectId);
+
+        Assert.Equal(1.0, effect);
+    }
+
+    [Fact]
+    public void GetEffectValue_ReturnsFormationEffectBonusAtLevel2()
+    {
+        double effect = SubsystemMasteryRules.GetEffectValue(PlayerActionState.ModeFormation, 2, SubsystemMasteryRules.FormationEffectBonusEffectId);
+
+        Assert.Equal(0.10, effect);
+    }
+
+    [Fact]
+    public void GetEffectValue_ReturnsEnlightenmentMeditationCapBonusAtLevel3()
+    {
+        double effect = SubsystemMasteryRules.GetEffectValue(PlayerActionState.ModeEnlightenment, 3, SubsystemMasteryRules.EnlightenmentMeditationCapBonusEffectId);
+
+        Assert.Equal(10.0, effect);
+    }
+
+    [Fact]
+    public void GetEffectValue_ReturnsBodyCultivationTemperCapBonusAtLevel3()
+    {
+        double effect = SubsystemMasteryRules.GetEffectValue(PlayerActionState.ModeBodyCultivation, 3, SubsystemMasteryRules.BodyCultivationTemperCapBonusEffectId);
+
+        Assert.Equal(10.0, effect);
+    }
+
+    [Fact]
     public void TotalUnlockCost_AcrossAll12Systems_MatchesCurrentRegistryBudget()
     {
         double total = SubsystemMasteryRules.GetAllDefinitions().Sum(def => def.InsightCost);
 
-        Assert.Equal(1865.0, total);
+        Assert.Equal(2080.0, total);
     }
 }

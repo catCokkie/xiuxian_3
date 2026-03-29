@@ -23,15 +23,15 @@ namespace Xiuxian.Scripts.Services
 
         public string ActiveLevelId { get; private set; } = string.Empty;
         public string ActiveLevelName { get; private set; } = "Unknown Zone";
-        public double ProgressPer100Inputs { get; private set; } = 2.0;
-        public double EncounterCheckIntervalProgress { get; private set; } = 20.0;
-        public double BaseEncounterRate { get; private set; } = 0.18;
-        public int DangerLevel { get; private set; } = 1;
+        public double ProgressPer100Inputs { get; private set; } = GameBalanceConstants.LevelDefaults.ProgressPer100Inputs;
+        public double EncounterCheckIntervalProgress { get; private set; } = GameBalanceConstants.LevelDefaults.EncounterCheckIntervalProgress;
+        public double BaseEncounterRate { get; private set; } = GameBalanceConstants.LevelDefaults.BaseEncounterRate;
+        public int DangerLevel { get; private set; } = GameBalanceConstants.LevelDefaults.DangerLevel;
         public double BattlePauseFactor { get; private set; }
-        public int PlayerBaseHp { get; private set; } = 36;
-        public int PlayerAttackPerRound { get; private set; } = 4;
-        public int EnemyDamageDivider { get; private set; } = 4;
-        public int EnemyMinDamagePerRound { get; private set; } = 1;
+        public int PlayerBaseHp { get; private set; } = GameBalanceConstants.LevelDefaults.PlayerBaseHp;
+        public int PlayerAttackPerRound { get; private set; } = GameBalanceConstants.LevelDefaults.PlayerAttackPerRound;
+        public int EnemyDamageDivider { get; private set; } = GameBalanceConstants.LevelDefaults.EnemyDamageDivider;
+        public int EnemyMinDamagePerRound { get; private set; } = GameBalanceConstants.LevelDefaults.EnemyMinDamagePerRound;
 
         public IReadOnlyList<string> ActiveLevelMonsterWave => _activeLevelMonsterWave;
         public Dictionary<string, int> ActiveMoveInputsByCategory => _activeMoveInputsByCategory;
@@ -472,15 +472,15 @@ namespace Xiuxian.Scripts.Services
             {
                 ActiveLevelId = string.Empty;
                 ActiveLevelName = "Unknown Zone";
-                ProgressPer100Inputs = 2.0;
-                EncounterCheckIntervalProgress = 20.0;
-                BaseEncounterRate = 0.18;
-                DangerLevel = 1;
+                ProgressPer100Inputs = GameBalanceConstants.LevelDefaults.ProgressPer100Inputs;
+                EncounterCheckIntervalProgress = GameBalanceConstants.LevelDefaults.EncounterCheckIntervalProgress;
+                BaseEncounterRate = GameBalanceConstants.LevelDefaults.BaseEncounterRate;
+                DangerLevel = GameBalanceConstants.LevelDefaults.DangerLevel;
                 BattlePauseFactor = 0.0;
-                PlayerBaseHp = 36;
-                PlayerAttackPerRound = 4;
-                EnemyDamageDivider = 4;
-                EnemyMinDamagePerRound = 1;
+                PlayerBaseHp = GameBalanceConstants.LevelDefaults.PlayerBaseHp;
+                PlayerAttackPerRound = GameBalanceConstants.LevelDefaults.PlayerAttackPerRound;
+                EnemyDamageDivider = GameBalanceConstants.LevelDefaults.EnemyDamageDivider;
+                EnemyMinDamagePerRound = GameBalanceConstants.LevelDefaults.EnemyMinDamagePerRound;
                 _activeLevelMonsterWave.Clear();
                 _activeMoveInputsByCategory.Clear();
                 _activeLevelWaveIndex = 0;
@@ -492,19 +492,19 @@ namespace Xiuxian.Scripts.Services
 
             if (!LevelConfigProvider.TryGetChildDictionary(level, "explore", out var explore))
             {
-                ProgressPer100Inputs = 2.0;
-                EncounterCheckIntervalProgress = 20.0;
-                BaseEncounterRate = 0.18;
-                DangerLevel = 1;
+                ProgressPer100Inputs = GameBalanceConstants.LevelDefaults.ProgressPer100Inputs;
+                EncounterCheckIntervalProgress = GameBalanceConstants.LevelDefaults.EncounterCheckIntervalProgress;
+                BaseEncounterRate = GameBalanceConstants.LevelDefaults.BaseEncounterRate;
+                DangerLevel = GameBalanceConstants.LevelDefaults.DangerLevel;
                 BattlePauseFactor = 0.0;
                 _activeMoveInputsByCategory.Clear();
                 _activeMoveInputsByCategory["default"] = 4;
             }
             else
             {
-                ProgressPer100Inputs = LevelConfigProvider.GetDouble(explore, "progress_per_100_inputs", 2.0);
-                EncounterCheckIntervalProgress = LevelConfigProvider.GetDouble(explore, "encounter_check_interval_progress", 20.0);
-                BaseEncounterRate = LevelConfigProvider.GetDouble(explore, "base_encounter_rate", 0.18);
+                ProgressPer100Inputs = LevelConfigProvider.GetDouble(explore, "progress_per_100_inputs", GameBalanceConstants.LevelDefaults.ProgressPer100Inputs);
+                EncounterCheckIntervalProgress = LevelConfigProvider.GetDouble(explore, "encounter_check_interval_progress", GameBalanceConstants.LevelDefaults.EncounterCheckIntervalProgress);
+                BaseEncounterRate = LevelConfigProvider.GetDouble(explore, "base_encounter_rate", GameBalanceConstants.LevelDefaults.BaseEncounterRate);
                 DangerLevel = Math.Max(1, level.ContainsKey("danger_level") ? level["danger_level"].AsInt32() : 1);
                 BattlePauseFactor = LevelConfigProvider.GetDouble(explore, "battle_pause_factor", 0.0);
                 _activeMoveInputsByCategory.Clear();
@@ -535,17 +535,17 @@ namespace Xiuxian.Scripts.Services
 
             if (!LevelConfigProvider.TryGetChildDictionary(level, "battle_runtime", out var battleRuntime))
             {
-                PlayerBaseHp = 36;
-                PlayerAttackPerRound = 4;
-                EnemyDamageDivider = 4;
-                EnemyMinDamagePerRound = 1;
+                PlayerBaseHp = GameBalanceConstants.LevelDefaults.PlayerBaseHp;
+                PlayerAttackPerRound = GameBalanceConstants.LevelDefaults.PlayerAttackPerRound;
+                EnemyDamageDivider = GameBalanceConstants.LevelDefaults.EnemyDamageDivider;
+                EnemyMinDamagePerRound = GameBalanceConstants.LevelDefaults.EnemyMinDamagePerRound;
                 return;
             }
 
-            PlayerBaseHp = Math.Max(1, battleRuntime.ContainsKey("player_base_hp") ? battleRuntime["player_base_hp"].AsInt32() : 36);
-            PlayerAttackPerRound = Math.Max(1, battleRuntime.ContainsKey("player_attack_per_round") ? battleRuntime["player_attack_per_round"].AsInt32() : 4);
-            EnemyDamageDivider = Math.Max(1, battleRuntime.ContainsKey("enemy_damage_divider") ? battleRuntime["enemy_damage_divider"].AsInt32() : 4);
-            EnemyMinDamagePerRound = Math.Max(1, battleRuntime.ContainsKey("enemy_min_damage_per_round") ? battleRuntime["enemy_min_damage_per_round"].AsInt32() : 1);
+            PlayerBaseHp = Math.Max(1, battleRuntime.ContainsKey("player_base_hp") ? battleRuntime["player_base_hp"].AsInt32() : GameBalanceConstants.LevelDefaults.PlayerBaseHp);
+            PlayerAttackPerRound = Math.Max(1, battleRuntime.ContainsKey("player_attack_per_round") ? battleRuntime["player_attack_per_round"].AsInt32() : GameBalanceConstants.LevelDefaults.PlayerAttackPerRound);
+            EnemyDamageDivider = Math.Max(1, battleRuntime.ContainsKey("enemy_damage_divider") ? battleRuntime["enemy_damage_divider"].AsInt32() : GameBalanceConstants.LevelDefaults.EnemyDamageDivider);
+            EnemyMinDamagePerRound = Math.Max(1, battleRuntime.ContainsKey("enemy_min_damage_per_round") ? battleRuntime["enemy_min_damage_per_round"].AsInt32() : GameBalanceConstants.LevelDefaults.EnemyMinDamagePerRound);
         }
 
         private static string GetLevelBossMonsterId(Godot.Collections.Dictionary<string, Variant> level)

@@ -45,11 +45,12 @@ namespace Xiuxian.Scripts.Services
             return TryGetCrop(recipeId, out CropSpec crop) && masteryLevel >= crop.RequiredMasteryLevel;
         }
 
-        public static GardenProgressDecision AdvanceProgress(float currentProgress, int inputEvents, int requiredInputs)
+        public static GardenProgressDecision AdvanceProgress(float currentProgress, int inputEvents, int requiredInputs, int masteryLevel = 1)
         {
+            double speedBonus = SubsystemMasteryRules.GetEffectValue(PlayerActionState.ModeGarden, masteryLevel, SubsystemMasteryRules.GardenGrowthSpeedBonusEffectId);
+            float effectiveThreshold = (float)(Math.Max(1, requiredInputs) * (1.0 - speedBonus));
             float next = Math.Max(0.0f, currentProgress) + Math.Max(0, inputEvents);
-            float threshold = Math.Max(1, requiredInputs);
-            bool completed = next >= threshold;
+            bool completed = next >= effectiveThreshold;
             return new GardenProgressDecision(completed ? 0.0f : next, completed);
         }
 
@@ -61,7 +62,14 @@ namespace Xiuxian.Scripts.Services
             }
 
             int bonusYield = masteryLevel >= 3 ? 1 : 0;
-            return new GatherResult(crop.OutputItemId, crop.OutputCount + bonusYield);
+            double rareBonus = SubsystemMasteryRules.GetEffectValue(PlayerActionState.ModeGarden, masteryLevel, SubsystemMasteryRules.GardenRareSpawnBonusEffectId);
+            int rareExtra = rareBonus > 0.0 && crop.RequiredMasteryLevel >= 2 ? 1 : 0;
+            return new GatherResult(crop.OutputItemId, crop.OutputCount + bonusYield + rareExtra);
+        }
+
+        public static bool IsOfflineFullySupported(int masteryLevel)
+        {
+            return SubsystemMasteryRules.GetEffectValue(PlayerActionState.ModeGarden, masteryLevel, SubsystemMasteryRules.GardenOfflineFullEffectId) >= 1.0;
         }
     }
 }

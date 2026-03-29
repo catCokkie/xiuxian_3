@@ -37,6 +37,16 @@
         "monster_spider_cave"
       ],
       "boss_monster_id": "monster_spider_cave_queen",
+      "boss_fields": {
+        "trigger_condition": "explore_100_percent",
+        "stat_multiplier_vs_elite": 2.0,
+        "battle_round_limit": 20,
+        "first_kill_equipment_rarity_floor": "spirit",
+        "first_kill_lingqi_multiplier": 1.2,
+        "first_kill_insight_multiplier": 1.2,
+        "boss_unique_material_id": "",
+        "repeat_kill_drop_table_id": "drop_qi_outer_boss"
+      },
       "unlock_next_level_id": "lv_qi_002",
       "rewards": {
         "first_clear": {
@@ -97,7 +107,12 @@
         "monster_bat_shadow",
         "monster_spider_cave"
       ],
-      "boss_monster_id": "monster_spider_cave",
+      "boss_monster_id": "monster_bat_shadow_lord",
+      "boss_fields": {
+        "trigger_condition": "explore_100_percent",
+        "stat_multiplier_vs_elite": 2.2,
+        "battle_round_limit": 20
+      },
       "unlock_next_level_id": "lv_qi_003",
       "rewards": {
         "first_clear": {
@@ -151,7 +166,12 @@
         "monster_slime_moss",
         "monster_spider_cave"
       ],
-      "boss_monster_id": "monster_spider_cave",
+      "boss_monster_id": "monster_yin_tide_serpent",
+      "boss_fields": {
+        "trigger_condition": "explore_100_percent",
+        "stat_multiplier_vs_elite": 2.4,
+        "battle_round_limit": 20
+      },
       "unlock_next_level_id": "lv_qi_004",
       "rewards": {
         "first_clear": {
@@ -205,7 +225,12 @@
         "monster_bat_shadow",
         "monster_spider_cave"
       ],
-      "boss_monster_id": "monster_spider_cave",
+      "boss_monster_id": "monster_fungus_titan",
+      "boss_fields": {
+        "trigger_condition": "explore_100_percent",
+        "stat_multiplier_vs_elite": 2.6,
+        "battle_round_limit": 20
+      },
       "unlock_next_level_id": "lv_qi_005",
       "rewards": {
         "first_clear": {
@@ -259,7 +284,12 @@
         "monster_bat_shadow",
         "monster_spider_cave"
       ],
-      "boss_monster_id": "monster_spider_cave",
+      "boss_monster_id": "monster_nether_bone_king",
+      "boss_fields": {
+        "trigger_condition": "explore_100_percent",
+        "stat_multiplier_vs_elite": 2.8,
+        "battle_round_limit": 20
+      },
       "rewards": {
         "first_clear": {
           "lingqi": 420,
@@ -431,6 +461,217 @@
         "lingqi_max": 150,
         "insight_min": 16,
         "insight_max": 24
+      }
+    },
+    {
+      "monster_id": "monster_bat_shadow_lord",
+      "monster_name": "Shadow Bat Overlord",
+      "rarity": "boss",
+      "move_category": "boss",
+      "realm_recommend": "Qi 5",
+      "tags": ["yao", "boss", "flying"],
+      "combat": {
+        "hp": 140,
+        "attack": 16,
+        "defense": 7,
+        "inputs_per_round": 22,
+        "speed_factor": 1.08
+      },
+      "behavior": {
+        "skill_list": ["sonic_shriek_stun_1_round", "shadow_dive_ignore_defense_50pct"],
+        "phase_rules": ["attack_speed_plus_20pct_below_50hp", "summon_bat_swarm_every_3_rounds_below_40hp"],
+        "anti_afk_rule": "boss_enrage_plus_30pct_if_low_input"
+      },
+      "boss_fields": {
+        "bind_level_id": "lv_qi_002",
+        "trigger_condition": "explore_100_percent",
+        "stat_multiplier_vs_elite": 2.2,
+        "battle_round_limit": 20,
+        "first_kill_equipment_rarity_floor": "spirit",
+        "first_kill_lingqi_multiplier": 1.5,
+        "first_kill_insight_multiplier": 1.4,
+        "boss_unique_material_id": "",
+        "repeat_kill_drop_table_id": "drop_qi_inner_boss"
+      },
+      "visual": {
+        "portrait": "res://assets/ui/actor_placeholder.svg",
+        "animation": "pulse",
+        "anim_speed": 5.2,
+        "anim_amplitude": 0.08,
+        "tint": [0.60, 0.65, 0.95, 1.0]
+      },
+      "drops": {
+        "drop_table_id": "drop_qi_inner_boss",
+        "drop_roll_count": 3,
+        "guaranteed_drop": [
+          { "item_id": "spirit_herb", "qty": 3 },
+          { "item_id": "lingqi_core_fragment", "qty": 2 }
+        ]
+      },
+      "settlement_reward": {
+        "lingqi_min": 150,
+        "lingqi_max": 210,
+        "insight_min": 20,
+        "insight_max": 30
+      }
+    },
+    {
+      "monster_id": "monster_yin_tide_serpent",
+      "monster_name": "Yin Tide Serpent",
+      "rarity": "boss",
+      "move_category": "boss",
+      "realm_recommend": "Qi 7",
+      "tags": ["yao", "boss", "yin", "aquatic"],
+      "combat": {
+        "hp": 185,
+        "attack": 20,
+        "defense": 10,
+        "inputs_per_round": 22,
+        "speed_factor": 0.96
+      },
+      "behavior": {
+        "skill_list": ["tidal_crush_aoe_15pct", "yin_frost_reduce_speed_30pct_2rounds"],
+        "phase_rules": ["regenerate_5pct_hp_every_3_rounds_above_50hp", "attack_plus_25pct_below_30hp"],
+        "anti_afk_rule": "boss_enrage_plus_30pct_if_low_input"
+      },
+      "boss_fields": {
+        "bind_level_id": "lv_qi_003",
+        "trigger_condition": "explore_100_percent",
+        "stat_multiplier_vs_elite": 2.4,
+        "battle_round_limit": 20,
+        "first_kill_equipment_rarity_floor": "spirit",
+        "first_kill_lingqi_multiplier": 1.6,
+        "first_kill_insight_multiplier": 1.5,
+        "boss_unique_material_id": "",
+        "repeat_kill_drop_table_id": "drop_qi_rift_boss"
+      },
+      "visual": {
+        "portrait": "res://assets/ui/actor_placeholder.svg",
+        "animation": "hover",
+        "anim_speed": 1.2,
+        "anim_amplitude": 5.0,
+        "tint": [0.55, 0.70, 0.90, 1.0]
+      },
+      "drops": {
+        "drop_table_id": "drop_qi_rift_boss",
+        "drop_roll_count": 3,
+        "guaranteed_drop": [
+          { "item_id": "spirit_herb", "qty": 3 },
+          { "item_id": "spirit_ink", "qty": 2 },
+          { "item_id": "lingqi_core_fragment", "qty": 2 }
+        ]
+      },
+      "settlement_reward": {
+        "lingqi_min": 200,
+        "lingqi_max": 280,
+        "insight_min": 28,
+        "insight_max": 42
+      }
+    },
+    {
+      "monster_id": "monster_fungus_titan",
+      "monster_name": "Abyss Fungus Titan",
+      "rarity": "boss",
+      "move_category": "boss",
+      "realm_recommend": "Qi 9",
+      "tags": ["yao", "boss", "fungus", "poison"],
+      "combat": {
+        "hp": 240,
+        "attack": 24,
+        "defense": 14,
+        "inputs_per_round": 24,
+        "speed_factor": 0.88
+      },
+      "behavior": {
+        "skill_list": ["spore_cloud_poison_3pct_per_round_3rounds", "fungal_slam_reduce_defense_20pct"],
+        "phase_rules": ["regenerate_3pct_hp_every_2_rounds_above_60hp", "summon_sporeling_every_3_rounds_below_40hp"],
+        "anti_afk_rule": "boss_enrage_plus_30pct_if_low_input"
+      },
+      "boss_fields": {
+        "bind_level_id": "lv_qi_004",
+        "trigger_condition": "explore_100_percent",
+        "stat_multiplier_vs_elite": 2.6,
+        "battle_round_limit": 20,
+        "first_kill_equipment_rarity_floor": "spirit",
+        "first_kill_lingqi_multiplier": 1.8,
+        "first_kill_insight_multiplier": 1.6,
+        "boss_unique_material_id": "",
+        "repeat_kill_drop_table_id": "drop_qi_abyss_boss"
+      },
+      "visual": {
+        "portrait": "res://assets/ui/actor_placeholder.svg",
+        "animation": "hover",
+        "anim_speed": 1.0,
+        "anim_amplitude": 3.5,
+        "tint": [0.70, 0.88, 0.55, 1.0]
+      },
+      "drops": {
+        "drop_table_id": "drop_qi_abyss_boss",
+        "drop_roll_count": 4,
+        "guaranteed_drop": [
+          { "item_id": "spirit_herb", "qty": 4 },
+          { "item_id": "beast_bone", "qty": 2 },
+          { "item_id": "lingqi_core_fragment", "qty": 3 }
+        ]
+      },
+      "settlement_reward": {
+        "lingqi_min": 260,
+        "lingqi_max": 360,
+        "insight_min": 36,
+        "insight_max": 54
+      }
+    },
+    {
+      "monster_id": "monster_nether_bone_king",
+      "monster_name": "Nether Bone King",
+      "rarity": "boss",
+      "move_category": "boss",
+      "realm_recommend": "Qi 11",
+      "tags": ["yao", "boss", "nether", "undead"],
+      "combat": {
+        "hp": 310,
+        "attack": 30,
+        "defense": 18,
+        "inputs_per_round": 24,
+        "speed_factor": 0.85
+      },
+      "behavior": {
+        "skill_list": ["bone_lance_pierce_ignore_defense_30pct", "soul_drain_lifesteal_20pct"],
+        "phase_rules": ["bone_armor_reduce_damage_taken_15pct_above_60hp", "attack_plus_30pct_below_25hp", "summon_skeleton_every_2_rounds_below_35hp"],
+        "anti_afk_rule": "boss_enrage_plus_30pct_if_low_input"
+      },
+      "boss_fields": {
+        "bind_level_id": "lv_qi_005",
+        "trigger_condition": "explore_100_percent",
+        "stat_multiplier_vs_elite": 2.8,
+        "battle_round_limit": 20,
+        "first_kill_equipment_rarity_floor": "spirit",
+        "first_kill_lingqi_multiplier": 2.0,
+        "first_kill_insight_multiplier": 1.8,
+        "boss_unique_material_id": "",
+        "repeat_kill_drop_table_id": "drop_qi_nether_boss"
+      },
+      "visual": {
+        "portrait": "res://assets/ui/actor_placeholder.svg",
+        "animation": "hover",
+        "anim_speed": 0.9,
+        "anim_amplitude": 4.5,
+        "tint": [0.90, 0.80, 0.60, 1.0]
+      },
+      "drops": {
+        "drop_table_id": "drop_qi_nether_boss",
+        "drop_roll_count": 4,
+        "guaranteed_drop": [
+          { "item_id": "spirit_herb", "qty": 5 },
+          { "item_id": "beast_bone", "qty": 3 },
+          { "item_id": "lingqi_core_fragment", "qty": 4 }
+        ]
+      },
+      "settlement_reward": {
+        "lingqi_min": 340,
+        "lingqi_max": 460,
+        "insight_min": 48,
+        "insight_max": 70
       }
     }
   ],
@@ -678,6 +919,98 @@
         "repeat_decay_factor": 0.99,
         "daily_cap_rolls": 90,
         "hourly_soft_cap_rolls": 16,
+        "anti_abuse_flag": true
+      }
+    },
+    {
+      "drop_table_id": "drop_qi_inner_boss",
+      "bind_level_id": "lv_qi_002",
+      "bind_monster_ids": ["monster_bat_shadow_lord"],
+      "entries": [
+        { "item_id": "spirit_herb", "weight": 35, "min_qty": 3, "max_qty": 4 },
+        { "item_id": "lingqi_core_fragment", "weight": 35, "min_qty": 2, "max_qty": 3 },
+        { "item_id": "broken_talisman", "weight": 30, "min_qty": 3, "max_qty": 5 }
+      ],
+      "pity": {
+        "counter_key": "pity_qi_inner_boss",
+        "threshold": 2,
+        "item_id": "lingqi_core_fragment",
+        "qty": 3
+      },
+      "economy": {
+        "repeat_decay_factor": 1.0,
+        "daily_cap_rolls": 20,
+        "hourly_soft_cap_rolls": 4,
+        "anti_abuse_flag": true
+      }
+    },
+    {
+      "drop_table_id": "drop_qi_rift_boss",
+      "bind_level_id": "lv_qi_003",
+      "bind_monster_ids": ["monster_yin_tide_serpent"],
+      "entries": [
+        { "item_id": "spirit_herb", "weight": 30, "min_qty": 3, "max_qty": 5 },
+        { "item_id": "lingqi_core_fragment", "weight": 30, "min_qty": 2, "max_qty": 4 },
+        { "item_id": "spirit_ink", "weight": 20, "min_qty": 2, "max_qty": 3, "_comment": "符箓系统材料" },
+        { "item_id": "beast_bone", "weight": 20, "min_qty": 1, "max_qty": 2, "_comment": "体修系统材料" }
+      ],
+      "pity": {
+        "counter_key": "pity_qi_rift_boss",
+        "threshold": 2,
+        "item_id": "lingqi_core_fragment",
+        "qty": 3
+      },
+      "economy": {
+        "repeat_decay_factor": 1.0,
+        "daily_cap_rolls": 20,
+        "hourly_soft_cap_rolls": 4,
+        "anti_abuse_flag": true
+      }
+    },
+    {
+      "drop_table_id": "drop_qi_abyss_boss",
+      "bind_level_id": "lv_qi_004",
+      "bind_monster_ids": ["monster_fungus_titan"],
+      "entries": [
+        { "item_id": "spirit_herb", "weight": 25, "min_qty": 4, "max_qty": 6 },
+        { "item_id": "lingqi_core_fragment", "weight": 30, "min_qty": 3, "max_qty": 5 },
+        { "item_id": "beast_bone", "weight": 25, "min_qty": 2, "max_qty": 3, "_comment": "体修系统材料" },
+        { "item_id": "toxic_gland", "weight": 20, "min_qty": 2, "max_qty": 3, "_comment": "体修系统材料" }
+      ],
+      "pity": {
+        "counter_key": "pity_qi_abyss_boss",
+        "threshold": 2,
+        "item_id": "lingqi_core_fragment",
+        "qty": 4
+      },
+      "economy": {
+        "repeat_decay_factor": 1.0,
+        "daily_cap_rolls": 20,
+        "hourly_soft_cap_rolls": 4,
+        "anti_abuse_flag": true
+      }
+    },
+    {
+      "drop_table_id": "drop_qi_nether_boss",
+      "bind_level_id": "lv_qi_005",
+      "bind_monster_ids": ["monster_nether_bone_king"],
+      "entries": [
+        { "item_id": "spirit_herb", "weight": 20, "min_qty": 5, "max_qty": 7 },
+        { "item_id": "lingqi_core_fragment", "weight": 30, "min_qty": 4, "max_qty": 6 },
+        { "item_id": "beast_bone", "weight": 25, "min_qty": 3, "max_qty": 4, "_comment": "体修系统材料" },
+        { "item_id": "spirit_pearl", "weight": 15, "min_qty": 1, "max_qty": 2, "_comment": "悟道系统材料" },
+        { "item_id": "toxic_gland", "weight": 10, "min_qty": 2, "max_qty": 4, "_comment": "体修系统材料" }
+      ],
+      "pity": {
+        "counter_key": "pity_qi_nether_boss",
+        "threshold": 2,
+        "item_id": "lingqi_core_fragment",
+        "qty": 5
+      },
+      "economy": {
+        "repeat_decay_factor": 1.0,
+        "daily_cap_rolls": 20,
+        "hourly_soft_cap_rolls": 4,
         "anti_abuse_flag": true
       }
     }

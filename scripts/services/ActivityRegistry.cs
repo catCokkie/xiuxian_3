@@ -22,6 +22,11 @@ namespace Xiuxian.Scripts.Services
 
         public static void Register(IActivityDefinition activity)
         {
+            if (activity == null)
+            {
+                throw new ArgumentNullException(nameof(activity));
+            }
+
             Activities[activity.SystemId] = activity;
             foreach (IRecipeDefinition recipe in activity.GetRecipes())
             {

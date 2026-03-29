@@ -5,7 +5,7 @@ namespace Xiuxian.Scripts.Services
     /// <summary>
     /// Runtime wallet for AP conversion outputs.
     /// </summary>
-    public partial class ResourceWalletState : Node
+    public partial class ResourceWalletState : Node, IDictionaryPersistable
     {
         [Signal]
         public delegate void WalletChangedEventHandler(double lingqi, double insight, double petAffinity, int spiritStones);

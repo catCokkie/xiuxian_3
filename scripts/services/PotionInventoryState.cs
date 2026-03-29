@@ -2,7 +2,7 @@ using Godot;
 
 namespace Xiuxian.Scripts.Services
 {
-    public partial class PotionInventoryState : Node
+    public partial class PotionInventoryState : Node, IDictionaryPersistable
     {
         [Signal]
         public delegate void PotionInventoryChangedEventHandler(string potionId, int amount, int newTotal);

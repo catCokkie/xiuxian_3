@@ -46,11 +46,12 @@ namespace Xiuxian.Scripts.Services
             return TryGetPond(recipeId, out PondSpec pond) && masteryLevel >= pond.RequiredMasteryLevel;
         }
 
-        public static FishingProgressDecision AdvanceProgress(float currentProgress, int inputEvents, int requiredInputs)
+        public static FishingProgressDecision AdvanceProgress(float currentProgress, int inputEvents, int requiredInputs, int masteryLevel = 1)
         {
+            double speedBonus = SubsystemMasteryRules.GetEffectValue(PlayerActionState.ModeFishing, masteryLevel, SubsystemMasteryRules.FishingSpeedBonusEffectId);
+            float effectiveThreshold = (float)(Math.Max(1, requiredInputs) * (1.0 - speedBonus));
             float next = Math.Max(0.0f, currentProgress) + Math.Max(0, inputEvents);
-            float threshold = Math.Max(1, requiredInputs);
-            bool completed = next >= threshold;
+            bool completed = next >= effectiveThreshold;
             return new FishingProgressDecision(completed ? 0.0f : next, completed);
         }
 
@@ -63,6 +64,11 @@ namespace Xiuxian.Scripts.Services
 
             int bonusYield = masteryLevel >= 4 ? 1 : 0;
             return new CatchResult(pond.OutputItemId, pond.OutputCount + bonusYield);
+        }
+
+        public static double GetDoubleOutputChance(int masteryLevel)
+        {
+            return SubsystemMasteryRules.GetEffectValue(PlayerActionState.ModeFishing, masteryLevel, SubsystemMasteryRules.FishingDoubleOutputEffectId);
         }
     }
 }

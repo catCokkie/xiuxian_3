@@ -47,11 +47,13 @@ namespace Xiuxian.Scripts.Services
             return TryGetNode(recipeId, out NodeSpec node) && masteryLevel >= node.RequiredMasteryLevel;
         }
 
-        public static MiningProgressDecision AdvanceProgress(float currentProgress, int inputEvents, int requiredInputs, int currentDurability)
+        public static MiningProgressDecision AdvanceProgress(float currentProgress, int inputEvents, int requiredInputs, int currentDurability, int masteryLevel = 1)
         {
             float next = Math.Max(0.0f, currentProgress) + Math.Max(0, inputEvents);
             float threshold = Math.Max(1, requiredInputs);
-            int durability = Math.Clamp(currentDurability, 1, DefaultNodeDurability);
+            double durabilityBonus = SubsystemMasteryRules.GetEffectValue(PlayerActionState.ModeMining, masteryLevel, SubsystemMasteryRules.MiningDurabilityBonusEffectId);
+            int effectiveMaxDurability = (int)(DefaultNodeDurability * (1.0 + durabilityBonus));
+            int durability = Math.Clamp(currentDurability, 1, effectiveMaxDurability);
             bool completed = next >= threshold;
             bool refreshed = false;
 
@@ -63,7 +65,7 @@ namespace Xiuxian.Scripts.Services
             durability = Math.Max(0, durability - 1);
             if (durability == 0)
             {
-                durability = DefaultNodeDurability;
+                durability = effectiveMaxDurability;
                 refreshed = true;
             }
 
@@ -79,6 +81,17 @@ namespace Xiuxian.Scripts.Services
 
             int bonusYield = masteryLevel >= 4 ? 1 : 0;
             return new GatherResult(node.OutputItemId, node.OutputCount + bonusYield);
+        }
+
+        public static double GetDoubleOutputChance(int masteryLevel)
+        {
+            return SubsystemMasteryRules.GetEffectValue(PlayerActionState.ModeMining, masteryLevel, SubsystemMasteryRules.MiningDoubleOutputEffectId);
+        }
+
+        public static int GetEffectiveMaxDurability(int masteryLevel)
+        {
+            double durabilityBonus = SubsystemMasteryRules.GetEffectValue(PlayerActionState.ModeMining, masteryLevel, SubsystemMasteryRules.MiningDurabilityBonusEffectId);
+            return (int)(DefaultNodeDurability * (1.0 + durabilityBonus));
         }
     }
 }

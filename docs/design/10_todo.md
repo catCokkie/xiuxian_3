@@ -1,4 +1,4 @@
-﻿# Codex 实施待办清单
+# Codex 实施待办清单
 
 > 项目：xiuxian_4 — Godot 4.5.1 + C# (.NET 8) 桌宠修仙挂机游戏
 > 生成日期：2026-03-24
@@ -8,19 +8,65 @@
 > 约定：修改后必须通过 `dotnet test tests/Xiuxian2.Tests/Xiuxian2.Tests.csproj` 零失败。
 > 维护规则：`docs/design/10_todo.md` 是任务状态唯一真源；`AGENTS.md` 仅保留流程规则，不重复维护任务进度。
 
-## 当前进度记录（更新：2026-03-26）
+## 当前进度记录（更新：2026-03-29）
 
 ### 总览
-- 代码任务：除 `TASK-06` 外，Phase 1–5 实现项已全部落地并通过 `dotnet test tests/Xiuxian2.Tests/Xiuxian2.Tests.csproj`
+- 代码任务：Phase 1–8 全部实现项除 `TASK-06` 外已全部落地并通过 `dotnet test tests/Xiuxian2.Tests/Xiuxian2.Tests.csproj`（317/317）
+- 存档版本：v8（v5→v6→v7→v8 迁移链完整）
+- 子系统：12 个活动模式全部代码落地，12 × 4 = 48 条精通定义总计 2080 悟性
 - 待人工验收：`TASK-06 场景文件 UTF-8 编码修复`
 - 延后到 V2：`TASK-11 宠物亲密度最小闭环`
 - 维护规则：新增任务或状态变更时，只更新本文件，不在 agent 指令文件重复记录
 - **设计变更（2026-03-26）**：境界突破改为纯经验驱动，悟性完全转为子系统熟练度解锁货币。`TASK-26` 被 `TASK-30` 系列替代。详见 `02_systems.md` §12。
 - **设计变更（2026-03-26 #2）**：子系统从 4 个扩展至 12 个（参考 Melvor Idle），新增 Phase 7（TASK-36~42）。详见 `02_systems.md` §13-§20、`01_core_loop.md` 设计决策记录。
-- **重构规划（2026-03-27）**：代码已先行落地 `TASK-36` 的基础框架（`ActivityFramework` / `ActivityRegistry` / `MaterialRegistry` / 12 模式常量），但 `TASK-30~35` 仍未完成，形成“框架已扩展、熟练度/存档/UI 仍沿用旧 4 系统逻辑”的断层。下一批重构按 `TASK-30 -> TASK-31 -> TASK-32/33 -> TASK-34/35 -> TASK-37` 顺序推进，先补齐熟练度与存档骨架，再接 8 个新子系统实现。
+- **重构完成（2026-03-29）**：`TASK-30~35`（熟练度/存档/UI/测试）与 `TASK-36~42`（12 子系统横向扩展）全部落地。存档已升至 v8，12 模式主循环/精通/持久化/效果/测试均已闭环。剩余 UI 打磨（Toast 系统、递减曲线可视化、高阶精通交互）属 V2 范围。
+- **存档安全加固（2026-03-29）**：
+  - `SaveAllState()` 全事务化：15 个 Write* 调用包裹 try/catch，序列化异常时中止写盘；backup rename 失败时中止；promote 失败时自动恢复 backup
+  - `MigrateToLatest()` 按步 try/catch + 版本回滚 + `SaveMigrationException`；链末 `ValidatePostMigration` 校验必要 section/key 存在
+  - `LevelConfigProvider` 全部 `Json.ParseString` 加 try/catch + `GD.PushError`/`GD.PushWarning` 日志
+  - `InputActivityState.ToDictionary()`/`FromDictionary()` 加 `lock(_pendingLock)` 防止存档读写撕裂
+- **健壮性加固（2026-03-29）**：
+  - `ReadUnifiedState` 15 个 Read* 包裹 `ReadStateSafe` try/catch，单 section 损坏不影响其余加载
+  - `ActionSettlementRules` 全部数值参数 `Math.Max(0,…)` 防御负值，null 参数回退空值
+  - `ActivityRegistry.Register()` 加 `ArgumentNullException` 空检查
+  - `PrototypeRootController` 3 个 lambda 事件订阅改为命名方法，`_ExitTree` 补充 4 个 UI 信号退订（修复泄漏）
+- **可维护性加固（2026-03-29）**：
+  - `GameBalanceConstants.LevelDefaults` 提取 `ActiveLevelManager` 中 8 个魔法数字（ProgressPer100Inputs、BaseEncounterRate、PlayerBaseHp 等）为命名常量
+  - `ActiveLevelManager` 4 处 fallback/默认值块全部替换为 `GameBalanceConstants.LevelDefaults.*` 引用
+  - `EquipmentProfileCodec.FromPlainDictionary` 空 equipment_id 防御（返回空 EquipmentId 而非抛异常）
+  - 新增 7 个补充测试：ActionSettlementRules 负值/null 边界 ×2、ActivityRegistry null/unknown ×3、EquipmentProfileCodec 空字典/缺失 modifier ×2
+  - 测试 304/304 通过
+- **架构优化（2026-03-29）**：
+  - `InputActivityState.PruneRollingWindow` 新增 `MaxRollingQueueSize = 10000` 安全上限，防止配置异常导致内存增长
+  - 新增 `IDictionaryPersistable` 接口，14 个 State 类统一实现，消除 Read*/Write* 样板代码
+  - 新增 `StatePersistenceManager`（注册式 section/key/state 插槽），`PrototypeRootController` 从 822 行缩减至 740 行
+  - 新增 `InputActivityRulesTests`（13 个测试覆盖衰减/Cap/累加器热路径）
+  - 测试 317/317 通过
+- **UI 主面板重构（2026-03-30）**：
+  - 修复信号断连错误（`_actionModeOptionConnected`/`_levelOptionConnected` 守卫）
+  - 修复空白屏幕问题（Chrome 面板 offset_top/bottom 归零）
+  - 重写 `MainBarWindow.tscn` 三行布局：BattleTrack 满宽高（clip_contents）、控制行（Y=172）、拖拽手柄（左上）
+  - 重写 `MainBarLayoutController.cs` `UpdateRightAnchoredLayout()` 匹配新布局
+  - `project.godot` 新增 `[display]` 段，视口 1152×648
+  - `dotnet build` 零错误
+- **背包格子化重构（2026-03-29）**：
+  - 新增 `BackpackGridController.cs`：ScrollContainer + GridContainer 三分区（材料/丹药/装备），64px 格子带悬浮详情 tooltip
+  - `BookTabsController.BuildBackpackUi()` 替换为挂载 BackpackGridController，移除旧 RichTextLabel 列表
+  - 装备格子按稀有度着色（俗器灰/法器蓝/灵器紫/宝器金），点击可触发装备操作
+  - `BuildBackpackOverviewText()` 移除，背包 Tab 改为直接调用 `RefreshBackpackGrid()`
+  - `dotnet build` 零错误，测试 317/317 通过
+- **配置校验页面布局修复（2026-03-29）**：
+  - 三个 section panel（筛选信息/校验结果/模拟结果）从 `Panel` + 绝对定位子节点改为 `PanelContainer` + VBoxContainer 自动布局
+  - 整个校验页包裹在 ScrollContainer 中，内容多时可滚动
+  - RichTextLabel 改为 `FitContent=true` + `ScrollActive=false`，随内容自适应高度
+  - 字体大小统一为 12-14，标题加粗区分
+  - `dotnet build` 零错误，测试 317/317 通过
+- **UI 页面设计提示词文档（2026-03-29）**：
+  - 新增 `docs/design/15_ui_prompts.md`：包含通用风格前缀 + 12 个页面的 v0.dev 兼容提示词
+  - 覆盖：主底栏、书本外框、修炼概况、战斗日志、装备情况、背包格子、统计概览、配置校验、Bug 反馈、设置三子页
+  - 颜色/尺寸/布局均从项目实际代码提取，可直接用于外部 UI 生成工具
 
-### 已完成
-- `TASK-01 拆分 LevelConfigLoader 上帝对象` ✅
+### 已完成- `TASK-01 拆分 LevelConfigLoader 上帝对象` ✅
   - `LevelConfigLoader.cs` 已瘦身为 159 行兼容门面，保留 `/root/LevelConfigLoader` 访问路径
   - 已拆出 `LevelConfigProvider`、`MonsterConfigService`、`LevelRuntimeStateService`、`ConfigValidationService`
   - `dotnet test tests/Xiuxian2.Tests/Xiuxian2.Tests.csproj` 已通过（162/162）
@@ -938,7 +984,7 @@ TASK-22 (Boss 挑战)      ─── ✅ 已完成
 **批次 6（Melvor 扩展）**: TASK-19 ✅, TASK-22 ✅
 **批次 7（依赖 TASK-19）**: TASK-20 ✅, TASK-21 ✅
 **批次 8（依赖 TASK-20）**: TASK-23 ✅
-**批次 9（审计修复）**: TASK-24 ✅, TASK-25 ✅, TASK-26 ✅, TASK-28, TASK-29 ✅
+**批次 9（审计修复）**: TASK-24 ✅, TASK-25 ✅, TASK-26 ✅, TASK-28 ✅, TASK-29 ✅
 
 ---
 
@@ -984,6 +1030,8 @@ TASK-22 (Boss 挑战)      ─── ✅ 已完成
 - 无突破丹时行为不变。
 
 ### TASK-28: Boss 内容样本填充 (P2)
+**状态**: 已完成（2026-03-29）
+**完成说明**: 为练气期 5 个地图各新增独立 Boss 怪物（含完整 `boss_fields`）及 Boss 专属掉落表。共新增 4 个 Boss 怪物（Shadow Bat Overlord / Yin Tide Serpent / Abyss Fungus Titan / Nether Bone King）+ 4 个 Boss 掉落表 + 为原 Spider Queen 补充 `boss_fields`。JSON 验证通过（8 怪物、5 Boss、15 掉落表）。
 **依赖**: TASK-22
 **背景**: Boss 模板字段已补充（`07_content_template.md` §3.5），但 `09_level_monster_drop_sample.json` 缺少 Boss 内容样本。
 **涉及文件**:
@@ -1253,7 +1301,8 @@ TASK-22 (Boss 挑战)      ─── ✅ 已完成
 ---
 
 ### TASK-37: 采集系统实现（灵田/矿脉/灵渔）(P1)
-**状态**: 进行中（2026-03-29）
+**状态**: 已完成（2026-03-29）
+**完成说明**: 全部验收标准已满足——3 个采集系统可通过模式切换进入，输入事件驱动采集进度，完成后材料进入背包，各系统 8-9 个测试用例（共 26 个），294/294 测试通过。剩余 UI 打磨（剩余时长/手动启用策略）属 V2 范围。
 **优先级**: P1
 **依赖**: TASK-36
 **背景**: 实现 3 个采集子系统，为加工系统提供原材料。
@@ -1295,7 +1344,8 @@ TASK-22 (Boss 挑战)      ─── ✅ 已完成
 ---
 
 ### TASK-38: 加工系统实现（符箓/烹饪/阵法）(P1)
-**状态**: 进行中（2026-03-29）
+**状态**: 已完成（2026-03-29）
+**完成说明**: 全部验收标准已满足——3 个加工系统可通过模式切换进入，材料消耗正确，符咒/灵膳为战斗消耗品（战斗开始自动消耗），阵盘为常驻装备。各系统 6-7 个测试用例（共 20 个），294/294 测试通过。高阶精通效果（双槽/自修复）UI 属 V2 范围。
 **优先级**: P1
 **依赖**: TASK-36, TASK-37（需要采集产出的材料作为输入）
 **背景**: 实现 3 个加工子系统，消费采集材料产出战斗消耗品/增益。
@@ -1331,7 +1381,8 @@ TASK-22 (Boss 挑战)      ─── ✅ 已完成
 ---
 
 ### TASK-39: 修行系统实现（悟道/体修）(P1)
-**状态**: 进行中（2026-03-29）
+**状态**: 已完成（2026-03-29）
+**完成说明**: 全部验收标准已满足——2 个修行系统可通过模式切换进入，材料/灵气消耗正确，永久加成累加且有上限（冒想 20/参悟 10/淬体 20/炼骨 15），已接入战斗属性与存档。各系统 8 个测试用例（共 16 个），294/294 测试通过。递减曲线可视化属 V2 范围。
 **优先级**: P1
 **依赖**: TASK-36
 **背景**: 实现 2 个修行子系统，提供永久小幅加成作为长期目标。
@@ -1412,7 +1463,7 @@ mastery.body_cultivation_level = 1
 ---
 
 ### TASK-41: 新系统精通树集成 (P1)
-**状态**: 未开始
+**状态**: 已完成（2026-03-29）
 **优先级**: P1
 **依赖**: TASK-30, TASK-37, TASK-38, TASK-39
 **背景**: 将 8 个新系统的精通树（各 4 级）集成到 `SubsystemMasteryRules`。
@@ -1440,10 +1491,28 @@ mastery.body_cultivation_level = 1
 - 各精通效果正确接入对应系统规则
 - `dotnet test` 全部通过
 
+**完成说明**:
+- 8 个新系统的 32 条 `MasteryDefinition` 已按设计规格重新定义，效果 ID、数值、悟性成本与境界门槛全部对齐 TASK-41 精通效果概要表
+- 总解锁成本精确为 2080 悟性（原 4 系统 640 + 新 8 系统 1440）
+- 各系统 Rules 类已新增精通感知方法并接入 `SubsystemMasteryRules.GetEffectValue()`：
+  - 灵田：生长速度加成、稀有额外产出、离线全量支持判定
+  - 矿脉：有效最大耐久、双倍产出概率
+  - 灵渔：垂钓速度加成、双倍产出概率
+  - 符箓：双出概率、材料折扣、附魔概率
+  - 烹饪：有效持续场次、双出概率、额外效果判定
+  - 阵法：效果加成倍率、最大槽位数、自修复判定
+  - 悟道：效率倍率、冥想上限、参悟上限
+  - 体修：效率倍率、淬体上限、炼骨上限
+- 新增 26 个 const 效果 ID 字符串，覆盖所有新效果
+- `SubsystemMasteryRulesTests` 新增 10 个效果值断言测试
+- 8 个系统测试文件各新增 2-5 个精通门控/效果测试
+- `dotnet test` 全部通过（268/268）
+
 ---
 
 ### TASK-42: 新系统测试覆盖 (P1)
-**状态**: 未开始
+**状态**: 已完成（2026-03-29）
+**完成说明**: 为 8 个新系统和 ActivityRegistry/ActivityEffectRules 补全测试，共新增 26 个测试（294/294 全通过）。覆盖：unknown-recipe 拒绝、persistence round-trip、category 验证、consumable modifier、formation lingqi rate 等。
 **优先级**: P1
 **依赖**: TASK-37, TASK-38, TASK-39, TASK-40, TASK-41
 **背景**: 为 Phase 7 增加的 8 个新系统补全测试。

@@ -9,7 +9,7 @@ namespace Xiuxian.Scripts.Services
     /// 1) rolling-window frequency decay
     /// 2) per-minute soft cap
     /// </summary>
-    public partial class InputActivityState : Node
+    public partial class InputActivityState : Node, IDictionaryPersistable
     {
         [Signal]
         public delegate void ActivityTickEventHandler(double apThisBatch, double apFinal);
@@ -267,6 +267,8 @@ namespace Xiuxian.Scripts.Services
             _rollingRawApSum += apRawBatch;
         }
 
+        private const int MaxRollingQueueSize = 10000;
+
         private void PruneRollingWindow()
         {
             double cutoff = _runtimeSeconds - Math.Max(1.0, RollingWindowSeconds);
@@ -274,6 +276,12 @@ namespace Xiuxian.Scripts.Services
             {
                 var ev = _rollingEvents.Dequeue();
                 _rollingRawApSum -= ev.rawAp;
+            }
+
+            if (_rollingEvents.Count > MaxRollingQueueSize)
+            {
+                _rollingEvents.Clear();
+                _rollingRawApSum = 0.0;
             }
 
             if (_rollingRawApSum < 0.0)
@@ -284,29 +292,35 @@ namespace Xiuxian.Scripts.Services
 
         public Godot.Collections.Dictionary<string, Variant> ToDictionary()
         {
-            return new Godot.Collections.Dictionary<string, Variant>
+            lock (_pendingLock)
             {
-                ["total_key_down"] = TotalKeyDownCount,
-                ["total_mouse_click"] = TotalMouseClickCount,
-                ["total_scroll_steps"] = TotalMouseScrollSteps,
-                ["total_move_distance"] = TotalMouseMoveDistancePx,
-                ["total_joypad_button"] = TotalJoypadButtonCount,
-                ["total_joypad_axis"] = TotalJoypadAxisInputCount,
-                ["total_active_seconds"] = TotalActiveSeconds,
-                ["ap_accumulator"] = ApAccumulator
-            };
+                return new Godot.Collections.Dictionary<string, Variant>
+                {
+                    ["total_key_down"] = TotalKeyDownCount,
+                    ["total_mouse_click"] = TotalMouseClickCount,
+                    ["total_scroll_steps"] = TotalMouseScrollSteps,
+                    ["total_move_distance"] = TotalMouseMoveDistancePx,
+                    ["total_joypad_button"] = TotalJoypadButtonCount,
+                    ["total_joypad_axis"] = TotalJoypadAxisInputCount,
+                    ["total_active_seconds"] = TotalActiveSeconds,
+                    ["ap_accumulator"] = ApAccumulator
+                };
+            }
         }
 
         public void FromDictionary(Godot.Collections.Dictionary<string, Variant> data)
         {
-            TotalKeyDownCount = data.ContainsKey("total_key_down") ? data["total_key_down"].AsInt64() : 0L;
-            TotalMouseClickCount = data.ContainsKey("total_mouse_click") ? data["total_mouse_click"].AsInt64() : 0L;
-            TotalMouseScrollSteps = data.ContainsKey("total_scroll_steps") ? data["total_scroll_steps"].AsInt64() : 0L;
-            TotalMouseMoveDistancePx = data.ContainsKey("total_move_distance") ? data["total_move_distance"].AsDouble() : 0.0;
-            TotalJoypadButtonCount = data.ContainsKey("total_joypad_button") ? data["total_joypad_button"].AsInt64() : 0L;
-            TotalJoypadAxisInputCount = data.ContainsKey("total_joypad_axis") ? data["total_joypad_axis"].AsInt64() : 0L;
-            TotalActiveSeconds = data.ContainsKey("total_active_seconds") ? data["total_active_seconds"].AsDouble() : 0.0;
-            ApAccumulator = data.ContainsKey("ap_accumulator") ? data["ap_accumulator"].AsDouble() : 0.0;
+            lock (_pendingLock)
+            {
+                TotalKeyDownCount = data.ContainsKey("total_key_down") ? data["total_key_down"].AsInt64() : 0L;
+                TotalMouseClickCount = data.ContainsKey("total_mouse_click") ? data["total_mouse_click"].AsInt64() : 0L;
+                TotalMouseScrollSteps = data.ContainsKey("total_scroll_steps") ? data["total_scroll_steps"].AsInt64() : 0L;
+                TotalMouseMoveDistancePx = data.ContainsKey("total_move_distance") ? data["total_move_distance"].AsDouble() : 0.0;
+                TotalJoypadButtonCount = data.ContainsKey("total_joypad_button") ? data["total_joypad_button"].AsInt64() : 0L;
+                TotalJoypadAxisInputCount = data.ContainsKey("total_joypad_axis") ? data["total_joypad_axis"].AsInt64() : 0L;
+                TotalActiveSeconds = data.ContainsKey("total_active_seconds") ? data["total_active_seconds"].AsDouble() : 0.0;
+                ApAccumulator = data.ContainsKey("ap_accumulator") ? data["ap_accumulator"].AsDouble() : 0.0;
+            }
         }
 
         public void ResetCurrentTick()

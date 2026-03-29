@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace Xiuxian.Scripts.Services
 {
-    public partial class SubsystemMasteryState : Node
+    public partial class SubsystemMasteryState : Node, IDictionaryPersistable
     {
         [Signal]
         public delegate void MasteryChangedEventHandler(string systemId, int newLevel);

@@ -159,4 +159,52 @@ public sealed class ActivityRegistryTests
         ActivityRegistry.ResetForTesting();
         Assert.Null(ActivityRegistry.GetBySystem("nonexistent_system"));
     }
+
+    [Fact]
+    public void Registry_SystemCategoriesAreCorrect()
+    {
+        ActivityRegistry.ResetForTesting();
+
+        Assert.Equal(ActivityCategory.Gathering, ActivityRegistry.GetBySystem(PlayerActionState.ModeGarden)!.Category);
+        Assert.Equal(ActivityCategory.Gathering, ActivityRegistry.GetBySystem(PlayerActionState.ModeMining)!.Category);
+        Assert.Equal(ActivityCategory.Gathering, ActivityRegistry.GetBySystem(PlayerActionState.ModeFishing)!.Category);
+        Assert.Equal(ActivityCategory.Processing, ActivityRegistry.GetBySystem(PlayerActionState.ModeTalisman)!.Category);
+        Assert.Equal(ActivityCategory.Processing, ActivityRegistry.GetBySystem(PlayerActionState.ModeCooking)!.Category);
+        Assert.Equal(ActivityCategory.Processing, ActivityRegistry.GetBySystem(PlayerActionState.ModeFormation)!.Category);
+        Assert.Equal(ActivityCategory.Cultivation, ActivityRegistry.GetBySystem(PlayerActionState.ModeEnlightenment)!.Category);
+        Assert.Equal(ActivityCategory.Cultivation, ActivityRegistry.GetBySystem(PlayerActionState.ModeBodyCultivation)!.Category);
+    }
+
+    [Fact]
+    public void Registry_EachSystemHasAtLeastOneRecipe()
+    {
+        ActivityRegistry.ResetForTesting();
+        IReadOnlyDictionary<string, IActivityDefinition> all = ActivityRegistry.GetAll();
+
+        foreach (KeyValuePair<string, IActivityDefinition> kvp in all)
+        {
+            Assert.True(kvp.Value.GetRecipes().Count > 0, $"System '{kvp.Key}' has no recipes");
+        }
+    }
+
+    [Fact]
+    public void Register_ThrowsOnNull()
+    {
+        ActivityRegistry.ResetForTesting();
+        Assert.Throws<System.ArgumentNullException>(() => ActivityRegistry.Register(null!));
+    }
+
+    [Fact]
+    public void GetBySystem_ReturnsNullForUnknownSystem()
+    {
+        ActivityRegistry.ResetForTesting();
+        Assert.Null(ActivityRegistry.GetBySystem("nonexistent_system"));
+    }
+
+    [Fact]
+    public void GetRecipe_ReturnsNullForUnknownRecipe()
+    {
+        ActivityRegistry.ResetForTesting();
+        Assert.Null(ActivityRegistry.GetRecipe("nonexistent_recipe"));
+    }
 }

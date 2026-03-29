@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 
 namespace Xiuxian.Scripts.Services
@@ -14,17 +15,17 @@ namespace Xiuxian.Scripts.Services
         {
             return new ActionSettlementResult(
                 ActionId: PlayerActionState.ActionCultivation,
-                ActionTargetId: actionTargetId,
+                ActionTargetId: actionTargetId ?? string.Empty,
                 SourceTag: "cultivation_tick",
-                ApConsumed: apConsumed,
-                LingqiGain: lingqiGain,
-                InsightGain: insightGain,
-                PetAffinityGain: petAffinityGain,
-                RealmExpGain: realmExpGain,
+                ApConsumed: Math.Max(0.0, apConsumed),
+                LingqiGain: Math.Max(0.0, lingqiGain),
+                InsightGain: Math.Max(0.0, insightGain),
+                PetAffinityGain: Math.Max(0.0, petAffinityGain),
+                RealmExpGain: Math.Max(0.0, realmExpGain),
                 ExploreProgressGain: 0.0,
                 BattleRoundsAdvanced: 0,
                 ItemDrops: new Dictionary<string, int>(),
-                EquipmentDrops: System.Array.Empty<EquipmentInstanceData>());
+                EquipmentDrops: Array.Empty<EquipmentInstanceData>());
         }
 
         public static ActionSettlementResult BuildDungeonRewardSettlement(
@@ -40,17 +41,17 @@ namespace Xiuxian.Scripts.Services
         {
             return new ActionSettlementResult(
                 ActionId: PlayerActionState.ActionDungeon,
-                ActionTargetId: actionTargetId,
-                SourceTag: sourceTag,
+                ActionTargetId: actionTargetId ?? string.Empty,
+                SourceTag: sourceTag ?? string.Empty,
                 ApConsumed: 0.0,
-                LingqiGain: lingqiGain,
-                InsightGain: insightGain,
+                LingqiGain: Math.Max(0.0, lingqiGain),
+                InsightGain: Math.Max(0.0, insightGain),
                 PetAffinityGain: 0.0,
-                RealmExpGain: realmExpGain,
-                ExploreProgressGain: exploreProgressGain,
-                BattleRoundsAdvanced: battleRoundsAdvanced,
-                ItemDrops: itemDrops,
-                EquipmentDrops: equipmentDrops);
+                RealmExpGain: Math.Max(0.0, realmExpGain),
+                ExploreProgressGain: Math.Max(0.0, exploreProgressGain),
+                BattleRoundsAdvanced: Math.Max(0, battleRoundsAdvanced),
+                ItemDrops: itemDrops ?? new Dictionary<string, int>(),
+                EquipmentDrops: equipmentDrops ?? Array.Empty<EquipmentInstanceData>());
         }
     }
 }

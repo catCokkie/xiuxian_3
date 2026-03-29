@@ -36,4 +36,49 @@ public sealed class GardenRulesTests
         Assert.Equal(2, normal.ItemCount);
         Assert.Equal(3, boosted.ItemCount);
     }
+
+    [Fact]
+    public void AdvanceProgress_MasteryLevel2ReducesThreshold()
+    {
+        GardenRules.GardenProgressDecision atLv1 = GardenRules.AdvanceProgress(150.0f, 20, 200, masteryLevel: 1);
+        GardenRules.GardenProgressDecision atLv2 = GardenRules.AdvanceProgress(150.0f, 20, 200, masteryLevel: 2);
+
+        Assert.False(atLv1.CompletedBatch);
+        Assert.True(atLv2.CompletedBatch);
+    }
+
+    [Fact]
+    public void IsOfflineFullySupported_OnlyAtMasteryLevel4()
+    {
+        Assert.False(GardenRules.IsOfflineFullySupported(1));
+        Assert.False(GardenRules.IsOfflineFullySupported(3));
+        Assert.True(GardenRules.IsOfflineFullySupported(4));
+    }
+
+    [Fact]
+    public void TryGetCrop_ReturnsFalseForUnknownRecipe()
+    {
+        bool found = GardenRules.TryGetCrop("garden_nonexistent", out _);
+        Assert.False(found);
+    }
+
+    [Fact]
+    public void HarvestCrop_ReturnsDefaultForUnknownRecipe()
+    {
+        GardenRules.GatherResult result = GardenRules.HarvestCrop("garden_nonexistent");
+        Assert.Null(result.ItemId);
+        Assert.Equal(0, result.ItemCount);
+    }
+
+    [Fact]
+    public void GardenPersistence_RoundTripsSnapshotViaPlainDictionary()
+    {
+        var original = new GardenPersistenceRules.GardenSnapshot("garden_spirit_herb", 85.5f, 200.0f);
+        var dict = GardenPersistenceRules.ToPlainDictionary(original);
+        var restored = GardenPersistenceRules.FromPlainDictionary(dict);
+
+        Assert.Equal(original.SelectedRecipeId, restored.SelectedRecipeId);
+        Assert.Equal(original.Progress, restored.Progress, 2);
+        Assert.Equal(original.RequiredProgress, restored.RequiredProgress, 2);
+    }
 }
