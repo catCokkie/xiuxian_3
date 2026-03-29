@@ -27,4 +27,18 @@ public sealed class UiTextStatsTests
         Assert.Contains("战斗胜率:", text);
         Assert.Contains("累计获得灵石: 40", text);
     }
+
+    [Fact]
+    public void MasteryTextHelpers_FormatCurrentAndNextUnlockState()
+    {
+        string line = UiText.MasteryStatusLine(
+            PlayerActionState.ModeAlchemy,
+            2,
+            UiText.MasteryEffectDescription("alchemy_unlock_juling_san", 1.0),
+            "Lv3（45悟性，炼气2层）");
+
+        Assert.Contains("炼丹 Lv2", line);
+        Assert.Contains("解锁聚灵散", line);
+        Assert.Contains("45悟性", line);
+    }
 }

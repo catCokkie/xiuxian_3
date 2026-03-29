@@ -108,7 +108,12 @@ public sealed class SaveRoundTripTests
             RealmExp: 37.5,
             PetMood: 88,
             AdvancedAlchemyStudyUnlocked: true,
-            CurrentRealmActiveSeconds: 123.4);
+            CurrentRealmActiveSeconds: 123.4,
+            EnlightenmentInsightBonusRate: 0.05,
+            EnlightenmentLingqiBonusRate: 0.08,
+            BodyCultivationMaxHpFlat: 10,
+            BodyCultivationAttackFlat: 4,
+            BodyCultivationDefenseFlat: 3);
 
         Dictionary<string, object> data = PlayerProgressPersistenceRules.ToPlainDictionary(expected);
         PlayerProgressPersistenceRules.PlayerProgressSnapshot restored = PlayerProgressPersistenceRules.FromPlainDictionary(data);
@@ -118,6 +123,11 @@ public sealed class SaveRoundTripTests
         Assert.Equal(88, restored.PetMood);
         Assert.True(restored.AdvancedAlchemyStudyUnlocked);
         Assert.Equal(123.4, restored.CurrentRealmActiveSeconds, 6);
+        Assert.Equal(0.05, restored.EnlightenmentInsightBonusRate, 6);
+        Assert.Equal(0.08, restored.EnlightenmentLingqiBonusRate, 6);
+        Assert.Equal(10, restored.BodyCultivationMaxHpFlat);
+        Assert.Equal(4, restored.BodyCultivationAttackFlat);
+        Assert.Equal(3, restored.BodyCultivationDefenseFlat);
     }
 
     [Fact]
@@ -154,6 +164,40 @@ public sealed class SaveRoundTripTests
         Assert.True(restored.TryGetValue(EquipmentSlotType.Armor, out EquipmentStatProfile restoredArmor));
         AssertEquipmentProfileEqual(weapon, restoredWeapon);
         AssertEquipmentProfileEqual(armor, restoredArmor);
+    }
+
+    [Fact]
+    public void SubsystemMasteryPersistenceRules_RoundTripsMasteryLevelsAndDefaultsMissingSystems()
+    {
+        Dictionary<string, int> levels = new()
+        {
+            [PlayerActionState.ModeDungeon] = 4,
+            [PlayerActionState.ModeAlchemy] = 3,
+        };
+
+        Dictionary<string, object> data = SubsystemMasteryPersistenceRules.ToPlainDictionary(levels);
+        Dictionary<string, int> restored = SubsystemMasteryPersistenceRules.FromPlainDictionary(data);
+
+        Assert.Equal(4, restored[PlayerActionState.ModeDungeon]);
+        Assert.Equal(3, restored[PlayerActionState.ModeAlchemy]);
+        Assert.Equal(1, restored[PlayerActionState.ModeFishing]);
+        Assert.Equal(SubsystemMasteryRules.GetAllSystemIds().Count, restored.Count);
+    }
+
+    [Fact]
+    public void GatheringPersistenceRules_RoundTripGardenMiningAndFishingState()
+    {
+        GardenPersistenceRules.GardenSnapshot garden = new("garden_spirit_flower", 88.0f, 240.0f);
+        MiningPersistenceRules.MiningSnapshot mining = new("mining_spirit_jade", 42.0f, 220.0f, 73);
+        FishingPersistenceRules.FishingSnapshot fishing = new("fishing_deep_pond", 95.0f, 240.0f);
+
+        GardenPersistenceRules.GardenSnapshot restoredGarden = GardenPersistenceRules.FromPlainDictionary(GardenPersistenceRules.ToPlainDictionary(garden));
+        MiningPersistenceRules.MiningSnapshot restoredMining = MiningPersistenceRules.FromPlainDictionary(MiningPersistenceRules.ToPlainDictionary(mining));
+        FishingPersistenceRules.FishingSnapshot restoredFishing = FishingPersistenceRules.FromPlainDictionary(FishingPersistenceRules.ToPlainDictionary(fishing));
+
+        Assert.Equal(garden, restoredGarden);
+        Assert.Equal(mining, restoredMining);
+        Assert.Equal(fishing, restoredFishing);
     }
 
     [Fact]

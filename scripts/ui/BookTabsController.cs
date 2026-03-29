@@ -69,9 +69,16 @@ public partial class BookTabsController : Control
     private Label _cultivationStatusLabel = null!;
     private Button _cultivationBreakthroughButton = null!;
     private Button _cultivationBossInsightButton = null!;
-    private Button _cultivationAlchemyStudyButton = null!;
+    private RichTextLabel _cultivationMasteryLabel = null!;
+    private readonly Dictionary<string, Button> _cultivationMasteryButtons = new();
     private OptionButton _cultivationAlchemyRecipeOption = null!;
     private Button _cultivationAlchemyStartButton = null!;
+    private OptionButton _cultivationGardenOption = null!;
+    private Button _cultivationGardenStartButton = null!;
+    private OptionButton _cultivationMiningOption = null!;
+    private Button _cultivationMiningStartButton = null!;
+    private OptionButton _cultivationFishingOption = null!;
+    private Button _cultivationFishingStartButton = null!;
     private RichTextLabel _cultivationContentLabel = null!;
     private RichTextLabel _backpackContentLabel = null!;
     private TextEdit _bugFeedbackInput = null!;
@@ -95,10 +102,14 @@ public partial class BookTabsController : Control
     private AlchemyState? _alchemyState;
     private PotionInventoryState? _potionInventoryState;
     private SmithingState? _smithingState;
+    private GardenState? _gardenState;
+    private MiningState? _miningState;
+    private FishingState? _fishingState;
     private ResourceWalletState? _resourceWalletState;
     private PlayerProgressState? _playerProgressState;
     private PlayerActionState? _playerActionState;
     private EquippedItemsState? _equippedItemsState;
+    private SubsystemMasteryState? _subsystemMasteryState;
     private LevelConfigLoader? _levelConfigLoader;
     private ExploreProgressController? _exploreProgressController;
 
@@ -154,10 +165,14 @@ public partial class BookTabsController : Control
         _alchemyState = services?.AlchemyState;
         _potionInventoryState = services?.PotionInventoryState;
         _smithingState = services?.SmithingState;
+        _gardenState = services?.GardenState;
+        _miningState = services?.MiningState;
+        _fishingState = services?.FishingState;
         _resourceWalletState = services?.ResourceWalletState;
         _playerProgressState = services?.PlayerProgressState;
         _playerActionState = services?.PlayerActionState;
         _equippedItemsState = services?.EquippedItemsState;
+        _subsystemMasteryState = services?.SubsystemMasteryState;
         _levelConfigLoader = services?.LevelConfigLoader;
         _exploreProgressController = GetNodeOrNull<ExploreProgressController>("../../ExploreProgressController");
         _simulationLevelFilterId = _levelConfigLoader?.ActiveLevelId ?? "";
@@ -182,6 +197,18 @@ public partial class BookTabsController : Control
         if (_smithingState != null)
         {
             _smithingState.SmithingChanged += OnSmithingChanged;
+        }
+        if (_gardenState != null)
+        {
+            _gardenState.GardenChanged += OnGardenChanged;
+        }
+        if (_miningState != null)
+        {
+            _miningState.MiningChanged += OnMiningChanged;
+        }
+        if (_fishingState != null)
+        {
+            _fishingState.FishingChanged += OnFishingChanged;
         }
         if (_resourceWalletState != null)
         {
@@ -237,6 +264,18 @@ public partial class BookTabsController : Control
         if (_smithingState != null)
         {
             _smithingState.SmithingChanged -= OnSmithingChanged;
+        }
+        if (_gardenState != null)
+        {
+            _gardenState.GardenChanged -= OnGardenChanged;
+        }
+        if (_miningState != null)
+        {
+            _miningState.MiningChanged -= OnMiningChanged;
+        }
+        if (_fishingState != null)
+        {
+            _fishingState.FishingChanged -= OnFishingChanged;
         }
         if (_resourceWalletState != null)
         {
@@ -358,6 +397,21 @@ public partial class BookTabsController : Control
         RefreshDynamicTabContent();
     }
 
+    private void OnGardenChanged(string selectedRecipeId, float currentProgress, float requiredProgress)
+    {
+        RefreshDynamicTabContent();
+    }
+
+    private void OnMiningChanged(string selectedRecipeId, float currentProgress, float requiredProgress, int currentDurability)
+    {
+        RefreshDynamicTabContent();
+    }
+
+    private void OnFishingChanged(string selectedRecipeId, float currentProgress, float requiredProgress)
+    {
+        RefreshDynamicTabContent();
+    }
+
     private void OnRealmProgressChanged(int realmLevel, double realmExp, double realmExpRequired)
     {
         RefreshDynamicTabContent();
@@ -438,7 +492,26 @@ public partial class BookTabsController : Control
             _playerProgressState.RealmLevel,
             _levelConfigLoader.PlayerBaseHp,
             _levelConfigLoader.PlayerAttackPerRound);
-        CharacterStatBlock finalStats = CharacterStatRules.BuildFinalStats(baseStats, equippedProfiles);
+        CharacterStatModifier[] bonusModifiers =
+        {
+            ActivityEffectRules.CollectFormationModifier(ServiceLocator.Instance?.FormationState?.SelectedRecipeId ?? string.Empty, _backpackState.GetItemEntries()),
+            ActivityEffectRules.CollectPermanentProgressModifier(new PlayerProgressPersistenceRules.PlayerProgressSnapshot(
+                _playerProgressState.RealmLevel,
+                _playerProgressState.RealmExp,
+                _playerProgressState.PetMood,
+                _playerProgressState.HasUnlockedAdvancedAlchemyStudy,
+                _playerProgressState.CurrentRealmActiveSeconds,
+                _playerProgressState.EnlightenmentInsightBonusRate,
+                _playerProgressState.EnlightenmentLingqiBonusRate,
+                _playerProgressState.BodyCultivationMaxHpFlat,
+                _playerProgressState.BodyCultivationAttackFlat,
+                _playerProgressState.BodyCultivationDefenseFlat,
+                _playerProgressState.MeditationCount,
+                _playerProgressState.ContemplationCount,
+                _playerProgressState.TemperCount,
+                _playerProgressState.BoneforgeCount))
+        };
+        CharacterStatBlock finalStats = CharacterStatRules.BuildFinalStats(CharacterStatRules.BuildFinalStats(baseStats, bonusModifiers), equippedProfiles);
         EquipmentInstanceData[] backpackInstances = _backpackState.GetEquipmentInstances();
         EquipmentStatProfile[] backpackProfiles = _backpackState.GetEquipmentProfiles();
         RefreshSmithingControls(equippedProfiles);
@@ -448,6 +521,9 @@ public partial class BookTabsController : Control
             double percent = _smithingState.RequiredProgress > 0.0f ? _smithingState.CurrentProgress / _smithingState.RequiredProgress * 100.0 : 0.0;
             text += $"\n\n强化目标\n- {target.DisplayName} +{target.EnhanceLevel} ({percent:0}%)";
         }
+
+        text += $"\n\n悟道加成\n- 灵气收益 +{_playerProgressState.EnlightenmentLingqiBonusRate * 100:0}%\n- 悟性收益 +{_playerProgressState.EnlightenmentInsightBonusRate * 100:0}%";
+        text += $"\n\n体修加成\n- 气血 +{_playerProgressState.BodyCultivationMaxHpFlat}\n- 攻击 +{_playerProgressState.BodyCultivationAttackFlat}\n- 防御 +{_playerProgressState.BodyCultivationDefenseFlat}";
 
         return text;
     }
@@ -580,11 +656,6 @@ public partial class BookTabsController : Control
         sb.AppendLine($"- 灵气: {_resourceWalletState.Lingqi:0.0}（{BuildLingqiStatusSummary()}）");
         sb.AppendLine($"- 灵石: {_resourceWalletState.SpiritStones}（{BuildSpiritStoneStatusSummary()}）");
 
-        if (_playerProgressState.HasUnlockedAdvancedAlchemyStudy)
-        {
-            sb.AppendLine("- 高阶丹方参悟: 已解锁");
-        }
-
         if (_alchemyState != null && _alchemyState.HasSelectedRecipe && AlchemyRules.TryGetRecipe(_alchemyState.SelectedRecipeId, out AlchemyRules.RecipeSpec recipe))
         {
             double percent = _alchemyState.RequiredProgress > 0.0f ? _alchemyState.CurrentProgress / _alchemyState.RequiredProgress * 100.0 : 0.0;
@@ -608,6 +679,39 @@ public partial class BookTabsController : Control
         }
 
         return sb.ToString().TrimEnd();
+    }
+
+    private string BuildMasteryOverviewText()
+    {
+        if (_playerProgressState == null)
+        {
+            return UiText.CultivationUnavailable;
+        }
+
+        StringBuilder sb = new();
+        sb.AppendLine(UiText.MasterySectionTitle);
+        sb.AppendLine($"当前悟性: {_resourceWalletState?.Insight ?? 0.0:0.0}");
+        foreach (string systemId in GetTrackedMasterySystems())
+        {
+            int currentLevel = GetMasteryLevel(systemId);
+            SubsystemMasteryRules.TryGetDefinition(systemId, currentLevel, out var currentDefinition);
+            string effectDescription = UiText.MasteryEffectDescription(currentDefinition.EffectId, currentDefinition.EffectValue);
+            string nextUnlock = BuildNextMasteryUnlockDescription(systemId, currentLevel);
+            sb.AppendLine(UiText.MasteryStatusLine(systemId, currentLevel, effectDescription, nextUnlock));
+        }
+
+        return sb.ToString().TrimEnd();
+    }
+
+    private string BuildNextMasteryUnlockDescription(string systemId, int currentLevel)
+    {
+        int nextLevel = currentLevel + 1;
+        if (!SubsystemMasteryRules.TryGetDefinition(systemId, nextLevel, out var nextDefinition))
+        {
+            return "已满级";
+        }
+
+        return $"Lv{nextDefinition.Level}（{nextDefinition.InsightCost:0}悟性，炼气{nextDefinition.RequiredRealmLevel}层）";
     }
 
     private string BuildCultivationActionSummary()
@@ -658,12 +762,13 @@ public partial class BookTabsController : Control
             return "暂不可用";
         }
 
-        if (_exploreProgressController != null && _exploreProgressController.CanApplyBossWeaknessInsight(_resourceWalletState.Insight))
+        int dungeonMasteryLevel = _subsystemMasteryState?.GetLevel(PlayerActionState.ModeDungeon) ?? 1;
+        if (_exploreProgressController != null && _exploreProgressController.CanApplyBossWeaknessInsight(dungeonMasteryLevel))
         {
-            return "状态：可用于当前 Boss 弱点参悟";
+            return "状态：副本精通已可看破当前 Boss 弱点";
         }
 
-        if (InsightSpendRules.CanUnlockAdvancedAlchemy(_playerProgressState.HasUnlockedAdvancedAlchemyStudy, _resourceWalletState.Insight))
+        if (CanUnlockMastery(PlayerActionState.ModeAlchemy))
         {
             return "状态：可用于参悟高阶丹方";
         }
@@ -764,7 +869,7 @@ public partial class BookTabsController : Control
 
         Dictionary<string, int> potions = _potionInventoryState?.GetPotionEntries() ?? new Dictionary<string, int>();
         int huiqi = potions.TryGetValue("potion_huiqi_dan", out int huiqiCount) ? huiqiCount : 0;
-        if (huiqi < 2 && _resourceWalletState != null && _backpackState != null && AlchemyRules.CanStartRecipe("potion_huiqi_dan", _resourceWalletState.Lingqi, _backpackState.GetItemEntries(), _playerProgressState?.HasUnlockedAdvancedAlchemyStudy ?? false))
+        if (huiqi < 2 && _resourceWalletState != null && _backpackState != null && AlchemyRules.CanStartRecipe("recipe_huiqi_dan", _resourceWalletState.Lingqi, _backpackState.GetItemEntries(), GetAlchemyMasteryLevel()))
         {
             return "结果：当前已经具备补充回气丹的条件，战斗容错仍有提升空间。";
         }
@@ -784,14 +889,15 @@ public partial class BookTabsController : Control
 
     private string BuildSecondaryCultivationAssessment()
     {
-        if (_playerProgressState != null && !_playerProgressState.HasUnlockedAdvancedAlchemyStudy && _resourceWalletState != null && InsightSpendRules.CanUnlockAdvancedAlchemy(_playerProgressState.HasUnlockedAdvancedAlchemyStudy, _resourceWalletState.Insight))
+        if (CanUnlockMastery(PlayerActionState.ModeAlchemy))
         {
             return "状态：当前悟性已经足够支撑一次高阶丹方参悟。";
         }
 
-        if (_exploreProgressController != null && _resourceWalletState != null && _exploreProgressController.CanApplyBossWeaknessInsight(_resourceWalletState.Insight))
+        int dungeonMasteryLevel = _subsystemMasteryState?.GetLevel(PlayerActionState.ModeDungeon) ?? 1;
+        if (_exploreProgressController != null && _exploreProgressController.CanApplyBossWeaknessInsight(dungeonMasteryLevel))
         {
-            return "状态：当前已具备 Boss 弱点参悟条件，Boss 战准备度较高。";
+            return "状态：当前已具备 Boss 弱点洞察条件，Boss 战准备度较高。";
         }
 
         if (_resourceWalletState != null && _resourceWalletState.SpiritStones >= 50)
@@ -831,8 +937,25 @@ public partial class BookTabsController : Control
             _cultivationBreakthroughButton.Disabled = true;
             _cultivationBreakthroughButton.Text = UiText.BreakthroughButtonLabel;
             _cultivationBreakthroughButton.TooltipText = UiText.CultivationUnavailableTooltip;
+            _cultivationBossInsightButton.Disabled = true;
             _cultivationAlchemyRecipeOption.Disabled = true;
             _cultivationAlchemyStartButton.Disabled = true;
+            _cultivationGardenOption.Disabled = true;
+            _cultivationGardenStartButton.Disabled = true;
+            _cultivationMiningOption.Disabled = true;
+            _cultivationMiningStartButton.Disabled = true;
+            _cultivationFishingOption.Disabled = true;
+            _cultivationFishingStartButton.Disabled = true;
+            if (_cultivationMasteryLabel != null)
+            {
+                _cultivationMasteryLabel.Text = UiText.CultivationUnavailable;
+            }
+
+            foreach (Button button in _cultivationMasteryButtons.Values)
+            {
+                button.Disabled = true;
+                button.TooltipText = UiText.CultivationUnavailableTooltip;
+            }
             return;
         }
 
@@ -846,22 +969,54 @@ public partial class BookTabsController : Control
             : UiText.BreakthroughButtonLabel;
         _cultivationBreakthroughButton.TooltipText = UiText.CultivationBreakthroughTooltip(canBreakthrough, remainingExp);
 
-        bool canProbeBoss = _resourceWalletState != null
-            && _exploreProgressController != null
-            && _exploreProgressController.CanApplyBossWeaknessInsight(_resourceWalletState.Insight);
+        int dungeonMasteryLevel = _subsystemMasteryState?.GetLevel(PlayerActionState.ModeDungeon) ?? 1;
+        bool canProbeBoss = _exploreProgressController != null
+            && _exploreProgressController.CanApplyBossWeaknessInsight(dungeonMasteryLevel);
         _cultivationBossInsightButton.Disabled = !canProbeBoss;
         _cultivationBossInsightButton.TooltipText = canProbeBoss
-            ? UiText.BossWeaknessInsightReadyTooltipFor((int)InsightSpendRules.GetBossWeaknessInsightCost(_levelConfigLoader?.ActiveLevelIndex ?? 0))
+            ? UiText.BossWeaknessInsightReadyTooltip
             : UiText.BossWeaknessInsightLockedTooltip;
 
-        bool canStudyAlchemy = _resourceWalletState != null
-            && InsightSpendRules.CanUnlockAdvancedAlchemy(_playerProgressState.HasUnlockedAdvancedAlchemyStudy, _resourceWalletState.Insight);
-        _cultivationAlchemyStudyButton.Disabled = !canStudyAlchemy;
-        _cultivationAlchemyStudyButton.TooltipText = _playerProgressState.HasUnlockedAdvancedAlchemyStudy
-            ? UiText.AdvancedAlchemyStudyUnlockedTooltip
-            : UiText.AdvancedAlchemyStudyTooltip;
+        RefreshMasteryControls();
 
         RefreshAlchemyControls();
+        RefreshGatheringControls();
+    }
+
+    private void RefreshMasteryControls()
+    {
+        if (_cultivationMasteryLabel == null)
+        {
+            return;
+        }
+
+        _cultivationMasteryLabel.Text = BuildMasteryOverviewText();
+        foreach (string systemId in GetTrackedMasterySystems())
+        {
+            if (!_cultivationMasteryButtons.TryGetValue(systemId, out Button? button))
+            {
+                continue;
+            }
+
+            int currentLevel = GetMasteryLevel(systemId);
+            int nextLevel = currentLevel + 1;
+            if (!SubsystemMasteryRules.TryGetDefinition(systemId, nextLevel, out var nextDefinition))
+            {
+                button.Text = UiText.MasteryUnlockButton(systemId, currentLevel);
+                button.Disabled = true;
+                button.TooltipText = UiText.MasteryMaxLevelTooltip;
+                continue;
+            }
+
+            bool canUnlock = _playerProgressState != null
+                && _resourceWalletState != null
+                && InsightSpendRules.CanUnlockMastery(systemId, currentLevel, _resourceWalletState.Insight, _playerProgressState.RealmLevel);
+            button.Text = UiText.MasteryUnlockButton(systemId, nextDefinition.Level);
+            button.Disabled = !canUnlock;
+            button.TooltipText = canUnlock
+                ? UiText.MasteryUnlockTooltip(systemId, currentLevel, nextDefinition.Level, nextDefinition.InsightCost, nextDefinition.RequiredRealmLevel)
+                : UiText.MasteryUnavailableTooltip;
+        }
     }
 
     private void OnCultivationBreakthroughPressed()
@@ -914,7 +1069,7 @@ public partial class BookTabsController : Control
             return;
         }
 
-        if (!SmithingRules.CanEnhance(profile, _backpackState, _resourceWalletState))
+        if (!SmithingRules.CanEnhance(profile, _backpackState, _resourceWalletState, GetSmithingMasteryLevel()))
         {
             RefreshDynamicTabContent();
             return;
@@ -945,7 +1100,7 @@ public partial class BookTabsController : Control
         bool canStart = _smithingState.HasTarget
             && _equippedItemsState != null
             && _equippedItemsState.TryGetEquippedProfileById(_smithingState.TargetEquipmentId, out EquipmentStatProfile target)
-            && SmithingRules.CanEnhance(target, _backpackState, _resourceWalletState);
+            && SmithingRules.CanEnhance(target, _backpackState, _resourceWalletState, GetSmithingMasteryLevel());
         _equipmentSmithingStartButton.Disabled = !canStart;
         _equipmentSmithingStartButton.TooltipText = canStart
             ? "切到炼器模式后输入会推进当前强化。"
@@ -954,18 +1109,13 @@ public partial class BookTabsController : Control
 
     private void OnBossWeaknessInsightPressed()
     {
-        if (_resourceWalletState == null || _exploreProgressController == null)
+        if (_exploreProgressController == null)
         {
             return;
         }
 
-        if (!_exploreProgressController.CanApplyBossWeaknessInsight(_resourceWalletState.Insight))
-        {
-            RefreshCultivationPanelContent();
-            return;
-        }
-
-        if (!_resourceWalletState.SpendInsight(InsightSpendRules.GetBossWeaknessInsightCost(_levelConfigLoader?.ActiveLevelIndex ?? 0)))
+        int dungeonMasteryLevel = _subsystemMasteryState?.GetLevel(PlayerActionState.ModeDungeon) ?? 1;
+        if (!_exploreProgressController.CanApplyBossWeaknessInsight(dungeonMasteryLevel))
         {
             RefreshCultivationPanelContent();
             return;
@@ -975,26 +1125,29 @@ public partial class BookTabsController : Control
         RefreshDynamicTabContent();
     }
 
-    private void OnAdvancedAlchemyStudyPressed()
+    private void OnMasteryUnlockPressed(string systemId)
     {
         if (_resourceWalletState == null || _playerProgressState == null)
         {
             return;
         }
 
-        if (!InsightSpendRules.CanUnlockAdvancedAlchemy(_playerProgressState.HasUnlockedAdvancedAlchemyStudy, _resourceWalletState.Insight))
+        int currentLevel = GetMasteryLevel(systemId);
+        if (!InsightSpendRules.CanUnlockMastery(systemId, currentLevel, _resourceWalletState.Insight, _playerProgressState.RealmLevel))
         {
             RefreshCultivationPanelContent();
             return;
         }
 
-        if (!_resourceWalletState.SpendInsight(InsightSpendRules.AdvancedAlchemyStudyInsightCost))
+        if (!InsightSpendRules.SpendInsightForMastery(systemId, currentLevel, _resourceWalletState.Insight, _playerProgressState.RealmLevel, out int nextLevel, out double remainingInsight))
         {
             RefreshCultivationPanelContent();
             return;
         }
 
-        _playerProgressState.UnlockAdvancedAlchemyStudy();
+        _resourceWalletState.SpendInsight(_resourceWalletState.Insight - remainingInsight);
+        _subsystemMasteryState?.TrySetLevel(systemId, nextLevel);
+        _cultivationStatusLabel.Text = UiText.MasteryUnlockSuccessPrefix + UiText.MasterySystemName(systemId);
         RefreshDynamicTabContent();
     }
 
@@ -1018,7 +1171,7 @@ public partial class BookTabsController : Control
             return;
         }
 
-        if (!AlchemyRules.CanStartRecipe(_alchemyState.SelectedRecipeId, _resourceWalletState.Lingqi, _backpackState.GetItemEntries(), _playerProgressState?.HasUnlockedAdvancedAlchemyStudy ?? false))
+        if (!AlchemyRules.CanStartRecipe(_alchemyState.SelectedRecipeId, _resourceWalletState.Lingqi, _backpackState.GetItemEntries(), GetAlchemyMasteryLevel()))
         {
             RefreshCultivationPanelContent();
             _cultivationStatusLabel.Text = "材料不足或灵气不足，无法开始当前丹方。";
@@ -1027,6 +1180,75 @@ public partial class BookTabsController : Control
 
         RefreshCultivationPanelContent();
         _cultivationStatusLabel.Text = "炼丹已开始，切到炼丹模式后输入会推进进度。";
+    }
+
+    private void OnGardenRecipeSelected(long index)
+    {
+        if (_gardenState == null || index < 0 || index >= _cultivationGardenOption.ItemCount)
+        {
+            return;
+        }
+
+        _gardenState.SelectCrop(_cultivationGardenOption.GetItemMetadata((int)index).AsString());
+        RefreshDynamicTabContent();
+    }
+
+    private void OnMiningRecipeSelected(long index)
+    {
+        if (_miningState == null || index < 0 || index >= _cultivationMiningOption.ItemCount)
+        {
+            return;
+        }
+
+        _miningState.SelectNode(_cultivationMiningOption.GetItemMetadata((int)index).AsString());
+        RefreshDynamicTabContent();
+    }
+
+    private void OnFishingRecipeSelected(long index)
+    {
+        if (_fishingState == null || index < 0 || index >= _cultivationFishingOption.ItemCount)
+        {
+            return;
+        }
+
+        _fishingState.SelectPond(_cultivationFishingOption.GetItemMetadata((int)index).AsString());
+        RefreshDynamicTabContent();
+    }
+
+    private void OnGardenStartPressed()
+    {
+        if (_gardenState == null || !_gardenState.HasSelectedCrop)
+        {
+            RefreshCultivationPanelContent();
+            return;
+        }
+
+        _cultivationStatusLabel.Text = "灵田已就绪，切到灵田模式后输入会推进种植。";
+        RefreshCultivationPanelContent();
+    }
+
+    private void OnMiningStartPressed()
+    {
+        if (_miningState == null || !_miningState.HasSelectedNode)
+        {
+            RefreshCultivationPanelContent();
+            return;
+        }
+
+        _cultivationStatusLabel.Text = "矿脉已就绪，切到矿脉模式后输入会推进开采。";
+        RefreshCultivationPanelContent();
+    }
+
+    private void OnFishingStartPressed()
+    {
+        if (_fishingState == null || !_fishingState.HasSelectedPond)
+        {
+            RefreshCultivationPanelContent();
+            return;
+        }
+
+        _cultivationStatusLabel.Text = "灵渔已就绪，切到灵渔模式后输入会推进垂钓。";
+        RefreshCultivationPanelContent();
     }
 
     private void RefreshAlchemyControls()
@@ -1068,11 +1290,143 @@ public partial class BookTabsController : Control
 
         bool canStart = _alchemyState != null
             && _alchemyState.HasSelectedRecipe
-            && AlchemyRules.CanStartRecipe(_alchemyState.SelectedRecipeId, _resourceWalletState!.Lingqi, _backpackState!.GetItemEntries(), _playerProgressState?.HasUnlockedAdvancedAlchemyStudy ?? false);
+            && AlchemyRules.CanStartRecipe(_alchemyState.SelectedRecipeId, _resourceWalletState!.Lingqi, _backpackState!.GetItemEntries(), GetAlchemyMasteryLevel());
         _cultivationAlchemyStartButton.Disabled = !canStart;
         _cultivationAlchemyStartButton.TooltipText = canStart
             ? "满足材料后，切到炼丹模式即可推进当前批次。"
             : "请选择可用丹方，并准备足够灵草与灵气。";
+    }
+
+    private void RefreshGatheringControls()
+    {
+        RefreshGardenControls();
+        RefreshMiningControls();
+        RefreshFishingControls();
+    }
+
+    private void RefreshGardenControls()
+    {
+        bool enabled = _cultivationGardenOption != null && _cultivationGardenStartButton != null && _gardenState != null;
+        if (!enabled)
+        {
+            return;
+        }
+
+        if (_cultivationGardenOption.ItemCount == 0)
+        {
+            IReadOnlyList<GardenRules.CropSpec> crops = GardenRules.GetCrops();
+            for (int i = 0; i < crops.Count; i++)
+            {
+                _cultivationGardenOption.AddItem(crops[i].DisplayName, i);
+                _cultivationGardenOption.SetItemMetadata(i, crops[i].RecipeId);
+            }
+        }
+
+        SelectCurrentOption(_cultivationGardenOption, _gardenState.SelectedRecipeId);
+        bool canStart = _gardenState.HasSelectedCrop;
+        _cultivationGardenOption.Disabled = false;
+        _cultivationGardenStartButton.Disabled = !canStart;
+    }
+
+    private void RefreshMiningControls()
+    {
+        bool enabled = _cultivationMiningOption != null && _cultivationMiningStartButton != null && _miningState != null;
+        if (!enabled)
+        {
+            return;
+        }
+
+        if (_cultivationMiningOption.ItemCount == 0)
+        {
+            IReadOnlyList<MiningRules.NodeSpec> nodes = MiningRules.GetNodes();
+            for (int i = 0; i < nodes.Count; i++)
+            {
+                _cultivationMiningOption.AddItem(nodes[i].DisplayName, i);
+                _cultivationMiningOption.SetItemMetadata(i, nodes[i].RecipeId);
+            }
+        }
+
+        SelectCurrentOption(_cultivationMiningOption, _miningState.SelectedRecipeId);
+        bool canStart = _miningState.HasSelectedNode;
+        _cultivationMiningOption.Disabled = false;
+        _cultivationMiningStartButton.Disabled = !canStart;
+    }
+
+    private void RefreshFishingControls()
+    {
+        bool enabled = _cultivationFishingOption != null && _cultivationFishingStartButton != null && _fishingState != null;
+        if (!enabled)
+        {
+            return;
+        }
+
+        if (_cultivationFishingOption.ItemCount == 0)
+        {
+            IReadOnlyList<FishingRules.PondSpec> ponds = FishingRules.GetPonds();
+            for (int i = 0; i < ponds.Count; i++)
+            {
+                _cultivationFishingOption.AddItem(ponds[i].DisplayName, i);
+                _cultivationFishingOption.SetItemMetadata(i, ponds[i].RecipeId);
+            }
+        }
+
+        SelectCurrentOption(_cultivationFishingOption, _fishingState.SelectedRecipeId);
+        bool canStart = _fishingState.HasSelectedPond;
+        _cultivationFishingOption.Disabled = false;
+        _cultivationFishingStartButton.Disabled = !canStart;
+    }
+
+    private static void SelectCurrentOption(OptionButton option, string selectedId)
+    {
+        if (string.IsNullOrEmpty(selectedId))
+        {
+            return;
+        }
+
+        for (int i = 0; i < option.ItemCount; i++)
+        {
+            if (option.GetItemMetadata(i).AsString() == selectedId)
+            {
+                option.Select(i);
+                break;
+            }
+        }
+    }
+
+    private int GetAlchemyMasteryLevel()
+    {
+        return GetMasteryLevel(PlayerActionState.ModeAlchemy);
+    }
+
+    private int GetSmithingMasteryLevel()
+    {
+        return GetMasteryLevel(PlayerActionState.ModeSmithing);
+    }
+
+    private int GetMasteryLevel(string systemId)
+    {
+        return _subsystemMasteryState?.GetLevel(systemId) ?? 1;
+    }
+
+    private bool CanUnlockMastery(string systemId)
+    {
+        if (_resourceWalletState == null || _playerProgressState == null)
+        {
+            return false;
+        }
+
+        return InsightSpendRules.CanUnlockMastery(systemId, GetMasteryLevel(systemId), _resourceWalletState.Insight, _playerProgressState.RealmLevel);
+    }
+
+    private static string[] GetTrackedMasterySystems()
+    {
+        return new[]
+        {
+            PlayerActionState.ModeDungeon,
+            PlayerActionState.ModeCultivation,
+            PlayerActionState.ModeAlchemy,
+            PlayerActionState.ModeSmithing,
+        };
     }
 
     private string BuildStatsOverviewText()
@@ -1455,11 +1809,6 @@ public partial class BookTabsController : Control
         _cultivationBossInsightButton.Pressed += OnBossWeaknessInsightPressed;
         actionRow.AddChild(_cultivationBossInsightButton);
 
-        _cultivationAlchemyStudyButton = new Button();
-        _cultivationAlchemyStudyButton.Text = UiText.AdvancedAlchemyStudyButton;
-        _cultivationAlchemyStudyButton.Pressed += OnAdvancedAlchemyStudyPressed;
-        actionRow.AddChild(_cultivationAlchemyStudyButton);
-
         _cultivationAlchemyRecipeOption = new OptionButton();
         _cultivationAlchemyRecipeOption.ItemSelected += OnAlchemyRecipeSelected;
         actionRow.AddChild(_cultivationAlchemyRecipeOption);
@@ -1468,6 +1817,53 @@ public partial class BookTabsController : Control
         _cultivationAlchemyStartButton.Text = "开始炼丹";
         _cultivationAlchemyStartButton.Pressed += OnAlchemyStartPressed;
         actionRow.AddChild(_cultivationAlchemyStartButton);
+
+        HBoxContainer gatheringRow = new();
+        gatheringRow.AddThemeConstantOverride("separation", 8);
+        _cultivationRoot.AddChild(gatheringRow);
+
+        _cultivationGardenOption = new OptionButton();
+        _cultivationGardenOption.ItemSelected += OnGardenRecipeSelected;
+        gatheringRow.AddChild(_cultivationGardenOption);
+
+        _cultivationGardenStartButton = new Button();
+        _cultivationGardenStartButton.Text = "开始灵田";
+        _cultivationGardenStartButton.Pressed += OnGardenStartPressed;
+        gatheringRow.AddChild(_cultivationGardenStartButton);
+
+        _cultivationMiningOption = new OptionButton();
+        _cultivationMiningOption.ItemSelected += OnMiningRecipeSelected;
+        gatheringRow.AddChild(_cultivationMiningOption);
+
+        _cultivationMiningStartButton = new Button();
+        _cultivationMiningStartButton.Text = "开始矿脉";
+        _cultivationMiningStartButton.Pressed += OnMiningStartPressed;
+        gatheringRow.AddChild(_cultivationMiningStartButton);
+
+        _cultivationFishingOption = new OptionButton();
+        _cultivationFishingOption.ItemSelected += OnFishingRecipeSelected;
+        gatheringRow.AddChild(_cultivationFishingOption);
+
+        _cultivationFishingStartButton = new Button();
+        _cultivationFishingStartButton.Text = "开始灵渔";
+        _cultivationFishingStartButton.Pressed += OnFishingStartPressed;
+        gatheringRow.AddChild(_cultivationFishingStartButton);
+
+        _cultivationMasteryLabel = new RichTextLabel();
+        _cultivationMasteryLabel.FitContent = true;
+        _cultivationMasteryLabel.ScrollActive = false;
+        _cultivationRoot.AddChild(_cultivationMasteryLabel);
+
+        HBoxContainer masteryRow = new();
+        masteryRow.AddThemeConstantOverride("separation", 8);
+        _cultivationRoot.AddChild(masteryRow);
+        foreach (string systemId in GetTrackedMasterySystems())
+        {
+            Button button = new();
+            button.Pressed += () => OnMasteryUnlockPressed(systemId);
+            masteryRow.AddChild(button);
+            _cultivationMasteryButtons[systemId] = button;
+        }
 
         _cultivationContentLabel = new RichTextLabel();
         _cultivationContentLabel.FitContent = false;

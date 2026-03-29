@@ -95,7 +95,7 @@ public sealed class SaveMigrationRulesTests
 
         SaveMigrationRules.MigrateToLatest(cfg, 5);
 
-        Assert.Equal(6, System.Convert.ToInt32(cfg.GetValue("meta", "version", 0)));
+        Assert.Equal(8, System.Convert.ToInt32(cfg.GetValue("meta", "version", 0)));
 
         var wallet = (System.Collections.Generic.Dictionary<string, object>)cfg.GetValue("resource", "wallet", new System.Collections.Generic.Dictionary<string, object>());
         Assert.Equal(0L, System.Convert.ToInt64(wallet["spirit_stones"]));
@@ -127,6 +127,9 @@ public sealed class SaveMigrationRulesTests
         var backpack = (System.Collections.Generic.Dictionary<string, object>)cfg.GetValue("backpack", "items", new System.Collections.Generic.Dictionary<string, object>());
         Assert.False(backpack.ContainsKey("novice_breakthrough_pill"));
         Assert.Equal("dungeon", System.Convert.ToString(((System.Collections.Generic.Dictionary<string, object>)cfg.GetValue("action", "mode", new System.Collections.Generic.Dictionary<string, object>()))["mode_id"]));
+
+        var mastery = (System.Collections.Generic.Dictionary<string, object>)cfg.GetValue("mastery", "levels", new System.Collections.Generic.Dictionary<string, object>());
+        Assert.Equal(1L, System.Convert.ToInt64(mastery[PlayerActionState.ModeDungeon]));
     }
 
     [Fact]
@@ -140,5 +143,83 @@ public sealed class SaveMigrationRulesTests
 
         Assert.Equal("BackpackTab", System.Convert.ToString(cfg.GetValue("ui", "submenu_active_left_tab", string.Empty)));
         Assert.False(cfg.HasSectionKey("ui", "submenu_active_right_tab"));
+    }
+
+    [Fact]
+    public void MigrateToLatest_PromotesV6SaveToV7WithMasteryDefaults()
+    {
+        SaveMigrationRules.MigrationStore cfg = new();
+        cfg.SetValue("meta", "version", 6);
+        cfg.SetValue("action", "mode", new System.Collections.Generic.Dictionary<string, object>
+        {
+            ["mode_id"] = PlayerActionState.ModeFishing,
+            ["action_id"] = PlayerActionState.ModeFishing,
+            ["action_target_id"] = string.Empty,
+            ["action_variant"] = string.Empty,
+        });
+
+        SaveMigrationRules.MigrateToLatest(cfg, 6);
+
+        Assert.Equal(8, System.Convert.ToInt32(cfg.GetValue("meta", "version", 0)));
+        var mastery = (System.Collections.Generic.Dictionary<string, object>)cfg.GetValue("mastery", "levels", new System.Collections.Generic.Dictionary<string, object>());
+        Assert.Equal(12, mastery.Count);
+        Assert.Equal(1L, System.Convert.ToInt64(mastery[PlayerActionState.ModeDungeon]));
+        Assert.Equal(1L, System.Convert.ToInt64(mastery[PlayerActionState.ModeBodyCultivation]));
+
+        var action = (System.Collections.Generic.Dictionary<string, object>)cfg.GetValue("action", "mode", new System.Collections.Generic.Dictionary<string, object>());
+        Assert.Equal(PlayerActionState.ModeFishing, System.Convert.ToString(action["mode_id"]));
+
+        var garden = (System.Collections.Generic.Dictionary<string, object>)cfg.GetValue("garden", "state", new System.Collections.Generic.Dictionary<string, object>());
+        Assert.Equal(string.Empty, System.Convert.ToString(garden["selected_recipe"]));
+        Assert.Equal(200.0, System.Convert.ToDouble(garden["required_progress"]));
+
+        var formation = (System.Collections.Generic.Dictionary<string, object>)cfg.GetValue("formation", "state", new System.Collections.Generic.Dictionary<string, object>());
+        Assert.Equal(100.0, System.Convert.ToDouble(formation["required_progress"]));
+
+        var progress = (System.Collections.Generic.Dictionary<string, object>)cfg.GetValue("progress", "player", new System.Collections.Generic.Dictionary<string, object>());
+        Assert.Equal(0.0, System.Convert.ToDouble(progress["enlightenment_insight_bonus_rate"]));
+        Assert.Equal(0L, System.Convert.ToInt64(progress["body_cultivation_temper_count"]));
+    }
+
+    [Fact]
+    public void MigrateToLatest_ConvertsLegacyAdvancedAlchemyFlagToMasteryLevel2()
+    {
+        SaveMigrationRules.MigrationStore cfg = new();
+        cfg.SetValue("meta", "version", 6);
+        cfg.SetValue("progress", "player", new System.Collections.Generic.Dictionary<string, object>
+        {
+            ["advanced_alchemy_study_unlocked"] = true,
+        });
+
+        SaveMigrationRules.MigrateToLatest(cfg, 6);
+
+        var mastery = (System.Collections.Generic.Dictionary<string, object>)cfg.GetValue("mastery", "levels", new System.Collections.Generic.Dictionary<string, object>());
+        Assert.Equal(2L, System.Convert.ToInt64(mastery[PlayerActionState.ModeAlchemy]));
+    }
+
+    [Fact]
+    public void MigrateToLatest_PromotesV7SaveToV8WithPhaseSevenDefaults()
+    {
+        SaveMigrationRules.MigrationStore cfg = new();
+        cfg.SetValue("meta", "version", 7);
+        cfg.SetValue("progress", "player", new System.Collections.Generic.Dictionary<string, object>
+        {
+            ["realm_level"] = 2,
+            ["realm_exp"] = 10.0,
+        });
+
+        SaveMigrationRules.MigrateToLatest(cfg, 7);
+
+        Assert.Equal(8, System.Convert.ToInt32(cfg.GetValue("meta", "version", 0)));
+
+        var mining = (System.Collections.Generic.Dictionary<string, object>)cfg.GetValue("mining", "state", new System.Collections.Generic.Dictionary<string, object>());
+        Assert.Equal(MiningRules.DefaultNodeDurability, System.Convert.ToInt32(mining["current_durability"]));
+
+        var body = (System.Collections.Generic.Dictionary<string, object>)cfg.GetValue("body_cultivation", "state", new System.Collections.Generic.Dictionary<string, object>());
+        Assert.Equal(100.0, System.Convert.ToDouble(body["required_progress"]));
+
+        var progress = (System.Collections.Generic.Dictionary<string, object>)cfg.GetValue("progress", "player", new System.Collections.Generic.Dictionary<string, object>());
+        Assert.Equal(0.0, System.Convert.ToDouble(progress["enlightenment_lingqi_bonus_rate"]));
+        Assert.Equal(0L, System.Convert.ToInt64(progress["body_cultivation_boneforge_count"]));
     }
 }

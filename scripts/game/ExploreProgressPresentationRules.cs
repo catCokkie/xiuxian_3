@@ -13,6 +13,14 @@ namespace Xiuxian.Scripts.Game
                 1 => "修炼｜灵气悟性",
                 2 => "炼丹｜战斗丹药",
                 3 => "炼器｜装备强化",
+                4 => "灵田｜草花果",
+                5 => "矿脉｜矿玉银",
+                6 => "灵渔｜鱼珠涎",
+                7 => "符箓｜战斗消耗",
+                8 => "烹饪｜战前增益",
+                9 => "阵法｜常驻阵盘",
+                10 => "悟道｜悟性增益",
+                11 => "体修｜永久属性",
                 _ => "副本｜材料装备",
             };
         }
@@ -24,6 +32,14 @@ namespace Xiuxian.Scripts.Game
                 PlayerActionState.ActionCultivation => "修炼",
                 PlayerActionState.ActionAlchemy => "炼丹",
                 PlayerActionState.ActionSmithing => "炼器",
+                PlayerActionState.ActionGarden => "灵田",
+                PlayerActionState.ActionMining => "矿脉",
+                PlayerActionState.ActionFishing => "灵渔",
+                PlayerActionState.ActionTalisman => "符箓",
+                PlayerActionState.ActionCooking => "烹饪",
+                PlayerActionState.ActionFormation => "阵法",
+                PlayerActionState.ActionEnlightenment => "悟道",
+                PlayerActionState.ActionBodyCultivation => "体修",
                 _ => "副本",
             };
         }
@@ -55,12 +71,48 @@ namespace Xiuxian.Scripts.Game
             return $"强化：{equipmentName} +{enhanceLevel}->{enhanceLevel + 1} {percent:0}%";
         }
 
-        public static string GetPausedModeRoundLabel(string actionId, string alchemyText, string smithingText)
+        public static string BuildGardenProgressText(string cropName, float currentProgress, float requiredProgress)
+        {
+            if (string.IsNullOrEmpty(cropName))
+            {
+                return "灵田待命（请先选择作物）";
+            }
+
+            float percent = requiredProgress > 0.0f ? currentProgress / requiredProgress * 100.0f : 0.0f;
+            return $"种植：{cropName} {percent:0}%";
+        }
+
+        public static string BuildMiningProgressText(string nodeName, float currentProgress, float requiredProgress, int durability)
+        {
+            if (string.IsNullOrEmpty(nodeName))
+            {
+                return "矿脉待命（请先选择矿点）";
+            }
+
+            float percent = requiredProgress > 0.0f ? currentProgress / requiredProgress * 100.0f : 0.0f;
+            return $"开采：{nodeName} {percent:0}% | 耐久 {durability}";
+        }
+
+        public static string BuildFishingProgressText(string pondName, float currentProgress, float requiredProgress)
+        {
+            if (string.IsNullOrEmpty(pondName))
+            {
+                return "灵渔待命（请先选择鱼塘）";
+            }
+
+            float percent = requiredProgress > 0.0f ? currentProgress / requiredProgress * 100.0f : 0.0f;
+            return $"垂钓：{pondName} {percent:0}%";
+        }
+
+        public static string GetPausedModeRoundLabel(string actionId, string alchemyText, string smithingText, string gardenText, string miningText, string fishingText)
         {
             return actionId switch
             {
                 PlayerActionState.ActionAlchemy => alchemyText,
                 PlayerActionState.ActionSmithing => smithingText,
+                PlayerActionState.ActionGarden => gardenText,
+                PlayerActionState.ActionMining => miningText,
+                PlayerActionState.ActionFishing => fishingText,
                 _ => $"副本暂停（{GetActionModeDisplayName(actionId)}模式）",
             };
         }

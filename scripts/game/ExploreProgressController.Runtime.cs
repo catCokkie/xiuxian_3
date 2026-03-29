@@ -43,11 +43,20 @@ namespace Xiuxian.Scripts.Game
         [Export] public NodePath AlchemyStatePath = "/root/AlchemyState";
         [Export] public NodePath PotionInventoryStatePath = "/root/PotionInventoryState";
         [Export] public NodePath SmithingStatePath = "/root/SmithingState";
+        [Export] public NodePath GardenStatePath = "/root/GardenState";
+        [Export] public NodePath MiningStatePath = "/root/MiningState";
+        [Export] public NodePath FishingStatePath = "/root/FishingState";
+        [Export] public NodePath TalismanStatePath = "/root/TalismanState";
+        [Export] public NodePath CookingStatePath = "/root/CookingState";
+        [Export] public NodePath FormationStatePath = "/root/FormationState";
+        [Export] public NodePath EnlightenmentStatePath = "/root/EnlightenmentState";
+        [Export] public NodePath BodyCultivationStatePath = "/root/BodyCultivationState";
         [Export] public NodePath PlayerProgressPath = "/root/PlayerProgressState";
         [Export] public NodePath EquippedItemsStatePath = "/root/EquippedItemsState";
         [Export] public NodePath ResourceWalletPath = "/root/ResourceWalletState";
         [Export] public NodePath LevelConfigLoaderPath = "/root/LevelConfigLoader";
         [Export] public NodePath ActionStatePath = "/root/PlayerActionState";
+        [Export] public NodePath SubsystemMasteryStatePath = "/root/SubsystemMasteryState";
 
         // Explore progress is input-event driven (percent per input event), not AP-driven.
         [Export] public float ProgressPerInput = GameBalanceConstants.Explore.ProgressPerInput;
@@ -84,8 +93,17 @@ namespace Xiuxian.Scripts.Game
         private AlchemyState? _alchemyState;
         private PotionInventoryState? _potionInventoryState;
         private SmithingState? _smithingState;
+        private GardenState? _gardenState;
+        private MiningState? _miningState;
+        private FishingState? _fishingState;
+        private RecipeProgressState? _talismanState;
+        private RecipeProgressState? _cookingState;
+        private RecipeProgressState? _formationState;
+        private RecipeProgressState? _enlightenmentState;
+        private RecipeProgressState? _bodyCultivationState;
         private PlayerProgressState? _playerProgressState;
         private EquippedItemsState? _equippedItemsState;
+        private SubsystemMasteryState? _subsystemMasteryState;
         private ResourceWalletState? _resourceWalletState;
         private LevelConfigLoader? _levelConfigLoader;
         private PlayerActionState? _actionState;
@@ -116,6 +134,22 @@ namespace Xiuxian.Scripts.Game
         private bool _validationOnlyActiveLevel;
         private bool _syncingActionModeOption;
         private bool _syncingLevelOption;
+        private CharacterStatModifier _battleConsumableModifier;
+        private static readonly string[] ActionModeIds =
+        {
+            PlayerActionState.ModeDungeon,
+            PlayerActionState.ModeCultivation,
+            PlayerActionState.ModeAlchemy,
+            PlayerActionState.ModeSmithing,
+            PlayerActionState.ModeGarden,
+            PlayerActionState.ModeMining,
+            PlayerActionState.ModeFishing,
+            PlayerActionState.ModeTalisman,
+            PlayerActionState.ModeCooking,
+            PlayerActionState.ModeFormation,
+            PlayerActionState.ModeEnlightenment,
+            PlayerActionState.ModeBodyCultivation,
+        };
         private bool _offlineSummaryVisible;
         private string _lastDropSummary = "none";
         private string _lastSimulationSummary = "no simulation";
@@ -193,8 +227,17 @@ namespace Xiuxian.Scripts.Game
             _alchemyState = GetNodeOrNull<AlchemyState>(AlchemyStatePath);
             _potionInventoryState = GetNodeOrNull<PotionInventoryState>(PotionInventoryStatePath);
             _smithingState = GetNodeOrNull<SmithingState>(SmithingStatePath);
+            _gardenState = GetNodeOrNull<GardenState>(GardenStatePath);
+            _miningState = GetNodeOrNull<MiningState>(MiningStatePath);
+            _fishingState = GetNodeOrNull<FishingState>(FishingStatePath);
+            _talismanState = GetNodeOrNull<RecipeProgressState>(TalismanStatePath);
+            _cookingState = GetNodeOrNull<RecipeProgressState>(CookingStatePath);
+            _formationState = GetNodeOrNull<RecipeProgressState>(FormationStatePath);
+            _enlightenmentState = GetNodeOrNull<RecipeProgressState>(EnlightenmentStatePath);
+            _bodyCultivationState = GetNodeOrNull<RecipeProgressState>(BodyCultivationStatePath);
             _playerProgressState = GetNodeOrNull<PlayerProgressState>(PlayerProgressPath);
             _equippedItemsState = GetNodeOrNull<EquippedItemsState>(EquippedItemsStatePath);
+            _subsystemMasteryState = GetNodeOrNull<SubsystemMasteryState>(SubsystemMasteryStatePath);
             _resourceWalletState = GetNodeOrNull<ResourceWalletState>(ResourceWalletPath);
             _levelConfigLoader = GetNodeOrNull<LevelConfigLoader>(LevelConfigLoaderPath);
             _actionState = GetNodeOrNull<PlayerActionState>(ActionStatePath);
@@ -487,10 +530,10 @@ namespace Xiuxian.Scripts.Game
             }
 
             _actionModeOptionButton.Clear();
-            _actionModeOptionButton.AddItem(ExploreProgressPresentationRules.GetActionModeOptionText(0), 0);
-            _actionModeOptionButton.AddItem(ExploreProgressPresentationRules.GetActionModeOptionText(1), 1);
-            _actionModeOptionButton.AddItem(ExploreProgressPresentationRules.GetActionModeOptionText(2), 2);
-            _actionModeOptionButton.AddItem(ExploreProgressPresentationRules.GetActionModeOptionText(3), 3);
+            for (int i = 0; i < ActionModeIds.Length; i++)
+            {
+                _actionModeOptionButton.AddItem(ExploreProgressPresentationRules.GetActionModeOptionText(i), i);
+            }
             _actionModeOptionButton.TooltipText = "切换主行为（等同 F4）";
             _actionModeOptionButton.ItemSelected -= OnActionModeOptionSelected;
             _actionModeOptionButton.ItemSelected += OnActionModeOptionSelected;
@@ -568,13 +611,8 @@ namespace Xiuxian.Scripts.Game
                 return;
             }
 
-            string modeId = index switch
-            {
-                1 => PlayerActionState.ModeCultivation,
-                2 => PlayerActionState.ModeAlchemy,
-                3 => PlayerActionState.ModeSmithing,
-                _ => PlayerActionState.ModeDungeon,
-            };
+            int selectedIndex = Mathf.Clamp((int)index, 0, ActionModeIds.Length - 1);
+            string modeId = ActionModeIds[selectedIndex];
             string targetLevelId = modeId == PlayerActionState.ModeDungeon ? _levelConfigLoader?.ActiveLevelId ?? string.Empty : string.Empty;
             _actionState.SetAction(modeId, targetLevelId);
         }
@@ -647,6 +685,22 @@ namespace Xiuxian.Scripts.Game
                 else if (IsSmithingMode())
                 {
                     AdvanceSmithingByInput(inputEvents);
+                }
+                else if (IsGardenMode())
+                {
+                    AdvanceGardenByInput(inputEvents);
+                }
+                else if (IsMiningMode())
+                {
+                    AdvanceMiningByInput(inputEvents);
+                }
+                else if (IsFishingMode())
+                {
+                    AdvanceFishingByInput(inputEvents);
+                }
+                else if (IsGenericRecipeMode())
+                {
+                    AdvanceGenericRecipeByInput(inputEvents);
                 }
                 else
                 {
@@ -820,6 +874,7 @@ namespace Xiuxian.Scripts.Game
             _battleMonsterIndex = _battleTrackVisualizer.ResolveBattleMonsterIndex(_battleMonsterIndex);
             _usedHealPotionThisBattle = false;
             _hasLingqiDropBuffThisBattle = false;
+            _battleConsumableModifier = default;
             _consumedPotionsThisBattle.Clear();
             ApplyAutoConsumables(isBattleStart: true);
             SyncLogicFromControllerState();
@@ -885,6 +940,7 @@ namespace Xiuxian.Scripts.Game
                 _playerProgressState?.RealmLevel ?? 1,
                 _levelConfigLoader?.PlayerBaseHp ?? _playerMaxHp,
                 _levelConfigLoader?.PlayerAttackPerRound ?? _playerAttackPerRoundRuntime);
+            playerBaseStats = CharacterStatRules.BuildFinalStats(playerBaseStats, BuildNonEquipmentModifiers());
             ExploreGameLogic.BattleAdvanceResult progress = _logic.AdvanceBattleByInput(
                 inputEvents,
                 playerBaseStats,
@@ -979,10 +1035,10 @@ namespace Xiuxian.Scripts.Game
             SyncLogicFromControllerState();
         }
 
-        public bool CanApplyBossWeaknessInsight(double currentInsight)
+        public bool CanApplyBossWeaknessInsight(int dungeonMasteryLevel)
         {
             SyncLogicFromControllerState();
-            return _logic.CanApplyBossWeaknessInsight(IsBossChallengeBattle(), currentInsight, _levelConfigLoader?.ActiveLevelIndex ?? 0);
+            return _logic.CanApplyBossWeaknessInsight(IsBossChallengeBattle(), dungeonMasteryLevel);
         }
 
         public bool TryApplyBossWeaknessInsight()
@@ -1191,6 +1247,7 @@ namespace Xiuxian.Scripts.Game
                 _playerProgressState?.RealmLevel ?? 1,
                 _levelConfigLoader.PlayerBaseHp,
                 _levelConfigLoader.PlayerAttackPerRound);
+            playerBaseStats = CharacterStatRules.BuildFinalStats(playerBaseStats, BuildNonEquipmentModifiers());
             SyncLogicFromControllerState();
             _logic.ApplyLevelConfig(
                 _currentZone,
@@ -1580,6 +1637,57 @@ namespace Xiuxian.Scripts.Game
             return _actionState?.ActionId == PlayerActionState.ActionSmithing;
         }
 
+        private bool IsGardenMode()
+        {
+            return _actionState?.ActionId == PlayerActionState.ActionGarden;
+        }
+
+        private bool IsMiningMode()
+        {
+            return _actionState?.ActionId == PlayerActionState.ActionMining;
+        }
+
+        private bool IsFishingMode()
+        {
+            return _actionState?.ActionId == PlayerActionState.ActionFishing;
+        }
+
+        private bool IsGenericRecipeMode()
+        {
+            string actionId = _actionState?.ActionId ?? string.Empty;
+            return actionId == PlayerActionState.ActionTalisman
+                || actionId == PlayerActionState.ActionCooking
+                || actionId == PlayerActionState.ActionFormation
+                || actionId == PlayerActionState.ActionEnlightenment
+                || actionId == PlayerActionState.ActionBodyCultivation;
+        }
+
+        private RecipeProgressState? GetActiveGenericRecipeState()
+        {
+            return (_actionState?.ActionId ?? string.Empty) switch
+            {
+                PlayerActionState.ActionTalisman => _talismanState,
+                PlayerActionState.ActionCooking => _cookingState,
+                PlayerActionState.ActionFormation => _formationState,
+                PlayerActionState.ActionEnlightenment => _enlightenmentState,
+                PlayerActionState.ActionBodyCultivation => _bodyCultivationState,
+                _ => null,
+            };
+        }
+
+        private string GetActiveGenericSystemId()
+        {
+            return (_actionState?.ActionId ?? string.Empty) switch
+            {
+                PlayerActionState.ActionTalisman => PlayerActionState.ModeTalisman,
+                PlayerActionState.ActionCooking => PlayerActionState.ModeCooking,
+                PlayerActionState.ActionFormation => PlayerActionState.ModeFormation,
+                PlayerActionState.ActionEnlightenment => PlayerActionState.ModeEnlightenment,
+                PlayerActionState.ActionBodyCultivation => PlayerActionState.ModeBodyCultivation,
+                _ => string.Empty,
+            };
+        }
+
         private void AdvanceAlchemyByInput(int inputEvents)
         {
             if (_alchemyState == null || _backpackState == null || _resourceWalletState == null || inputEvents <= 0)
@@ -1616,7 +1724,7 @@ namespace Xiuxian.Scripts.Game
                 _alchemyState,
                 _backpackState,
                 _resourceWalletState,
-                _playerProgressState,
+                _subsystemMasteryState?.GetLevel(PlayerActionState.ModeAlchemy) ?? 1,
                 _potionInventoryState,
                 out string rewardText);
             if (completed)
@@ -1664,6 +1772,7 @@ namespace Xiuxian.Scripts.Game
                 _equippedItemsState,
                 _backpackState,
                 _resourceWalletState,
+                _subsystemMasteryState?.GetLevel(PlayerActionState.ModeSmithing) ?? 1,
                 targetProfile,
                 out EquipmentStatProfile enhanced,
                 out string rewardText);
@@ -1678,15 +1787,251 @@ namespace Xiuxian.Scripts.Game
             return completed;
         }
 
+        private void AdvanceGardenByInput(int inputEvents)
+        {
+            if (_gardenState == null || _backpackState == null || inputEvents <= 0)
+            {
+                return;
+            }
+
+            if (!_gardenState.HasSelectedCrop)
+            {
+                _roundInfoLabel.Text = "灵田待命（请先选择作物）";
+                _progressBar.Value = 0.0f;
+                return;
+            }
+
+            bool completedBatch = _gardenState.AdvanceProgress(inputEvents);
+            _progressBar.Value = _gardenState.RequiredProgress > 0.0f
+                ? _gardenState.CurrentProgress / _gardenState.RequiredProgress * 100.0f
+                : 0.0f;
+            _roundInfoLabel.Text = BuildGardenProgressText();
+            if (!completedBatch)
+            {
+                return;
+            }
+
+            if (TryCompleteGardenBatch())
+            {
+                _progressBar.Value = 0.0f;
+                _roundInfoLabel.Text = BuildGardenProgressText();
+            }
+        }
+
+        private bool TryCompleteGardenBatch()
+        {
+            if (_gardenState == null || _backpackState == null)
+            {
+                return false;
+            }
+
+            GardenRules.GatherResult result = GardenRules.HarvestCrop(
+                _gardenState.SelectedRecipeId,
+                _subsystemMasteryState?.GetLevel(PlayerActionState.ModeGarden) ?? 1);
+            if (string.IsNullOrEmpty(result.ItemId) || result.ItemCount <= 0)
+            {
+                return false;
+            }
+
+            _backpackState.AddItem(result.ItemId, result.ItemCount);
+            _battleInfoLabel.Text = $"灵田收获：{result.ItemId} x{result.ItemCount}";
+            _battleInfoLabel.Visible = true;
+            return true;
+        }
+
+        private void AdvanceMiningByInput(int inputEvents)
+        {
+            if (_miningState == null || _backpackState == null || inputEvents <= 0)
+            {
+                return;
+            }
+
+            if (!_miningState.HasSelectedNode)
+            {
+                _roundInfoLabel.Text = "矿脉待命（请先选择矿点）";
+                _progressBar.Value = 0.0f;
+                return;
+            }
+
+            bool completedBatch = _miningState.AdvanceProgress(inputEvents);
+            _progressBar.Value = _miningState.RequiredProgress > 0.0f
+                ? _miningState.CurrentProgress / _miningState.RequiredProgress * 100.0f
+                : 0.0f;
+            _roundInfoLabel.Text = BuildMiningProgressText();
+            if (!completedBatch)
+            {
+                return;
+            }
+
+            if (TryCompleteMiningBatch())
+            {
+                _progressBar.Value = 0.0f;
+                _roundInfoLabel.Text = BuildMiningProgressText();
+            }
+        }
+
+        private bool TryCompleteMiningBatch()
+        {
+            if (_miningState == null || _backpackState == null)
+            {
+                return false;
+            }
+
+            MiningRules.GatherResult result = MiningRules.GatherOre(
+                _miningState.SelectedRecipeId,
+                _subsystemMasteryState?.GetLevel(PlayerActionState.ModeMining) ?? 1);
+            if (string.IsNullOrEmpty(result.ItemId) || result.ItemCount <= 0)
+            {
+                return false;
+            }
+
+            _backpackState.AddItem(result.ItemId, result.ItemCount);
+            _battleInfoLabel.Text = $"矿脉收获：{result.ItemId} x{result.ItemCount}";
+            _battleInfoLabel.Visible = true;
+            return true;
+        }
+
+        private void AdvanceFishingByInput(int inputEvents)
+        {
+            if (_fishingState == null || _backpackState == null || inputEvents <= 0)
+            {
+                return;
+            }
+
+            if (!_fishingState.HasSelectedPond)
+            {
+                _roundInfoLabel.Text = "灵渔待命（请先选择鱼塘）";
+                _progressBar.Value = 0.0f;
+                return;
+            }
+
+            bool completedBatch = _fishingState.AdvanceProgress(inputEvents);
+            _progressBar.Value = _fishingState.RequiredProgress > 0.0f
+                ? _fishingState.CurrentProgress / _fishingState.RequiredProgress * 100.0f
+                : 0.0f;
+            _roundInfoLabel.Text = BuildFishingProgressText();
+            if (!completedBatch)
+            {
+                return;
+            }
+
+            if (TryCompleteFishingBatch())
+            {
+                _progressBar.Value = 0.0f;
+                _roundInfoLabel.Text = BuildFishingProgressText();
+            }
+        }
+
+        private bool TryCompleteFishingBatch()
+        {
+            if (_fishingState == null || _backpackState == null)
+            {
+                return false;
+            }
+
+            FishingRules.CatchResult result = FishingRules.CatchFish(
+                _fishingState.SelectedRecipeId,
+                _subsystemMasteryState?.GetLevel(PlayerActionState.ModeFishing) ?? 1);
+            if (string.IsNullOrEmpty(result.ItemId) || result.ItemCount <= 0)
+            {
+                return false;
+            }
+
+            _backpackState.AddItem(result.ItemId, result.ItemCount);
+            _battleInfoLabel.Text = $"灵渔收获：{result.ItemId} x{result.ItemCount}";
+            _battleInfoLabel.Visible = true;
+            return true;
+        }
+
+        private void AdvanceGenericRecipeByInput(int inputEvents)
+        {
+            RecipeProgressState? state = GetActiveGenericRecipeState();
+            if (state == null || _backpackState == null || _resourceWalletState == null || inputEvents <= 0)
+            {
+                return;
+            }
+
+            EnsureGenericRecipeSelected(state, GetActiveGenericSystemId());
+            if (!state.HasSelectedRecipe)
+            {
+                _roundInfoLabel.Text = $"{GetActionModeDisplayName()}待命（当前无可用项目）";
+                _progressBar.Value = 0.0f;
+                return;
+            }
+
+            bool completedBatch = state.AdvanceProgress(inputEvents);
+            _progressBar.Value = state.RequiredProgress > 0.0f ? state.CurrentProgress / state.RequiredProgress * 100.0f : 0.0f;
+            _roundInfoLabel.Text = BuildGenericRecipeProgressText();
+            if (!completedBatch)
+            {
+                return;
+            }
+
+            if (TryCompleteGenericRecipeBatch(state.SelectedRecipeId))
+            {
+                _progressBar.Value = 0.0f;
+                _roundInfoLabel.Text = BuildGenericRecipeProgressText();
+            }
+        }
+
+        private void EnsureGenericRecipeSelected(RecipeProgressState state, string systemId)
+        {
+            if (state.HasSelectedRecipe)
+            {
+                return;
+            }
+
+            IActivityDefinition? activity = ActivityRegistry.GetBySystem(systemId);
+            if (activity == null || activity.GetRecipes().Count == 0)
+            {
+                return;
+            }
+
+            state.SelectRecipe(activity.GetRecipes()[0].RecipeId);
+        }
+
+        private bool TryCompleteGenericRecipeBatch(string recipeId)
+        {
+            if (_backpackState == null || _resourceWalletState == null)
+            {
+                return false;
+            }
+
+            if (!Xiuxian.Scripts.Game.CraftingProgressionService.TryCompleteGenericBatch(recipeId, _backpackState, _resourceWalletState, out string rewardText))
+            {
+                _battleInfoLabel.Text = "材料不足或灵气不足，当前流程已暂停";
+                _battleInfoLabel.Visible = true;
+                return false;
+            }
+
+            if (_playerProgressState != null)
+            {
+                if (recipeId == "enlightenment_meditation" || recipeId == "enlightenment_contemplation")
+                {
+                    _playerProgressState.ApplyEnlightenmentReward(recipeId);
+                    rewardText = recipeId == "enlightenment_meditation"
+                        ? "悟道完成，悟性收益提升 +5%"
+                        : "悟道完成，灵气收益提升 +8%";
+                }
+                else if (recipeId == "body_cultivation_temper" || recipeId == "body_cultivation_boneforge")
+                {
+                    _playerProgressState.ApplyBodyCultivationReward(recipeId);
+                    rewardText = recipeId == "body_cultivation_temper"
+                        ? "淬体完成，永久气血 +10、防御 +1"
+                        : "炼骨完成，永久攻击 +4、防御 +2";
+                }
+            }
+
+            _battleInfoLabel.Text = rewardText;
+            _battleInfoLabel.Visible = true;
+            return true;
+        }
+
         private int GetActionModeSelectedIndex()
         {
-            return (_actionState?.ActionId ?? PlayerActionState.ActionDungeon) switch
-            {
-                PlayerActionState.ActionCultivation => 1,
-                PlayerActionState.ActionAlchemy => 2,
-                PlayerActionState.ActionSmithing => 3,
-                _ => 0,
-            };
+            string currentActionId = _actionState?.ActionId ?? PlayerActionState.ActionDungeon;
+            int index = Array.IndexOf(ActionModeIds, currentActionId);
+            return index >= 0 ? index : 0;
         }
 
         private string GetActionModeOptionText(int selected)
@@ -1706,10 +2051,23 @@ namespace Xiuxian.Scripts.Game
 
         private string GetPausedModeRoundLabel()
         {
+            string actionId = _actionState?.ActionId ?? PlayerActionState.ActionDungeon;
+            if (actionId == PlayerActionState.ActionTalisman
+                || actionId == PlayerActionState.ActionCooking
+                || actionId == PlayerActionState.ActionFormation
+                || actionId == PlayerActionState.ActionEnlightenment
+                || actionId == PlayerActionState.ActionBodyCultivation)
+            {
+                return BuildGenericRecipeProgressText();
+            }
+
             return ExploreProgressPresentationRules.GetPausedModeRoundLabel(
-                _actionState?.ActionId ?? PlayerActionState.ActionDungeon,
+                actionId,
                 BuildAlchemyProgressText(),
-                BuildSmithingProgressText());
+                BuildSmithingProgressText(),
+                BuildGardenProgressText(),
+                BuildMiningProgressText(),
+                BuildFishingProgressText());
         }
 
         private string BuildAlchemyProgressText()
@@ -1736,6 +2094,96 @@ namespace Xiuxian.Scripts.Game
             }
 
             return ExploreProgressPresentationRules.BuildSmithingProgressText(resolved.DisplayName, resolved.EnhanceLevel, _smithingState.CurrentProgress, _smithingState.RequiredProgress);
+        }
+
+        private string BuildGardenProgressText()
+        {
+            if (_gardenState == null || !_gardenState.HasSelectedCrop || !GardenRules.TryGetCrop(_gardenState.SelectedRecipeId, out GardenRules.CropSpec crop))
+            {
+                return ExploreProgressPresentationRules.BuildGardenProgressText(string.Empty, 0.0f, 0.0f);
+            }
+
+            return ExploreProgressPresentationRules.BuildGardenProgressText(crop.DisplayName.Replace("种植", string.Empty), _gardenState.CurrentProgress, _gardenState.RequiredProgress);
+        }
+
+        private string BuildMiningProgressText()
+        {
+            if (_miningState == null || !_miningState.HasSelectedNode || !MiningRules.TryGetNode(_miningState.SelectedRecipeId, out MiningRules.NodeSpec node))
+            {
+                return ExploreProgressPresentationRules.BuildMiningProgressText(string.Empty, 0.0f, 0.0f, MiningRules.DefaultNodeDurability);
+            }
+
+            return ExploreProgressPresentationRules.BuildMiningProgressText(node.DisplayName.Replace("开采", string.Empty), _miningState.CurrentProgress, _miningState.RequiredProgress, _miningState.CurrentDurability);
+        }
+
+        private string BuildFishingProgressText()
+        {
+            if (_fishingState == null || !_fishingState.HasSelectedPond || !FishingRules.TryGetPond(_fishingState.SelectedRecipeId, out FishingRules.PondSpec pond))
+            {
+                return ExploreProgressPresentationRules.BuildFishingProgressText(string.Empty, 0.0f, 0.0f);
+            }
+
+            return ExploreProgressPresentationRules.BuildFishingProgressText(pond.DisplayName, _fishingState.CurrentProgress, _fishingState.RequiredProgress);
+        }
+
+        private string BuildGenericRecipeProgressText()
+        {
+            RecipeProgressState? state = GetActiveGenericRecipeState();
+            if (state == null || !state.HasSelectedRecipe)
+            {
+                return $"{GetActionModeDisplayName()}待命（当前无可用项目）";
+            }
+
+            IRecipeDefinition? recipe = ActivityRegistry.GetRecipe(state.SelectedRecipeId);
+            if (recipe == null)
+            {
+                return $"{GetActionModeDisplayName()}待命（当前无可用项目）";
+            }
+
+            float percent = state.RequiredProgress > 0.0f ? state.CurrentProgress / state.RequiredProgress * 100.0f : 0.0f;
+            return $"{recipe.DisplayName} {percent:0}%";
+        }
+
+        private CharacterStatModifier[] BuildNonEquipmentModifiers()
+        {
+            var result = new List<CharacterStatModifier>();
+            Dictionary<string, int> items = _backpackState?.GetItemEntries() ?? new Dictionary<string, int>();
+            CharacterStatModifier formationModifier = ActivityEffectRules.CollectFormationModifier(_formationState?.SelectedRecipeId ?? string.Empty, items);
+            if (!formationModifier.Equals(default(CharacterStatModifier)))
+            {
+                result.Add(formationModifier);
+            }
+
+            if (_playerProgressState != null)
+            {
+                CharacterStatModifier permanentModifier = ActivityEffectRules.CollectPermanentProgressModifier(
+                    new PlayerProgressPersistenceRules.PlayerProgressSnapshot(
+                        _playerProgressState.RealmLevel,
+                        _playerProgressState.RealmExp,
+                        _playerProgressState.PetMood,
+                        _playerProgressState.HasUnlockedAdvancedAlchemyStudy,
+                        _playerProgressState.CurrentRealmActiveSeconds,
+                        _playerProgressState.EnlightenmentInsightBonusRate,
+                        _playerProgressState.EnlightenmentLingqiBonusRate,
+                        _playerProgressState.BodyCultivationMaxHpFlat,
+                        _playerProgressState.BodyCultivationAttackFlat,
+                        _playerProgressState.BodyCultivationDefenseFlat,
+                        _playerProgressState.MeditationCount,
+                        _playerProgressState.ContemplationCount,
+                        _playerProgressState.TemperCount,
+                        _playerProgressState.BoneforgeCount));
+                if (!permanentModifier.Equals(default(CharacterStatModifier)))
+                {
+                    result.Add(permanentModifier);
+                }
+            }
+
+            if (!_battleConsumableModifier.Equals(default(CharacterStatModifier)))
+            {
+                result.Add(_battleConsumableModifier);
+            }
+
+            return result.ToArray();
         }
 
         private void SyncActionTargetToActiveLevel()
@@ -1960,24 +2408,26 @@ namespace Xiuxian.Scripts.Game
 
         private void ApplyAutoConsumables(bool isBattleStart)
         {
-            if (_potionInventoryState == null || !_inBattle)
+            if (!_inBattle)
             {
                 return;
             }
 
-            List<PotionUsage> usages = ConsumableUsageRules.DetermineAutoConsume(
-                new BattleConsumableState(
-                    PlayerCurrentHp: _playerHp,
-                    PlayerMaxHp: _playerMaxHp,
-                    IsBattleStart: isBattleStart,
-                    HasLingqiDropBuff: _hasLingqiDropBuffThisBattle,
-                    UsedHealPotionThisBattle: _usedHealPotionThisBattle),
-                _potionInventoryState.GetPotionEntries());
+            BattleConsumableState state = new(
+                PlayerCurrentHp: _playerHp,
+                PlayerMaxHp: _playerMaxHp,
+                IsBattleStart: isBattleStart,
+                HasLingqiDropBuff: _hasLingqiDropBuffThisBattle,
+                UsedHealPotionThisBattle: _usedHealPotionThisBattle);
+
+            List<PotionUsage> usages = _potionInventoryState != null
+                ? ConsumableUsageRules.DetermineAutoConsume(state, _potionInventoryState.GetPotionEntries())
+                : new List<PotionUsage>();
 
             for (int i = 0; i < usages.Count; i++)
             {
                 PotionUsage usage = usages[i];
-                if (!_potionInventoryState.ConsumePotion(usage.PotionId))
+                if (_potionInventoryState == null || !_potionInventoryState.ConsumePotion(usage.PotionId))
                 {
                     continue;
                 }
@@ -1994,10 +2444,46 @@ namespace Xiuxian.Scripts.Game
                     _hasLingqiDropBuffThisBattle = true;
                 }
             }
+
+            if (_backpackState == null)
+            {
+                return;
+            }
+
+            List<BackpackConsumableUsage> backpackUsages = ActivityEffectRules.DetermineAutoUseBackpackConsumables(state, _backpackState.GetItemEntries());
+            for (int i = 0; i < backpackUsages.Count; i++)
+            {
+                BackpackConsumableUsage usage = backpackUsages[i];
+                if (!_backpackState.RemoveItem(usage.ItemId, 1))
+                {
+                    continue;
+                }
+
+                CharacterStatModifier modifier = ActivityEffectRules.GetBackpackConsumableModifier(usage.ItemId);
+                _battleConsumableModifier = new CharacterStatModifier(
+                    MaxHpFlat: _battleConsumableModifier.MaxHpFlat + modifier.MaxHpFlat,
+                    AttackFlat: _battleConsumableModifier.AttackFlat + modifier.AttackFlat,
+                    DefenseFlat: _battleConsumableModifier.DefenseFlat + modifier.DefenseFlat,
+                    SpeedFlat: _battleConsumableModifier.SpeedFlat + modifier.SpeedFlat,
+                    MaxHpRate: _battleConsumableModifier.MaxHpRate + modifier.MaxHpRate,
+                    AttackRate: _battleConsumableModifier.AttackRate + modifier.AttackRate,
+                    DefenseRate: _battleConsumableModifier.DefenseRate + modifier.DefenseRate,
+                    SpeedRate: _battleConsumableModifier.SpeedRate + modifier.SpeedRate,
+                    CritChanceDelta: _battleConsumableModifier.CritChanceDelta + modifier.CritChanceDelta,
+                    CritDamageDelta: _battleConsumableModifier.CritDamageDelta + modifier.CritDamageDelta);
+                _consumedPotionsThisBattle.Add(UiText.BackpackItemName(usage.ItemId));
+            }
         }
 
         private void ApplyResourceAndItemRewards(double lingqi, double insight, Dictionary<string, int> items, string source)
         {
+            if (_playerProgressState != null)
+            {
+                lingqi *= 1.0 + ActivityEffectRules.CollectFormationLingqiRate(_formationState?.SelectedRecipeId ?? string.Empty, _backpackState?.GetItemEntries() ?? new Dictionary<string, int>());
+                lingqi *= 1.0 + _playerProgressState.EnlightenmentLingqiBonusRate;
+                insight *= 1.0 + _playerProgressState.EnlightenmentInsightBonusRate;
+            }
+
             if (lingqi > 0.0)
             {
                 _resourceWalletState?.AddLingqi(lingqi);

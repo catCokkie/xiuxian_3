@@ -5,29 +5,43 @@ namespace Xiuxian.Tests;
 public sealed class InsightSpendRulesTests
 {
     [Fact]
-    public void CanUnlockAdvancedAlchemy_RequiresEnoughInsightAndFreshState()
+    public void CanUnlockMastery_RequiresEnoughInsightAndFreshState()
     {
-        Assert.True(InsightSpendRules.CanUnlockAdvancedAlchemy(false, 20));
-        Assert.False(InsightSpendRules.CanUnlockAdvancedAlchemy(true, 20));
-        Assert.False(InsightSpendRules.CanUnlockAdvancedAlchemy(false, 19));
+        Assert.True(InsightSpendRules.CanUnlockMastery(PlayerActionState.ModeAlchemy, 1, 20.0, 1));
+        Assert.False(InsightSpendRules.CanUnlockMastery(PlayerActionState.ModeAlchemy, 2, 45.0, 1));
+        Assert.False(InsightSpendRules.CanUnlockMastery(PlayerActionState.ModeAlchemy, 1, 19.0, 1));
     }
 
     [Fact]
-    public void ApplyBossWeaknessMultiplier_ReducesStatsByTenPercent()
+    public void GetMasteryCost_ReturnsConfiguredCost()
     {
-        Assert.Equal(90.0, InsightSpendRules.ApplyBossWeaknessMultiplier(100.0));
-        Assert.Equal(9.0, InsightSpendRules.ApplyBossWeaknessMultiplier(10.0));
+        Assert.Equal(30.0, InsightSpendRules.GetMasteryCost(PlayerActionState.ModeDungeon, 1));
+        Assert.Equal(20.0, InsightSpendRules.GetMasteryCost(PlayerActionState.ModeAlchemy, 1));
     }
 
     [Fact]
-    public void GetBossWeaknessInsightCost_ScalesByZoneWithin30To80()
+    public void SpendInsightForMastery_DeductsInsightAndAdvancesLevel()
     {
-        Assert.Equal(30.0, InsightSpendRules.GetBossWeaknessInsightCost(0));
-        Assert.Equal(42.0, InsightSpendRules.GetBossWeaknessInsightCost(1));
-        Assert.Equal(54.0, InsightSpendRules.GetBossWeaknessInsightCost(2));
-        Assert.Equal(66.0, InsightSpendRules.GetBossWeaknessInsightCost(3));
-        Assert.Equal(78.0, InsightSpendRules.GetBossWeaknessInsightCost(4));
-        // Clamped to max 80
-        Assert.Equal(80.0, InsightSpendRules.GetBossWeaknessInsightCost(10));
+        bool unlocked = InsightSpendRules.SpendInsightForMastery(PlayerActionState.ModeDungeon, 1, 30.0, 2, out int nextLevel, out double remainingInsight);
+
+        Assert.True(unlocked);
+        Assert.Equal(2, nextLevel);
+        Assert.Equal(0.0, remainingInsight);
+    }
+
+    [Fact]
+    public void SpendInsightForMastery_ReturnsFalseWhenRealmTooLow()
+    {
+        bool unlocked = InsightSpendRules.SpendInsightForMastery(PlayerActionState.ModeAlchemy, 2, 45.0, 1, out int nextLevel, out double remainingInsight);
+
+        Assert.False(unlocked);
+        Assert.Equal(2, nextLevel);
+        Assert.Equal(45.0, remainingInsight);
+    }
+
+    [Fact]
+    public void GetMasteryCost_ReturnsZeroAtMaxLevel()
+    {
+        Assert.Equal(0.0, InsightSpendRules.GetMasteryCost(PlayerActionState.ModeDungeon, 4));
     }
 }

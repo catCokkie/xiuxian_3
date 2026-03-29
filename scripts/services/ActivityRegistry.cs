@@ -59,6 +59,14 @@ namespace Xiuxian.Scripts.Services
         {
             RegisterAlchemy();
             RegisterSmithing();
+            RegisterGarden();
+            RegisterMining();
+            RegisterFishing();
+            RegisterTalisman();
+            RegisterCooking();
+            RegisterFormation();
+            RegisterEnlightenment();
+            RegisterBodyCultivation();
         }
 
         private static void RegisterAlchemy()
@@ -83,6 +91,7 @@ namespace Xiuxian.Scripts.Services
                     LingqiCost = spec.LingqiCost,
                     RequiredInputEvents = spec.RequiredInputs,
                     Outputs = new[] { new MaterialOutput(spec.OutputPotionId, spec.OutputCount) },
+                    RequiredMasteryLevel = spec.RequiredMasteryLevel,
                 });
             }
 
@@ -115,9 +124,293 @@ namespace Xiuxian.Scripts.Services
                 LingqiCost = baseCost.Lingqi,
                 RequiredInputEvents = baseCost.RequiredInputs,
                 Outputs = System.Array.Empty<MaterialOutput>(),
+                RequiredMasteryLevel = 1,
             });
 
             Register(smithing);
+        }
+
+        private static void RegisterGarden()
+        {
+            var garden = new SimpleActivityDefinition
+            {
+                SystemId = PlayerActionState.ModeGarden,
+                DisplayName = "灵田",
+                Category = ActivityCategory.Gathering,
+                SupportsOffline = true,
+                OfflineEfficiency = 0.5,
+            };
+
+            foreach (GardenRules.CropSpec crop in GardenRules.GetCrops())
+            {
+                garden.AddRecipe(new SimpleRecipeDefinition
+                {
+                    RecipeId = crop.RecipeId,
+                    SystemId = PlayerActionState.ModeGarden,
+                    DisplayName = crop.DisplayName,
+                    Inputs = System.Array.Empty<MaterialCost>(),
+                    LingqiCost = 0.0,
+                    RequiredInputEvents = crop.RequiredInputs,
+                    Outputs = new[] { new MaterialOutput(crop.OutputItemId, crop.OutputCount) },
+                    RequiredMasteryLevel = crop.RequiredMasteryLevel,
+                });
+            }
+
+            Register(garden);
+        }
+
+        private static void RegisterMining()
+        {
+            var mining = new SimpleActivityDefinition
+            {
+                SystemId = PlayerActionState.ModeMining,
+                DisplayName = "矿脉",
+                Category = ActivityCategory.Gathering,
+                SupportsOffline = true,
+                OfflineEfficiency = 0.5,
+            };
+
+            foreach (MiningRules.NodeSpec node in MiningRules.GetNodes())
+            {
+                mining.AddRecipe(new SimpleRecipeDefinition
+                {
+                    RecipeId = node.RecipeId,
+                    SystemId = PlayerActionState.ModeMining,
+                    DisplayName = node.DisplayName,
+                    Inputs = System.Array.Empty<MaterialCost>(),
+                    LingqiCost = 0.0,
+                    RequiredInputEvents = node.RequiredInputs,
+                    Outputs = new[] { new MaterialOutput(node.OutputItemId, node.OutputCount) },
+                    RequiredMasteryLevel = node.RequiredMasteryLevel,
+                });
+            }
+
+            Register(mining);
+        }
+
+        private static void RegisterFishing()
+        {
+            var fishing = new SimpleActivityDefinition
+            {
+                SystemId = PlayerActionState.ModeFishing,
+                DisplayName = "灵渔",
+                Category = ActivityCategory.Gathering,
+                SupportsOffline = true,
+                OfflineEfficiency = 0.5,
+            };
+
+            foreach (FishingRules.PondSpec pond in FishingRules.GetPonds())
+            {
+                fishing.AddRecipe(new SimpleRecipeDefinition
+                {
+                    RecipeId = pond.RecipeId,
+                    SystemId = PlayerActionState.ModeFishing,
+                    DisplayName = pond.DisplayName,
+                    Inputs = System.Array.Empty<MaterialCost>(),
+                    LingqiCost = 0.0,
+                    RequiredInputEvents = pond.RequiredInputs,
+                    Outputs = new[] { new MaterialOutput(pond.OutputItemId, pond.OutputCount) },
+                    RequiredMasteryLevel = pond.RequiredMasteryLevel,
+                });
+            }
+
+            Register(fishing);
+        }
+
+        private static void RegisterTalisman()
+        {
+            var talisman = new SimpleActivityDefinition
+            {
+                SystemId = PlayerActionState.ModeTalisman,
+                DisplayName = "符箓",
+                Category = ActivityCategory.Processing,
+                SupportsOffline = true,
+                OfflineEfficiency = 0.5,
+            };
+
+            talisman.AddRecipe(new SimpleRecipeDefinition
+            {
+                RecipeId = "talisman_fire_charm",
+                SystemId = PlayerActionState.ModeTalisman,
+                DisplayName = "火符",
+                Inputs = new[] { new MaterialCost("broken_talisman", 2), new MaterialCost("spirit_ink", 1) },
+                LingqiCost = 0.0,
+                RequiredInputEvents = 180,
+                Outputs = new[] { new MaterialOutput("talisman_fire_charm", 1) },
+                RequiredMasteryLevel = 1,
+            });
+            talisman.AddRecipe(new SimpleRecipeDefinition
+            {
+                RecipeId = "talisman_shield_charm",
+                SystemId = PlayerActionState.ModeTalisman,
+                DisplayName = "盾符",
+                Inputs = new[] { new MaterialCost("broken_talisman", 3), new MaterialCost("beast_bone", 1) },
+                LingqiCost = 0.0,
+                RequiredInputEvents = 220,
+                Outputs = new[] { new MaterialOutput("talisman_shield_charm", 1) },
+                RequiredMasteryLevel = 2,
+            });
+
+            Register(talisman);
+        }
+
+        private static void RegisterCooking()
+        {
+            var cooking = new SimpleActivityDefinition
+            {
+                SystemId = PlayerActionState.ModeCooking,
+                DisplayName = "烹饪",
+                Category = ActivityCategory.Processing,
+                SupportsOffline = true,
+                OfflineEfficiency = 0.5,
+            };
+
+            cooking.AddRecipe(new SimpleRecipeDefinition
+            {
+                RecipeId = "cooking_spirit_porridge",
+                SystemId = PlayerActionState.ModeCooking,
+                DisplayName = "灵鱼粥",
+                Inputs = new[] { new MaterialCost("spirit_fish", 2), new MaterialCost("spirit_herb", 1) },
+                LingqiCost = 40.0,
+                RequiredInputEvents = 200,
+                Outputs = new[] { new MaterialOutput("food_spirit_porridge", 1) },
+                RequiredMasteryLevel = 1,
+            });
+            cooking.AddRecipe(new SimpleRecipeDefinition
+            {
+                RecipeId = "cooking_fruit_jelly",
+                SystemId = PlayerActionState.ModeCooking,
+                DisplayName = "灵果蜜饯",
+                Inputs = new[] { new MaterialCost("spirit_fruit", 2), new MaterialCost("spirit_flower", 1) },
+                LingqiCost = 60.0,
+                RequiredInputEvents = 240,
+                Outputs = new[] { new MaterialOutput("food_fruit_jelly", 1) },
+                RequiredMasteryLevel = 2,
+            });
+            cooking.AddRecipe(new SimpleRecipeDefinition
+            {
+                RecipeId = "cooking_dragon_soup",
+                SystemId = PlayerActionState.ModeCooking,
+                DisplayName = "龙涎鱼汤",
+                Inputs = new[] { new MaterialCost("spirit_fish", 1), new MaterialCost("dragon_saliva", 1) },
+                LingqiCost = 100.0,
+                RequiredInputEvents = 280,
+                Outputs = new[] { new MaterialOutput("food_dragon_soup", 1) },
+                RequiredMasteryLevel = 4,
+            });
+
+            Register(cooking);
+        }
+
+        private static void RegisterFormation()
+        {
+            var formation = new SimpleActivityDefinition
+            {
+                SystemId = PlayerActionState.ModeFormation,
+                DisplayName = "阵法",
+                Category = ActivityCategory.Processing,
+                SupportsOffline = true,
+                OfflineEfficiency = 0.5,
+            };
+
+            formation.AddRecipe(new SimpleRecipeDefinition
+            {
+                RecipeId = "formation_spirit_plate",
+                SystemId = PlayerActionState.ModeFormation,
+                DisplayName = "聚灵阵盘",
+                Inputs = new[] { new MaterialCost("spirit_jade", 3), new MaterialCost("dragon_saliva", 1) },
+                LingqiCost = 0.0,
+                RequiredInputEvents = 260,
+                Outputs = new[] { new MaterialOutput("formation_spirit_plate", 1) },
+                RequiredMasteryLevel = 1,
+            });
+            formation.AddRecipe(new SimpleRecipeDefinition
+            {
+                RecipeId = "formation_guard_flag",
+                SystemId = PlayerActionState.ModeFormation,
+                DisplayName = "护体阵旗",
+                Inputs = new[] { new MaterialCost("cold_iron_ore", 2), new MaterialCost("spirit_jade", 1) },
+                LingqiCost = 0.0,
+                RequiredInputEvents = 220,
+                Outputs = new[] { new MaterialOutput("formation_guard_flag", 1) },
+                RequiredMasteryLevel = 2,
+            });
+
+            Register(formation);
+        }
+
+        private static void RegisterEnlightenment()
+        {
+            var enlightenment = new SimpleActivityDefinition
+            {
+                SystemId = PlayerActionState.ModeEnlightenment,
+                DisplayName = "悟道",
+                Category = ActivityCategory.Cultivation,
+                SupportsOffline = true,
+                OfflineEfficiency = 0.5,
+            };
+
+            enlightenment.AddRecipe(new SimpleRecipeDefinition
+            {
+                RecipeId = "enlightenment_meditation",
+                SystemId = PlayerActionState.ModeEnlightenment,
+                DisplayName = "冥想",
+                Inputs = System.Array.Empty<MaterialCost>(),
+                LingqiCost = 200.0,
+                RequiredInputEvents = 240,
+                Outputs = System.Array.Empty<MaterialOutput>(),
+                RequiredMasteryLevel = 1,
+            });
+            enlightenment.AddRecipe(new SimpleRecipeDefinition
+            {
+                RecipeId = "enlightenment_contemplation",
+                SystemId = PlayerActionState.ModeEnlightenment,
+                DisplayName = "参悟",
+                Inputs = new[] { new MaterialCost("spirit_pearl", 1) },
+                LingqiCost = 500.0,
+                RequiredInputEvents = 320,
+                Outputs = System.Array.Empty<MaterialOutput>(),
+                RequiredMasteryLevel = 2,
+            });
+
+            Register(enlightenment);
+        }
+
+        private static void RegisterBodyCultivation()
+        {
+            var bodyCultivation = new SimpleActivityDefinition
+            {
+                SystemId = PlayerActionState.ModeBodyCultivation,
+                DisplayName = "体修",
+                Category = ActivityCategory.Cultivation,
+                SupportsOffline = true,
+                OfflineEfficiency = 0.5,
+            };
+
+            bodyCultivation.AddRecipe(new SimpleRecipeDefinition
+            {
+                RecipeId = "body_cultivation_temper",
+                SystemId = PlayerActionState.ModeBodyCultivation,
+                DisplayName = "淬体",
+                Inputs = new[] { new MaterialCost("beast_bone", 2) },
+                LingqiCost = 300.0,
+                RequiredInputEvents = 260,
+                Outputs = System.Array.Empty<MaterialOutput>(),
+                RequiredMasteryLevel = 1,
+            });
+            bodyCultivation.AddRecipe(new SimpleRecipeDefinition
+            {
+                RecipeId = "body_cultivation_boneforge",
+                SystemId = PlayerActionState.ModeBodyCultivation,
+                DisplayName = "炼骨",
+                Inputs = new[] { new MaterialCost("cold_iron_ore", 2) },
+                LingqiCost = 500.0,
+                RequiredInputEvents = 320,
+                Outputs = System.Array.Empty<MaterialOutput>(),
+                RequiredMasteryLevel = 2,
+            });
+
+            Register(bodyCultivation);
         }
     }
 }

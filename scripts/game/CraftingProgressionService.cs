@@ -25,7 +25,7 @@ namespace Xiuxian.Scripts.Game
             AlchemyState? alchemyState,
             BackpackState? backpackState,
             ResourceWalletState? resourceWalletState,
-            PlayerProgressState? playerProgressState,
+            int alchemyMasteryLevel,
             PotionInventoryState? potionInventoryState,
             out string rewardText)
         {
@@ -35,12 +35,12 @@ namespace Xiuxian.Scripts.Game
                 return false;
             }
 
-            if (!AlchemyRules.CanStartRecipe(alchemyState.SelectedRecipeId, resourceWalletState.Lingqi, backpackState.GetItemEntries(), playerProgressState?.HasUnlockedAdvancedAlchemyStudy ?? false))
+            if (!AlchemyRules.CanStartRecipe(alchemyState.SelectedRecipeId, resourceWalletState.Lingqi, backpackState.GetItemEntries(), alchemyMasteryLevel))
             {
                 return false;
             }
 
-            AlchemyRules.AlchemyCompletionResult result = AlchemyRules.CompleteRecipe(alchemyState.SelectedRecipeId);
+            AlchemyRules.AlchemyCompletionResult result = AlchemyRules.CompleteRecipe(alchemyState.SelectedRecipeId, alchemyMasteryLevel);
             if (string.IsNullOrEmpty(result.PotionItemId) || !backpackState.RemoveItem(result.MaterialItemId, result.MaterialCount))
             {
                 return false;
@@ -77,6 +77,7 @@ namespace Xiuxian.Scripts.Game
             EquippedItemsState? equippedItemsState,
             BackpackState? backpackState,
             ResourceWalletState? resourceWalletState,
+            int smithingMasteryLevel,
             EquipmentStatProfile targetProfile,
             out EquipmentStatProfile enhancedProfile,
             out string rewardText)
@@ -88,12 +89,12 @@ namespace Xiuxian.Scripts.Game
                 return false;
             }
 
-            if (!SmithingRules.CanEnhance(targetProfile, backpackState, resourceWalletState))
+            if (!SmithingRules.CanEnhance(targetProfile, backpackState, resourceWalletState, smithingMasteryLevel))
             {
                 return false;
             }
 
-            SmithingCost cost = SmithingRules.GetCost(targetProfile.EnhanceLevel);
+            SmithingCost cost = SmithingRules.GetCost(targetProfile.EnhanceLevel, smithingMasteryLevel);
             if (!backpackState.RemoveItem("lingqi_shard", cost.Shards))
             {
                 return false;

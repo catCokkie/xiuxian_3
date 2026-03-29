@@ -14,8 +14,7 @@ namespace Xiuxian.Scripts.Services
             string OutputPotionId,
             int OutputCount,
             int RequiredInputs,
-            double InsightCost = 0.0,
-            bool RequiresAdvancedStudy = false);
+            int RequiredMasteryLevel = 1);
 
         public readonly record struct AlchemyProgressDecision(float NextProgress, bool CompletedBatch);
 
@@ -29,8 +28,8 @@ namespace Xiuxian.Scripts.Services
 
         private static readonly RecipeSpec[] Recipes =
         {
-            new("recipe_huiqi_dan", "回气丹", "spirit_herb", 2, 50.0, "potion_huiqi_dan", 2, 200),
-            new("recipe_juling_san", "聚灵散", "spirit_herb", 3, 80.0, "potion_juling_san", 1, 220),
+            new("recipe_huiqi_dan", "回气丹", "spirit_herb", 2, 50.0, "potion_huiqi_dan", 2, 200, 1),
+            new("recipe_juling_san", "聚灵散", "spirit_herb", 3, 80.0, "potion_juling_san", 1, 220, 2),
         };
 
         public static IReadOnlyList<RecipeSpec> GetRecipes() => Recipes;
@@ -50,14 +49,14 @@ namespace Xiuxian.Scripts.Services
             return false;
         }
 
-        public static bool CanStartRecipe(string recipeId, double lingqi, IReadOnlyDictionary<string, int> backpackItems, bool advancedStudyUnlocked = false)
+        public static bool CanStartRecipe(string recipeId, double lingqi, IReadOnlyDictionary<string, int> backpackItems, int masteryLevel = 1)
         {
             if (!TryGetRecipe(recipeId, out RecipeSpec recipe))
             {
                 return false;
             }
 
-            if (recipe.RequiresAdvancedStudy && !advancedStudyUnlocked)
+            if (masteryLevel < recipe.RequiredMasteryLevel)
             {
                 return false;
             }
@@ -74,20 +73,22 @@ namespace Xiuxian.Scripts.Services
             return new AlchemyProgressDecision(completed ? 0.0f : next, completed);
         }
 
-        public static AlchemyCompletionResult CompleteRecipe(string recipeId)
+        public static AlchemyCompletionResult CompleteRecipe(string recipeId, int masteryLevel = 1)
         {
             if (!TryGetRecipe(recipeId, out RecipeSpec recipe))
             {
                 return default;
             }
 
+            int bonusOutput = masteryLevel >= 3 ? 1 : 0;
+
             return new AlchemyCompletionResult(
                 recipe.OutputPotionId,
-                recipe.OutputCount,
+                recipe.OutputCount + bonusOutput,
                 recipe.MaterialItemId,
                 recipe.MaterialCount,
                 recipe.LingqiCost,
-                recipe.InsightCost);
+                0.0);
         }
     }
 }

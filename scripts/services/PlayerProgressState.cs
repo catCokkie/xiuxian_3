@@ -19,6 +19,15 @@ namespace Xiuxian.Scripts.Services
         public int PetMood { get; private set; } = 60;
         public bool HasUnlockedAdvancedAlchemyStudy { get; private set; }
         public double CurrentRealmActiveSeconds { get; private set; }
+        public double EnlightenmentInsightBonusRate { get; private set; }
+        public double EnlightenmentLingqiBonusRate { get; private set; }
+        public int BodyCultivationMaxHpFlat { get; private set; }
+        public int BodyCultivationAttackFlat { get; private set; }
+        public int BodyCultivationDefenseFlat { get; private set; }
+        public int MeditationCount { get; private set; }
+        public int ContemplationCount { get; private set; }
+        public int TemperCount { get; private set; }
+        public int BoneforgeCount { get; private set; }
         [Export] public bool AutoBreakthrough = false;
 
         public double RealmExpRequired => GetExpRequired(RealmLevel);
@@ -120,6 +129,38 @@ namespace Xiuxian.Scripts.Services
             CurrentRealmActiveSeconds += seconds;
         }
 
+        public void ApplyEnlightenmentReward(string recipeId)
+        {
+            if (recipeId == "enlightenment_meditation" && EnlightenmentRules.CanApply(recipeId, MeditationCount))
+            {
+                EnlightenmentInsightBonusRate += EnlightenmentRules.GetInsightRateGain(recipeId);
+                MeditationCount++;
+            }
+            else if (recipeId == "enlightenment_contemplation" && EnlightenmentRules.CanApply(recipeId, ContemplationCount))
+            {
+                EnlightenmentInsightBonusRate += EnlightenmentRules.GetInsightRateGain(recipeId);
+                ContemplationCount++;
+            }
+
+            EmitSignal(SignalName.RealmProgressChanged, RealmLevel, RealmExp, RealmExpRequired);
+        }
+
+        public void ApplyBodyCultivationReward(string recipeId)
+        {
+            if (recipeId == "body_cultivation_temper" && BodyCultivationRules.CanApply(recipeId, TemperCount))
+            {
+                BodyCultivationMaxHpFlat += 6;
+                TemperCount++;
+            }
+            else if (recipeId == "body_cultivation_boneforge" && BodyCultivationRules.CanApply(recipeId, BoneforgeCount))
+            {
+                BodyCultivationDefenseFlat += 2;
+                BoneforgeCount++;
+            }
+
+            EmitSignal(SignalName.RealmProgressChanged, RealmLevel, RealmExp, RealmExpRequired);
+        }
+
         public static double GetExpRequired(int realmLevel)
         {
             int r = Math.Max(1, realmLevel);
@@ -133,7 +174,16 @@ namespace Xiuxian.Scripts.Services
                 RealmExp,
                 PetMood,
                 HasUnlockedAdvancedAlchemyStudy,
-                CurrentRealmActiveSeconds);
+                CurrentRealmActiveSeconds,
+                EnlightenmentInsightBonusRate,
+                EnlightenmentLingqiBonusRate,
+                BodyCultivationMaxHpFlat,
+                BodyCultivationAttackFlat,
+                BodyCultivationDefenseFlat,
+                MeditationCount,
+                ContemplationCount,
+                TemperCount,
+                BoneforgeCount);
             return SaveValueConversionRules.ToVariantDictionary(PlayerProgressPersistenceRules.ToPlainDictionary(snapshot));
         }
 
@@ -146,6 +196,15 @@ namespace Xiuxian.Scripts.Services
             PetMood = snapshot.PetMood;
             HasUnlockedAdvancedAlchemyStudy = snapshot.AdvancedAlchemyStudyUnlocked;
             CurrentRealmActiveSeconds = snapshot.CurrentRealmActiveSeconds;
+            EnlightenmentInsightBonusRate = snapshot.EnlightenmentInsightBonusRate;
+            EnlightenmentLingqiBonusRate = snapshot.EnlightenmentLingqiBonusRate;
+            BodyCultivationMaxHpFlat = snapshot.BodyCultivationMaxHpFlat;
+            BodyCultivationAttackFlat = snapshot.BodyCultivationAttackFlat;
+            BodyCultivationDefenseFlat = snapshot.BodyCultivationDefenseFlat;
+            MeditationCount = snapshot.MeditationCount;
+            ContemplationCount = snapshot.ContemplationCount;
+            TemperCount = snapshot.TemperCount;
+            BoneforgeCount = snapshot.BoneforgeCount;
             EmitSignal(SignalName.RealmProgressChanged, RealmLevel, RealmExp, RealmExpRequired);
         }
     }

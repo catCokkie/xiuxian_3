@@ -19,17 +19,12 @@ public sealed class BossEncounterRulesTests
     }
 
     [Fact]
-    public void CanApplyWeaknessInsight_RequiresBossChallengeAndAvailableInsight()
+    public void CanApplyWeaknessInsight_RequiresBossChallengeAndDungeonMasteryLevel4()
     {
-        // Zone 0: cost = 30
-        Assert.True(BossEncounterRules.CanApplyWeaknessInsight(true, false, 50, zoneIndex: 0));
-        Assert.False(BossEncounterRules.CanApplyWeaknessInsight(false, false, 50, zoneIndex: 0));
-        Assert.False(BossEncounterRules.CanApplyWeaknessInsight(true, true, 50, zoneIndex: 0));
-        Assert.False(BossEncounterRules.CanApplyWeaknessInsight(true, false, 29, zoneIndex: 0));
-
-        // Zone 4: cost = 78
-        Assert.True(BossEncounterRules.CanApplyWeaknessInsight(true, false, 78, zoneIndex: 4));
-        Assert.False(BossEncounterRules.CanApplyWeaknessInsight(true, false, 77, zoneIndex: 4));
+        Assert.True(BossEncounterRules.CanApplyWeaknessInsight(true, false, 4));
+        Assert.False(BossEncounterRules.CanApplyWeaknessInsight(false, false, 4));
+        Assert.False(BossEncounterRules.CanApplyWeaknessInsight(true, true, 4));
+        Assert.False(BossEncounterRules.CanApplyWeaknessInsight(true, false, 3));
     }
 
     [Fact]

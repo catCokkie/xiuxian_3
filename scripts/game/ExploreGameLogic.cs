@@ -275,9 +275,9 @@ namespace Xiuxian.Scripts.Game
             BossWeaknessInsightApplied = false;
         }
 
-        public bool CanApplyBossWeaknessInsight(bool isBossBattle, double currentInsight, int activeLevelIndex)
+        public bool CanApplyBossWeaknessInsight(bool isBossBattle, int dungeonMasteryLevel)
         {
-            return BossEncounterRules.CanApplyWeaknessInsight(isBossBattle, BossWeaknessInsightApplied, currentInsight, activeLevelIndex);
+            return BossEncounterRules.CanApplyWeaknessInsight(isBossBattle, BossWeaknessInsightApplied, dungeonMasteryLevel);
         }
 
         public bool TryApplyBossWeaknessInsight(bool isBossBattle)
@@ -287,10 +287,14 @@ namespace Xiuxian.Scripts.Game
                 return false;
             }
 
+            double reduction = SubsystemMasteryRules.GetEffectValue(
+                PlayerActionState.ModeDungeon,
+                4,
+                SubsystemMasteryRules.DungeonBossWeaknessEffectId);
             BossWeaknessInsightApplied = true;
-            EnemyMaxHp = Math.Max(1, (int)Math.Round(InsightSpendRules.ApplyBossWeaknessMultiplier(EnemyMaxHp)));
+            EnemyMaxHp = Math.Max(1, (int)Math.Round(EnemyMaxHp * (1.0 - reduction)));
             EnemyHp = Math.Min(EnemyHp, EnemyMaxHp);
-            EnemyAttackPower = Math.Max(1, (int)Math.Round(InsightSpendRules.ApplyBossWeaknessMultiplier(EnemyAttackPower)));
+            EnemyAttackPower = Math.Max(1, (int)Math.Round(EnemyAttackPower * (1.0 - reduction)));
             return true;
         }
 

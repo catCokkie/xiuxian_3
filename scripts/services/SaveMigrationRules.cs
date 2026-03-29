@@ -11,7 +11,7 @@ namespace Xiuxian.Scripts.Services
     /// </summary>
     public static class SaveMigrationRules
     {
-        public const int LatestVersion = 6;
+        public const int LatestVersion = 8;
 
         private const string DefaultLeftTab = "CultivationTab";
         private const string DefaultRightTab = "BugTab";
@@ -85,6 +85,14 @@ namespace Xiuxian.Scripts.Services
                     case 5:
                         MigrateV5ToV6(cfg);
                         version = 6;
+                        break;
+                    case 6:
+                        MigrateV6ToV7(cfg);
+                        version = 7;
+                        break;
+                    case 7:
+                        MigrateV7ToV8(cfg);
+                        version = 8;
                         break;
                     default:
                         version = LatestVersion;
@@ -254,6 +262,121 @@ namespace Xiuxian.Scripts.Services
             cfg.SetValue("action", "mode", action);
         }
 
+        private static void MigrateV6ToV7(IMigrationStore cfg)
+        {
+            Dictionary<string, object> mastery = EnsureDictionaryValue(cfg, "mastery", "levels");
+            foreach (string systemId in SubsystemMasteryRules.GetAllSystemIds())
+            {
+                if (!mastery.ContainsKey(systemId))
+                {
+                    mastery[systemId] = 1;
+                }
+            }
+
+            Dictionary<string, object> progress = EnsureDictionaryValue(cfg, "progress", "player");
+            if (ReadBool(GetDictionaryValue(progress, "advanced_alchemy_study_unlocked"), false))
+            {
+                mastery[PlayerActionState.ModeAlchemy] = Math.Max(ReadInt(GetDictionaryValue(mastery, PlayerActionState.ModeAlchemy), 1), 2);
+            }
+
+            cfg.SetValue("mastery", "levels", mastery);
+
+            Dictionary<string, object> action = EnsureDictionaryValue(cfg, "action", "mode");
+            string persistedActionId = ReadString(GetDictionaryValue(action, "action_id"), string.Empty);
+            string persistedTargetId = ReadString(GetDictionaryValue(action, "action_target_id"), string.Empty);
+            string persistedVariant = ReadString(GetDictionaryValue(action, "action_variant"), string.Empty);
+            string legacyModeId = ReadString(GetDictionaryValue(action, "mode_id"), string.Empty);
+            PlayerActionStateRules.PlayerActionStateData normalized = PlayerActionStateRules.FromPersistedValues(
+                persistedActionId,
+                persistedTargetId,
+                persistedVariant,
+                legacyModeId);
+            action["mode_id"] = normalized.ActionId;
+            action["action_id"] = normalized.ActionId;
+            action["action_target_id"] = normalized.ActionTargetId;
+            action["action_variant"] = normalized.ActionVariant;
+            cfg.SetValue("action", "mode", action);
+        }
+
+        private static void MigrateV7ToV8(IMigrationStore cfg)
+        {
+            EnsureSectionState(cfg, "garden", new Dictionary<string, object>(StringComparer.Ordinal)
+            {
+                ["selected_recipe"] = string.Empty,
+                ["progress"] = 0.0,
+                ["required_progress"] = 200.0,
+            });
+
+            EnsureSectionState(cfg, "mining", new Dictionary<string, object>(StringComparer.Ordinal)
+            {
+                ["selected_recipe"] = string.Empty,
+                ["progress"] = 0.0,
+                ["required_progress"] = 180.0,
+                ["current_durability"] = MiningRules.DefaultNodeDurability,
+            });
+
+            EnsureSectionState(cfg, "fishing", new Dictionary<string, object>(StringComparer.Ordinal)
+            {
+                ["selected_recipe"] = string.Empty,
+                ["progress"] = 0.0,
+                ["required_progress"] = 120.0,
+            });
+
+            EnsureSectionState(cfg, "talisman", BuildGenericState());
+            EnsureSectionState(cfg, "cooking", BuildGenericState());
+            EnsureSectionState(cfg, "formation", BuildGenericState());
+            EnsureSectionState(cfg, "enlightenment", BuildGenericState());
+            EnsureSectionState(cfg, "body_cultivation", BuildGenericState());
+
+            Dictionary<string, object> progress = EnsureDictionaryValue(cfg, "progress", "player");
+            EnsureMissing(progress, "enlightenment_insight_bonus_rate", 0.0);
+            EnsureMissing(progress, "enlightenment_lingqi_bonus_rate", 0.0);
+            EnsureMissing(progress, "body_cultivation_max_hp_flat", 0);
+            EnsureMissing(progress, "body_cultivation_attack_flat", 0);
+            EnsureMissing(progress, "body_cultivation_defense_flat", 0);
+            EnsureMissing(progress, "enlightenment_meditation_count", 0);
+            EnsureMissing(progress, "enlightenment_contemplation_count", 0);
+            EnsureMissing(progress, "body_cultivation_temper_count", 0);
+            EnsureMissing(progress, "body_cultivation_boneforge_count", 0);
+            cfg.SetValue("progress", "player", progress);
+
+            Dictionary<string, object> mastery = EnsureDictionaryValue(cfg, "mastery", "levels");
+            foreach (string systemId in SubsystemMasteryRules.GetAllSystemIds())
+            {
+                EnsureMissing(mastery, systemId, 1);
+            }
+            cfg.SetValue("mastery", "levels", mastery);
+        }
+
+        private static Dictionary<string, object> BuildGenericState()
+        {
+            return new Dictionary<string, object>(StringComparer.Ordinal)
+            {
+                ["selected_recipe"] = string.Empty,
+                ["progress"] = 0.0,
+                ["required_progress"] = 100.0,
+            };
+        }
+
+        private static void EnsureSectionState(IMigrationStore cfg, string section, Dictionary<string, object> defaults)
+        {
+            Dictionary<string, object> state = EnsureDictionaryValue(cfg, section, "state");
+            foreach ((string key, object value) in defaults)
+            {
+                EnsureMissing(state, key, value);
+            }
+
+            cfg.SetValue(section, "state", state);
+        }
+
+        private static void EnsureMissing(Dictionary<string, object> dict, string key, object value)
+        {
+            if (!dict.ContainsKey(key))
+            {
+                dict[key] = value;
+            }
+        }
+
         private static List<object> BuildUnlockedZoneIds(string zoneId)
         {
             string[] orderedZones = { "lv_qi_001", "lv_qi_002", "lv_qi_003", "lv_qi_004", "lv_qi_005" };
@@ -274,10 +397,7 @@ namespace Xiuxian.Scripts.Services
 
         private static bool IsSupportedMode(string modeId)
         {
-            return modeId == PlayerActionState.ActionDungeon
-                || modeId == PlayerActionState.ActionCultivation
-                || modeId == "alchemy"
-                || modeId == "smithing";
+            return PlayerActionStateRules.Normalize(modeId).ActionId == modeId;
         }
 
         private static Dictionary<string, object> EnsureDictionaryValue(IMigrationStore cfg, string section, string key)
@@ -347,6 +467,27 @@ namespace Xiuxian.Scripts.Services
                 int i => i,
                 long l => l,
                 _ => double.TryParse(value?.ToString(), out double parsed) ? parsed : fallback,
+            };
+        }
+
+        private static int ReadInt(object value, int fallback)
+        {
+            return value switch
+            {
+                int i => i,
+                long l => (int)l,
+                double d => (int)d,
+                float f => (int)f,
+                _ => int.TryParse(value?.ToString(), out int parsed) ? parsed : fallback,
+            };
+        }
+
+        private static bool ReadBool(object value, bool fallback)
+        {
+            return value switch
+            {
+                bool b => b,
+                _ => bool.TryParse(value?.ToString(), out bool parsed) ? parsed : fallback,
             };
         }
 

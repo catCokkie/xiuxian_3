@@ -62,15 +62,15 @@ public static class UiText
     public const string BreakthroughButtonLabel = "突破";
     public const string BreakthroughButtonReadyLabel = "立即突破";
     public const string BossWeaknessInsightButton = "参悟Boss弱点";
-    public const string AdvancedAlchemyStudyButton = "参悟高阶丹方";
+    public const string MasterySectionTitle = "熟练度领悟";
     public const string CultivationUnavailable = "当前无法读取修炼进度。";
     public const string CultivationUnavailableTooltip = "修炼进度未加载。";
     public const string CultivationBreakthroughReadyTooltip = "可突破，点击提升境界。";
-    public const string BossWeaknessInsightReadyTooltip = "消耗{0}悟性，令当前Boss挑战属性下降10%。";
-    public const string BossWeaknessInsightLockedTooltip = "仅可在Boss挑战中使用，且需要足够悟性(30-80)。";
-    public static string BossWeaknessInsightReadyTooltipFor(int cost) => string.Format(BossWeaknessInsightReadyTooltip, cost);
-    public const string AdvancedAlchemyStudyTooltip = "消耗20悟性，解锁一次高阶炼丹参悟资格。";
-    public const string AdvancedAlchemyStudyUnlockedTooltip = "已完成高阶炼丹参悟。";
+    public const string BossWeaknessInsightReadyTooltip = "副本精通 Lv4 生效中：可看破当前 Boss 弱点，使其属性下降10%。";
+    public const string BossWeaknessInsightLockedTooltip = "仅可在Boss挑战中使用，且需要副本精通 Lv4。";
+    public const string MasteryUnlockSuccessPrefix = "领悟成功：";
+    public const string MasteryMaxLevelTooltip = "已达到当前系统的最高熟练度。";
+    public const string MasteryUnavailableTooltip = "悟性或境界不足，暂时无法继续领悟。";
     public const string BackpackEquipWeapon = "装备背包武器";
     public const string BackpackEquipArmor = "装备背包护具";
     public const string BackpackEquipAccessory = "装备背包饰品";
@@ -90,6 +90,38 @@ public static class UiText
     public static string SpiritStone(int amount) => $"{SpiritStoneLabelPrefix} {amount}";
     public static string RealmStage(int realmLevel, double percent) => $"炼气{realmLevel}层 {percent:0}%";
     public static string BatchInputAndAp(int inputEvents, double apFinal) => $"本批输入 {inputEvents} | 本批AP(资源) {apFinal:0.0}";
+    public static string MasterySystemName(string systemId) => systemId switch
+    {
+        PlayerActionState.ModeDungeon => "副本",
+        PlayerActionState.ModeCultivation => "修炼",
+        PlayerActionState.ModeAlchemy => "炼丹",
+        PlayerActionState.ModeSmithing => "炼器",
+        _ => systemId,
+    };
+
+    public static string MasteryUnlockButton(string systemId, int nextLevel) => $"{MasterySystemName(systemId)} Lv{nextLevel}";
+
+    public static string MasteryUnlockTooltip(string systemId, int currentLevel, int nextLevel, double cost, int requiredRealmLevel)
+        => $"{MasterySystemName(systemId)} Lv{currentLevel} -> Lv{nextLevel}，消耗{cost:0}悟性，需要炼气{requiredRealmLevel}层。";
+
+    public static string MasteryStatusLine(string systemId, int currentLevel, string effectDescription, string nextUnlockDescription)
+        => $"- {MasterySystemName(systemId)} Lv{currentLevel}: {effectDescription} | 下一阶：{nextUnlockDescription}";
+
+    public static string MasteryEffectDescription(string effectId, double effectValue) => effectId switch
+    {
+        SubsystemMasteryRules.DungeonBossWeaknessEffectId => $"Boss 弱点洞察，属性下降{effectValue * 100:0}%",
+        SubsystemMasteryRules.CultivationLingqiBonusEffectId => $"修炼灵气获取 +{effectValue * 100:0}%",
+        "dungeon_elite_rate_bonus" => $"精英遭遇率 +{effectValue * 100:0}%",
+        "dungeon_drop_rate_bonus" => $"掉落率 +{effectValue * 100:0}%",
+        "cultivation_parallel_explore_factor" => $"并行推进效率 +{effectValue * 100:0}%",
+        "cultivation_breakthrough_exp_reduction" => $"突破经验需求 -{effectValue * 100:0}%",
+        "alchemy_unlock_juling_san" => "解锁聚灵散",
+        "alchemy_bonus_output" => $"炼丹额外产出 +{effectValue:0}",
+        "alchemy_high_tier_formula" => "预留高阶丹方入口",
+        "smithing_max_enhance_level" => $"强化上限提升至 +{effectValue:0}",
+        "smithing_material_discount" => $"强化材料消耗 -{effectValue * 100:0}%",
+        _ => effectId,
+    };
     public static string ExploreFrame(int frame) => $"探索中 | 帧 {frame}";
     public static string ExploreProgress(float progress) => $"进度 {progress:0.0}%";
     public static string Encounter(string monsterName) => $"遭遇{monsterName}，输入推进战斗回合";
@@ -201,8 +233,25 @@ public static class UiText
         return itemId switch
         {
             "spirit_herb" => "灵草",
+            "spirit_flower" => "灵花",
+            "spirit_fruit" => "灵果",
+            "cold_iron_ore" => "寒铁矿",
+            "spirit_jade" => "灵玉",
+            "mithril" => "秘银",
+            "spirit_fish" => "灵鱼",
+            "spirit_pearl" => "灵珠",
+            "dragon_saliva" => "龙涎",
             "lingqi_shard" => "灵气碎片",
             "broken_talisman" => "碎符",
+            "spirit_ink" => "灵墨",
+            "beast_bone" => "兽骨",
+            "talisman_fire_charm" => "火符",
+            "talisman_shield_charm" => "盾符",
+            "food_spirit_porridge" => "灵鱼粥",
+            "food_fruit_jelly" => "灵果蜜饯",
+            "food_dragon_soup" => "龙涎鱼汤",
+            "formation_spirit_plate" => "聚灵阵盘",
+            "formation_guard_flag" => "护体阵旗",
             "potion_huiqi_dan" => "回气丹",
             "potion_juling_san" => "聚灵散",
             _ => itemId

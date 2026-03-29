@@ -50,11 +50,11 @@ namespace Xiuxian.Scripts.Services
                 isBoss: true);
         }
 
-        public static bool CanApplyWeaknessInsight(bool isBossBattle, bool alreadyApplied, double currentInsight, int zoneIndex = 0)
+        public static bool CanApplyWeaknessInsight(bool isBossBattle, bool alreadyApplied, int dungeonMasteryLevel)
         {
             return isBossBattle
                 && !alreadyApplied
-                && InsightSpendRules.CanAfford(currentInsight, InsightSpendRules.GetBossWeaknessInsightCost(zoneIndex));
+                && dungeonMasteryLevel >= 4;
         }
     }
 }

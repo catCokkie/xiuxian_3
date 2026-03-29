@@ -26,10 +26,19 @@ namespace Xiuxian.Scripts.Game
         private AlchemyState? _alchemyState;
         private PotionInventoryState? _potionInventoryState;
         private SmithingState? _smithingState;
+        private GardenState? _gardenState;
+        private MiningState? _miningState;
+        private FishingState? _fishingState;
+        private RecipeProgressState? _talismanState;
+        private RecipeProgressState? _cookingState;
+        private RecipeProgressState? _formationState;
+        private RecipeProgressState? _enlightenmentState;
+        private RecipeProgressState? _bodyCultivationState;
         private ResourceWalletState? _resourceWalletState;
         private PlayerProgressState? _playerProgressState;
         private PlayerActionState? _playerActionState;
         private EquippedItemsState? _equippedItemsState;
+        private SubsystemMasteryState? _subsystemMasteryState;
         private LevelConfigLoader? _levelConfigLoader;
         private ExploreProgressController? _exploreProgressController;
         private CloudSaveSyncService? _cloudSaveSyncService;
@@ -56,10 +65,19 @@ namespace Xiuxian.Scripts.Game
             _alchemyState = services?.AlchemyState;
             _potionInventoryState = services?.PotionInventoryState;
             _smithingState = services?.SmithingState;
+            _gardenState = services?.GardenState;
+            _miningState = services?.MiningState;
+            _fishingState = services?.FishingState;
+            _talismanState = services?.TalismanState;
+            _cookingState = services?.CookingState;
+            _formationState = services?.FormationState;
+            _enlightenmentState = services?.EnlightenmentState;
+            _bodyCultivationState = services?.BodyCultivationState;
             _resourceWalletState = services?.ResourceWalletState;
             _playerProgressState = services?.PlayerProgressState;
             _playerActionState = services?.PlayerActionState;
             _equippedItemsState = services?.EquippedItemsState;
+            _subsystemMasteryState = services?.SubsystemMasteryState;
             _levelConfigLoader = services?.LevelConfigLoader;
             _exploreProgressController = GetNodeOrNull<ExploreProgressController>("ExploreProgressController");
             _cloudSaveSyncService = services?.CloudSaveSyncService;
@@ -98,6 +116,38 @@ namespace Xiuxian.Scripts.Game
             {
                 _playerProgressState.RealmProgressChanged += OnRealmProgressChanged;
             }
+            if (_gardenState != null)
+            {
+                _gardenState.GardenChanged += OnGardenChanged;
+            }
+            if (_miningState != null)
+            {
+                _miningState.MiningChanged += OnMiningChanged;
+            }
+            if (_fishingState != null)
+            {
+                _fishingState.FishingChanged += OnFishingChanged;
+            }
+            if (_talismanState != null)
+            {
+                _talismanState.RecipeProgressChanged += OnGenericRecipeProgressChanged;
+            }
+            if (_cookingState != null)
+            {
+                _cookingState.RecipeProgressChanged += OnGenericRecipeProgressChanged;
+            }
+            if (_formationState != null)
+            {
+                _formationState.RecipeProgressChanged += OnGenericRecipeProgressChanged;
+            }
+            if (_enlightenmentState != null)
+            {
+                _enlightenmentState.RecipeProgressChanged += OnGenericRecipeProgressChanged;
+            }
+            if (_bodyCultivationState != null)
+            {
+                _bodyCultivationState.RecipeProgressChanged += OnGenericRecipeProgressChanged;
+            }
 
             if (_hookService == null)
             {
@@ -114,6 +164,22 @@ namespace Xiuxian.Scripts.Game
             if (_playerProgressState == null)
             {
                 GD.PushWarning("PrototypeRootController: PlayerProgressState not found at /root/PlayerProgressState");
+            }
+            if (_gardenState == null)
+            {
+                GD.PushWarning("PrototypeRootController: GardenState not found at /root/GardenState");
+            }
+            if (_miningState == null)
+            {
+                GD.PushWarning("PrototypeRootController: MiningState not found at /root/MiningState");
+            }
+            if (_fishingState == null)
+            {
+                GD.PushWarning("PrototypeRootController: FishingState not found at /root/FishingState");
+            }
+            if (_talismanState == null)
+            {
+                GD.PushWarning("PrototypeRootController: TalismanState not found at /root/TalismanState");
             }
             if (_cloudSaveSyncService == null)
             {
@@ -157,6 +223,38 @@ namespace Xiuxian.Scripts.Game
             if (_playerProgressState != null)
             {
                 _playerProgressState.RealmProgressChanged -= OnRealmProgressChanged;
+            }
+            if (_gardenState != null)
+            {
+                _gardenState.GardenChanged -= OnGardenChanged;
+            }
+            if (_miningState != null)
+            {
+                _miningState.MiningChanged -= OnMiningChanged;
+            }
+            if (_fishingState != null)
+            {
+                _fishingState.FishingChanged -= OnFishingChanged;
+            }
+            if (_talismanState != null)
+            {
+                _talismanState.RecipeProgressChanged -= OnGenericRecipeProgressChanged;
+            }
+            if (_cookingState != null)
+            {
+                _cookingState.RecipeProgressChanged -= OnGenericRecipeProgressChanged;
+            }
+            if (_formationState != null)
+            {
+                _formationState.RecipeProgressChanged -= OnGenericRecipeProgressChanged;
+            }
+            if (_enlightenmentState != null)
+            {
+                _enlightenmentState.RecipeProgressChanged -= OnGenericRecipeProgressChanged;
+            }
+            if (_bodyCultivationState != null)
+            {
+                _bodyCultivationState.RecipeProgressChanged -= OnGenericRecipeProgressChanged;
             }
         }
 
@@ -228,6 +326,26 @@ namespace Xiuxian.Scripts.Game
             MarkDirty();
         }
 
+        private void OnGardenChanged(string selectedRecipeId, float currentProgress, float requiredProgress)
+        {
+            MarkDirty();
+        }
+
+        private void OnMiningChanged(string selectedRecipeId, float currentProgress, float requiredProgress, int currentDurability)
+        {
+            MarkDirty();
+        }
+
+        private void OnFishingChanged(string selectedRecipeId, float currentProgress, float requiredProgress)
+        {
+            MarkDirty();
+        }
+
+        private void OnGenericRecipeProgressChanged(string selectedRecipeId, float currentProgress, float requiredProgress)
+        {
+            MarkDirty();
+        }
+
         private void LoadAllState()
         {
             bool loaded = LoadUnifiedState(out bool migrated);
@@ -279,8 +397,11 @@ namespace Xiuxian.Scripts.Game
             WriteBackpackState(config);
             WriteAlchemyState(config);
             WriteSmithingState(config);
+            WriteGatheringState(config);
+            WriteGenericRecipeState(config);
             WriteResourceState(config);
             WritePlayerProgressState(config);
+            WriteMasteryState(config);
             WriteActionModeState(config);
             WriteEquippedItemsState(config);
             WriteExploreRuntimeState(config);
@@ -344,8 +465,11 @@ namespace Xiuxian.Scripts.Game
             ReadBackpackState(config);
             ReadAlchemyState(config);
             ReadSmithingState(config);
+            ReadGatheringState(config);
+            ReadGenericRecipeState(config);
             ReadResourceState(config);
             ReadPlayerProgressState(config);
+            ReadMasteryState(config);
             ReadActionModeState(config);
             ReadEquippedItemsState(config);
             ReadLevelRuntimeState(config);
@@ -437,7 +561,28 @@ namespace Xiuxian.Scripts.Game
                 _playerProgressState.RealmLevel,
                 _levelConfigLoader.PlayerBaseHp,
                 _levelConfigLoader.PlayerAttackPerRound);
-            CharacterStatBlock playerStats = CharacterStatRules.BuildFinalStats(baseStats, _equippedItemsState.GetEquippedProfiles());
+            var extraModifiers = new List<CharacterStatModifier>
+            {
+                ActivityEffectRules.CollectFormationModifier(_formationState?.SelectedRecipeId ?? string.Empty, _backpackState?.GetItemEntries() ?? new Dictionary<string, int>()),
+                ActivityEffectRules.CollectPermanentProgressModifier(new PlayerProgressPersistenceRules.PlayerProgressSnapshot(
+                    _playerProgressState.RealmLevel,
+                    _playerProgressState.RealmExp,
+                    _playerProgressState.PetMood,
+                    _playerProgressState.HasUnlockedAdvancedAlchemyStudy,
+                    _playerProgressState.CurrentRealmActiveSeconds,
+                    _playerProgressState.EnlightenmentInsightBonusRate,
+                    _playerProgressState.EnlightenmentLingqiBonusRate,
+                    _playerProgressState.BodyCultivationMaxHpFlat,
+                    _playerProgressState.BodyCultivationAttackFlat,
+                    _playerProgressState.BodyCultivationDefenseFlat,
+                    _playerProgressState.MeditationCount,
+                    _playerProgressState.ContemplationCount,
+                    _playerProgressState.TemperCount,
+                    _playerProgressState.BoneforgeCount))
+            };
+            CharacterStatBlock playerStats = CharacterStatRules.BuildFinalStats(
+                CharacterStatRules.BuildFinalStats(baseStats, extraModifiers),
+                _equippedItemsState.GetEquippedProfiles());
             string targetLevelId = _playerActionState?.ActionTargetId ?? _levelConfigLoader.ActiveLevelId;
 
             return DungeonOfflineSettlementRules.BuildDungeonOfflineSettlement(
@@ -618,6 +763,94 @@ namespace Xiuxian.Scripts.Game
             config.SetValue("smithing", "state", _smithingState.ToDictionary());
         }
 
+        private void ReadGatheringState(ConfigFile config)
+        {
+            if (_gardenState != null)
+            {
+                Variant gardenData = config.GetValue("garden", "state", new Godot.Collections.Dictionary<string, Variant>());
+                if (gardenData.VariantType == Variant.Type.Dictionary)
+                {
+                    _gardenState.FromDictionary((Godot.Collections.Dictionary<string, Variant>)gardenData);
+                }
+            }
+
+            if (_miningState != null)
+            {
+                Variant miningData = config.GetValue("mining", "state", new Godot.Collections.Dictionary<string, Variant>());
+                if (miningData.VariantType == Variant.Type.Dictionary)
+                {
+                    _miningState.FromDictionary((Godot.Collections.Dictionary<string, Variant>)miningData);
+                }
+            }
+
+            if (_fishingState != null)
+            {
+                Variant fishingData = config.GetValue("fishing", "state", new Godot.Collections.Dictionary<string, Variant>());
+                if (fishingData.VariantType == Variant.Type.Dictionary)
+                {
+                    _fishingState.FromDictionary((Godot.Collections.Dictionary<string, Variant>)fishingData);
+                }
+            }
+        }
+
+        private void WriteGatheringState(ConfigFile config)
+        {
+            if (_gardenState != null)
+            {
+                config.SetValue("garden", "state", _gardenState.ToDictionary());
+            }
+
+            if (_miningState != null)
+            {
+                config.SetValue("mining", "state", _miningState.ToDictionary());
+            }
+
+            if (_fishingState != null)
+            {
+                config.SetValue("fishing", "state", _fishingState.ToDictionary());
+            }
+        }
+
+        private void ReadGenericRecipeState(ConfigFile config)
+        {
+            ReadGenericRecipeStateSection(config, "talisman", _talismanState);
+            ReadGenericRecipeStateSection(config, "cooking", _cookingState);
+            ReadGenericRecipeStateSection(config, "formation", _formationState);
+            ReadGenericRecipeStateSection(config, "enlightenment", _enlightenmentState);
+            ReadGenericRecipeStateSection(config, "body_cultivation", _bodyCultivationState);
+        }
+
+        private void WriteGenericRecipeState(ConfigFile config)
+        {
+            WriteGenericRecipeStateSection(config, "talisman", _talismanState);
+            WriteGenericRecipeStateSection(config, "cooking", _cookingState);
+            WriteGenericRecipeStateSection(config, "formation", _formationState);
+            WriteGenericRecipeStateSection(config, "enlightenment", _enlightenmentState);
+            WriteGenericRecipeStateSection(config, "body_cultivation", _bodyCultivationState);
+        }
+
+        private static void ReadGenericRecipeStateSection(ConfigFile config, string section, RecipeProgressState? state)
+        {
+            if (state == null)
+            {
+                return;
+            }
+
+            Variant data = config.GetValue(section, "state", new Godot.Collections.Dictionary<string, Variant>());
+            if (data.VariantType == Variant.Type.Dictionary)
+            {
+                state.FromDictionary((Godot.Collections.Dictionary<string, Variant>)data);
+            }
+        }
+
+        private static void WriteGenericRecipeStateSection(ConfigFile config, string section, RecipeProgressState? state)
+        {
+            if (state != null)
+            {
+                config.SetValue(section, "state", state.ToDictionary());
+            }
+        }
+
         private void ReadResourceState(ConfigFile config)
         {
             if (_resourceWalletState == null)
@@ -664,6 +897,30 @@ namespace Xiuxian.Scripts.Game
             }
 
             config.SetValue("progress", "player", _playerProgressState.ToDictionary());
+        }
+
+        private void ReadMasteryState(ConfigFile config)
+        {
+            if (_subsystemMasteryState == null)
+            {
+                return;
+            }
+
+            Variant masteryData = config.GetValue("mastery", "levels", new Godot.Collections.Dictionary<string, Variant>());
+            if (masteryData.VariantType == Variant.Type.Dictionary)
+            {
+                _subsystemMasteryState.FromDictionary((Godot.Collections.Dictionary<string, Variant>)masteryData);
+            }
+        }
+
+        private void WriteMasteryState(ConfigFile config)
+        {
+            if (_subsystemMasteryState == null)
+            {
+                return;
+            }
+
+            config.SetValue("mastery", "levels", _subsystemMasteryState.ToDictionary());
         }
 
         private void ReadActionModeState(ConfigFile config)

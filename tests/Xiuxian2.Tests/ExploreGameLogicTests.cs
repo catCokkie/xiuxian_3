@@ -67,4 +67,24 @@ public sealed class ExploreGameLogicTests
         Assert.Equal(36, logic.PlayerHp);
         Assert.Equal(1, logic.TotalBattleCount);
     }
+
+    [Fact]
+    public void TryApplyBossWeaknessInsight_ReducesBossStatsWithoutSpendingInsight()
+    {
+        ExploreGameLogic logic = new()
+        {
+            InBattle = true,
+            EnemyMaxHp = 100,
+            EnemyHp = 100,
+            EnemyAttackPower = 20,
+        };
+
+        bool applied = logic.TryApplyBossWeaknessInsight(isBossBattle: true);
+
+        Assert.True(applied);
+        Assert.True(logic.BossWeaknessInsightApplied);
+        Assert.Equal(90, logic.EnemyMaxHp);
+        Assert.Equal(90, logic.EnemyHp);
+        Assert.Equal(18, logic.EnemyAttackPower);
+    }
 }

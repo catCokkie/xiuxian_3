@@ -13,10 +13,19 @@ namespace Xiuxian.Scripts.Services
         public AlchemyState? AlchemyState { get; private set; }
         public PotionInventoryState? PotionInventoryState { get; private set; }
         public SmithingState? SmithingState { get; private set; }
+        public GardenState? GardenState { get; private set; }
+        public MiningState? MiningState { get; private set; }
+        public FishingState? FishingState { get; private set; }
+        public RecipeProgressState? TalismanState { get; private set; }
+        public RecipeProgressState? CookingState { get; private set; }
+        public RecipeProgressState? FormationState { get; private set; }
+        public RecipeProgressState? EnlightenmentState { get; private set; }
+        public RecipeProgressState? BodyCultivationState { get; private set; }
         public ResourceWalletState? ResourceWalletState { get; private set; }
         public PlayerProgressState? PlayerProgressState { get; private set; }
         public PlayerActionState? PlayerActionState { get; private set; }
         public EquippedItemsState? EquippedItemsState { get; private set; }
+        public SubsystemMasteryState? SubsystemMasteryState { get; private set; }
         public LevelConfigLoader? LevelConfigLoader { get; private set; }
         public ActivityConversionService? ActivityConversionService { get; private set; }
         public CloudSaveSyncService? CloudSaveSyncService { get; private set; }
@@ -48,10 +57,19 @@ namespace Xiuxian.Scripts.Services
             AlchemyState = GetNodeOrNull<AlchemyState>("/root/AlchemyState");
             PotionInventoryState = GetNodeOrNull<PotionInventoryState>("/root/PotionInventoryState");
             SmithingState = GetNodeOrNull<SmithingState>("/root/SmithingState");
+            GardenState = GetNodeOrNull<GardenState>("/root/GardenState");
+            MiningState = GetNodeOrNull<MiningState>("/root/MiningState");
+            FishingState = GetNodeOrNull<FishingState>("/root/FishingState");
+            TalismanState = GetNodeOrNull<RecipeProgressState>("/root/TalismanState");
+            CookingState = GetNodeOrNull<RecipeProgressState>("/root/CookingState");
+            FormationState = GetNodeOrNull<RecipeProgressState>("/root/FormationState");
+            EnlightenmentState = GetNodeOrNull<RecipeProgressState>("/root/EnlightenmentState");
+            BodyCultivationState = GetNodeOrNull<RecipeProgressState>("/root/BodyCultivationState");
             ResourceWalletState = GetNodeOrNull<ResourceWalletState>("/root/ResourceWalletState");
             PlayerProgressState = GetNodeOrNull<PlayerProgressState>("/root/PlayerProgressState");
             PlayerActionState = GetNodeOrNull<PlayerActionState>("/root/PlayerActionState");
             EquippedItemsState = GetNodeOrNull<EquippedItemsState>("/root/EquippedItemsState");
+            SubsystemMasteryState = GetNodeOrNull<SubsystemMasteryState>("/root/SubsystemMasteryState");
             LevelConfigLoader = GetNodeOrNull<LevelConfigLoader>("/root/LevelConfigLoader");
             ActivityConversionService = GetNodeOrNull<ActivityConversionService>("/root/ActivityConversionService");
             CloudSaveSyncService = GetNodeOrNull<CloudSaveSyncService>("/root/CloudSaveSyncService");
