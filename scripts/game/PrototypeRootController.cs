@@ -2,6 +2,7 @@ using Godot;
 using System;
 using System.Collections.Generic;
 using Xiuxian.Scripts.Services;
+using Xiuxian.Scripts.Ui;
 
 namespace Xiuxian.Scripts.Game
 {
@@ -44,6 +45,7 @@ namespace Xiuxian.Scripts.Game
         private LevelConfigLoader? _levelConfigLoader;
         private ExploreProgressController? _exploreProgressController;
         private CloudSaveSyncService? _cloudSaveSyncService;
+        private ToastController? _toastController;
         private StatePersistenceManager _persistenceManager = new();
         private bool _cloudSyncEnabled;
         private long _lastLoadedSavedUnix;
@@ -84,6 +86,7 @@ namespace Xiuxian.Scripts.Game
             _levelConfigLoader = services?.LevelConfigLoader;
             _exploreProgressController = GetNodeOrNull<ExploreProgressController>("ExploreProgressController");
             _cloudSaveSyncService = services?.CloudSaveSyncService;
+            _toastController = GetNodeOrNull<ToastController>("ToastController");
 
             _persistenceManager = new StatePersistenceManager();
             _persistenceManager.Register("input", "stats", _activityState);
@@ -615,6 +618,7 @@ namespace Xiuxian.Scripts.Game
             _exploreProgressController?.ShowOfflineSummary(
                 OfflineSummaryPresentationRules.BuildTitle(result),
                 OfflineSummaryPresentationRules.BuildBody(result));
+            _toastController?.Enqueue(OfflineSummaryPresentationRules.BuildTitle(result), new Color("C8A050"));
             MarkDirty();
             return true;
         }

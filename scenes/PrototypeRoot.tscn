@@ -1,9 +1,10 @@
-[gd_scene load_steps=5 format=3 uid="uid://bkuyj1j6h47n2"]
+[gd_scene load_steps=6 format=3 uid="uid://bkuyj1j6h47n2"]
 
 [ext_resource type="Script" uid="uid://dt77vtxijvmhh" path="res://scripts/game/PrototypeRootController.cs" id="1"]
 [ext_resource type="PackedScene" uid="uid://djdifvjpvqykn" path="res://scenes/ui/MainBarWindow.tscn" id="2"]
 [ext_resource type="PackedScene" path="res://scenes/ui/SubmenuBookWindow.tscn" id="3"]
 [ext_resource type="Script" uid="uid://bw0fjkke28a3n" path="res://scripts/game/ExploreProgressController.cs" id="4"]
+[ext_resource type="Script" path="res://scripts/ui/ToastController.cs" id="5"]
 
 [node name="PrototypeRoot" type="Control"]
 layout_mode = 3
@@ -30,3 +31,13 @@ offset_bottom = 580.0
 
 [node name="ExploreProgressController" type="Node" parent="."]
 script = ExtResource("4")
+
+[node name="ToastController" type="Control" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("5")

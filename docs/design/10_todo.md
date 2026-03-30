@@ -11,11 +11,13 @@
 ## 当前进度记录（更新：2026-03-30）
 
 ### 总览
-- 代码任务：Phase 1–8 全部实现项除 `TASK-06` 外已全部落地并通过 `dotnet test tests/Xiuxian2.Tests/Xiuxian2.Tests.csproj`（317/317）
+- 代码任务：Phase 1–8 全部实现项除 `TASK-06` 外已全部落地并通过 `dotnet test tests/Xiuxian2.Tests/Xiuxian2.Tests.csproj`（331/331）
 - 存档版本：v9（v5→v6→v7→v8→v9 迁移链完整）
 - 子系统：12 个活动模式全部代码落地，12 × 4 = 48 条精通定义总计 2080 悟性
 - 待人工验收：`TASK-06 场景文件 UTF-8 编码修复`
 - 延后到 V2：`TASK-11 宠物亲密度最小闭环`
+- 深化迭代：`16_subsystem_deepening.md` 追踪 24 项深化意见（D-01~D-24），D-01 已完成
+- 通知体系改造：评估当前纯 Toast 模型不适合桌宠场景，规划三层通知体系（Toast合并 D-21 + 事件日志 D-22 + 未读徽标 D-23 + OS通知 D-24）
 - 维护规则：新增任务或状态变更时，只更新本文件，不在 agent 指令文件重复记录
 - **设计变更（2026-03-26）**：境界突破改为纯经验驱动，悟性完全转为子系统熟练度解锁货币。`TASK-26` 被 `TASK-30` 系列替代。详见 `02_systems.md` §12。
 - **设计变更（2026-03-26 #2）**：子系统从 4 个扩展至 12 个（参考 Melvor Idle），新增 Phase 7（TASK-36~42）。详见 `02_systems.md` §13-§20、`01_core_loop.md` 设计决策记录。
@@ -86,6 +88,11 @@
   - 新增装备相关丹药（洗练丹/铸魂丹）+ 附魔符（锋锐/坚壁/疾影）
   - 强化辅料链扩充：+4 以上强化需矿脉/灵田/灵渔跨系统材料
   - 12 个子系统中 8 个对装备成长链有直接或间接贡献（副本、修炼、炼丹、炼器、灵田、矿脉、灵渔、符箓）
+- **D-01 Toast 通知系统（2026-03-30）**：
+  - 新增 `scripts/ui/ToastController.cs`：队列式 Toast 通知，屏幕顶部居中，自动消失 2.8s + 0.4s 淡出，最多 3 条同时显示
+  - 已订阅：RealmLevelUp（突破）、MasteryChanged（精通解锁）、EquipmentInventoryChanged（装备掉落）、AlchemyChanged/SmithingChanged（炼丹/强化完成边缘检测）、离线结算摘要
+  - `PrototypeRoot.tscn` 新增 ToastController 节点；`PrototypeRootController.cs` 接入离线结算 Toast
+  - 331/331 测试通过，0 编译错误
 
 ### 已完成- `TASK-01 拆分 LevelConfigLoader 上帝对象` ✅
   - `LevelConfigLoader.cs` 已瘦身为 159 行兼容门面，保留 `/root/LevelConfigLoader` 访问路径
