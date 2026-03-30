@@ -25,6 +25,8 @@ public sealed class ExploreProgressPresentationRulesTests
         Assert.Equal("种植：灵花 50%", ExploreProgressPresentationRules.BuildGardenProgressText("灵花", 120, 240));
         Assert.Equal("开采：灵玉 50% | 耐久 73", ExploreProgressPresentationRules.BuildMiningProgressText("灵玉", 110, 220, 73));
         Assert.Equal("垂钓：灵鱼 50%", ExploreProgressPresentationRules.BuildFishingProgressText("灵鱼", 60, 120));
+        Assert.Equal("阵法：护体阵旗（当前生效）｜战斗防御 +5%", ExploreProgressPresentationRules.BuildFormationStatusText("护体阵旗", "战斗防御 +5%", true));
+        Assert.Equal("阵法：未激活", ExploreProgressPresentationRules.BuildFormationStatusText(string.Empty, string.Empty, false));
     }
 
     [Fact]

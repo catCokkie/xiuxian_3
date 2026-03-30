@@ -340,6 +340,28 @@ namespace Xiuxian.Scripts.Services
                 Outputs = new[] { new MaterialOutput("formation_guard_flag", 1) },
                 RequiredMasteryLevel = 2,
             });
+            formation.AddRecipe(new SimpleRecipeDefinition
+            {
+                RecipeId = "formation_harvest_array",
+                SystemId = PlayerActionState.ModeFormation,
+                DisplayName = "丰饶阵盘",
+                Inputs = new[] { new MaterialCost("spirit_flower", 2), new MaterialCost("spirit_pearl", 1) },
+                LingqiCost = 0.0,
+                RequiredInputEvents = 240,
+                Outputs = new[] { new MaterialOutput("formation_harvest_array", 1) },
+                RequiredMasteryLevel = 3,
+            });
+            formation.AddRecipe(new SimpleRecipeDefinition
+            {
+                RecipeId = "formation_craft_array",
+                SystemId = PlayerActionState.ModeFormation,
+                DisplayName = "工巧阵盘",
+                Inputs = new[] { new MaterialCost("mithril", 1), new MaterialCost("spirit_ink", 2) },
+                LingqiCost = 0.0,
+                RequiredInputEvents = 260,
+                Outputs = new[] { new MaterialOutput("formation_craft_array", 1) },
+                RequiredMasteryLevel = 4,
+            });
 
             Register(formation);
         }

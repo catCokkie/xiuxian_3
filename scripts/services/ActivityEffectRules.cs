@@ -55,24 +55,49 @@ namespace Xiuxian.Scripts.Services
             };
         }
 
-        public static CharacterStatModifier CollectFormationModifier(string activeRecipeId, IReadOnlyDictionary<string, int> items)
+        public static CharacterStatModifier CollectFormationModifier(string activePrimaryId, string activeSecondaryId, IReadOnlyDictionary<string, int> items, int masteryLevel)
         {
-            if (string.IsNullOrEmpty(activeRecipeId) || items == null || !items.TryGetValue(activeRecipeId, out int count) || count <= 0)
+            FormationEffectProfile profile = GetActiveFormationProfile(activePrimaryId, activeSecondaryId, items, masteryLevel);
+            return profile.BattleModifier;
+        }
+
+        public static double CollectFormationLingqiRate(string activePrimaryId, string activeSecondaryId, IReadOnlyDictionary<string, int> items, int masteryLevel)
+        {
+            return GetActiveFormationProfile(activePrimaryId, activeSecondaryId, items, masteryLevel).LingqiRewardRate;
+        }
+
+        public static double CollectFormationGatherSpeedRate(string activePrimaryId, string activeSecondaryId, IReadOnlyDictionary<string, int> items, int masteryLevel)
+        {
+            return GetActiveFormationProfile(activePrimaryId, activeSecondaryId, items, masteryLevel).GatherSpeedRate;
+        }
+
+        public static double CollectFormationCraftSpeedRate(string activePrimaryId, string activeSecondaryId, IReadOnlyDictionary<string, int> items, int masteryLevel)
+        {
+            return GetActiveFormationProfile(activePrimaryId, activeSecondaryId, items, masteryLevel).CraftSpeedRate;
+        }
+
+        private static FormationEffectProfile GetActiveFormationProfile(string activePrimaryId, string activeSecondaryId, IReadOnlyDictionary<string, int> items, int masteryLevel)
+        {
+            FormationEffectProfile primary = GetOwnedFormationProfile(activePrimaryId, items, masteryLevel);
+            if (FormationRules.GetMaxSlotCount(masteryLevel) < 2 || string.IsNullOrEmpty(activeSecondaryId) || activeSecondaryId == activePrimaryId)
+            {
+                return primary;
+            }
+
+            FormationEffectProfile secondary = FormationRules.ScaleEffectProfile(
+                GetOwnedFormationProfile(activeSecondaryId, items, masteryLevel),
+                FormationRules.SecondarySlotEffectRatio);
+            return FormationRules.CombineEffectProfiles(primary, secondary);
+        }
+
+        private static FormationEffectProfile GetOwnedFormationProfile(string formationId, IReadOnlyDictionary<string, int> items, int masteryLevel)
+        {
+            if (string.IsNullOrEmpty(formationId) || items == null || !items.TryGetValue(formationId, out int count) || count <= 0)
             {
                 return default;
             }
 
-            return FormationRules.GetModifier(activeRecipeId);
-        }
-
-        public static double CollectFormationLingqiRate(string activeRecipeId, IReadOnlyDictionary<string, int> items)
-        {
-            if (string.IsNullOrEmpty(activeRecipeId) || items == null || !items.TryGetValue(activeRecipeId, out int count) || count <= 0)
-            {
-                return 0.0;
-            }
-
-            return FormationRules.GetLingqiRewardRate(activeRecipeId);
+            return FormationRules.GetEffectProfile(formationId, masteryLevel);
         }
 
         public static CharacterStatModifier CollectPermanentProgressModifier(PlayerProgressPersistenceRules.PlayerProgressSnapshot snapshot)

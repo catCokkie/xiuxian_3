@@ -95,7 +95,7 @@ public sealed class SaveMigrationRulesTests
 
         SaveMigrationRules.MigrateToLatest(cfg, 5);
 
-        Assert.Equal(8, System.Convert.ToInt32(cfg.GetValue("meta", "version", 0)));
+        Assert.Equal(9, System.Convert.ToInt32(cfg.GetValue("meta", "version", 0)));
 
         var wallet = (System.Collections.Generic.Dictionary<string, object>)cfg.GetValue("resource", "wallet", new System.Collections.Generic.Dictionary<string, object>());
         Assert.Equal(0L, System.Convert.ToInt64(wallet["spirit_stones"]));
@@ -160,7 +160,7 @@ public sealed class SaveMigrationRulesTests
 
         SaveMigrationRules.MigrateToLatest(cfg, 6);
 
-        Assert.Equal(8, System.Convert.ToInt32(cfg.GetValue("meta", "version", 0)));
+        Assert.Equal(9, System.Convert.ToInt32(cfg.GetValue("meta", "version", 0)));
         var mastery = (System.Collections.Generic.Dictionary<string, object>)cfg.GetValue("mastery", "levels", new System.Collections.Generic.Dictionary<string, object>());
         Assert.Equal(12, mastery.Count);
         Assert.Equal(1L, System.Convert.ToInt64(mastery[PlayerActionState.ModeDungeon]));
@@ -210,7 +210,7 @@ public sealed class SaveMigrationRulesTests
 
         SaveMigrationRules.MigrateToLatest(cfg, 7);
 
-        Assert.Equal(8, System.Convert.ToInt32(cfg.GetValue("meta", "version", 0)));
+        Assert.Equal(9, System.Convert.ToInt32(cfg.GetValue("meta", "version", 0)));
 
         var mining = (System.Collections.Generic.Dictionary<string, object>)cfg.GetValue("mining", "state", new System.Collections.Generic.Dictionary<string, object>());
         Assert.Equal(MiningRules.DefaultNodeDurability, System.Convert.ToInt32(mining["current_durability"]));
@@ -221,6 +221,40 @@ public sealed class SaveMigrationRulesTests
         var progress = (System.Collections.Generic.Dictionary<string, object>)cfg.GetValue("progress", "player", new System.Collections.Generic.Dictionary<string, object>());
         Assert.Equal(0.0, System.Convert.ToDouble(progress["enlightenment_lingqi_bonus_rate"]));
         Assert.Equal(0L, System.Convert.ToInt64(progress["body_cultivation_boneforge_count"]));
+    }
+
+    [Fact]
+    public void MigrateToLatest_PromotesV8FormationStateToDedicatedStructure()
+    {
+        SaveMigrationRules.MigrationStore cfg = new();
+        cfg.SetValue("meta", "version", 8);
+        cfg.SetValue("formation", "state", new System.Collections.Generic.Dictionary<string, object>
+        {
+            ["selected_recipe"] = "formation_guard_flag",
+            ["progress"] = 45.0,
+            ["required_progress"] = 220.0,
+        });
+        cfg.SetValue("backpack", "items", new System.Collections.Generic.Dictionary<string, object>
+        {
+            ["formation_guard_flag"] = 2,
+            ["formation_spirit_plate"] = 1,
+        });
+
+        SaveMigrationRules.MigrateToLatest(cfg, 8);
+
+        Assert.Equal(9, System.Convert.ToInt32(cfg.GetValue("meta", "version", 0)));
+        var formation = (System.Collections.Generic.Dictionary<string, object>)cfg.GetValue("formation", "state", new System.Collections.Generic.Dictionary<string, object>());
+        Assert.Equal("formation_guard_flag", System.Convert.ToString(formation["selected_recipe"]));
+        Assert.Equal("formation_guard_flag", System.Convert.ToString(formation["active_primary_id"]));
+        Assert.Equal(string.Empty, System.Convert.ToString(formation["active_secondary_id"]));
+
+        var crafted = (System.Collections.Generic.List<object>)formation["crafted_ids"];
+        Assert.Contains("formation_guard_flag", crafted.Cast<string>());
+        Assert.Contains("formation_spirit_plate", crafted.Cast<string>());
+
+        var inventory = (System.Collections.Generic.Dictionary<string, object>)formation["inventory"];
+        Assert.Equal(2L, System.Convert.ToInt64(inventory["formation_guard_flag"]));
+        Assert.Equal(1L, System.Convert.ToInt64(inventory["formation_spirit_plate"]));
     }
 
     [Fact]

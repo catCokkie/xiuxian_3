@@ -12,7 +12,7 @@
 
 ### 总览
 - 代码任务：Phase 1–8 全部实现项除 `TASK-06` 外已全部落地并通过 `dotnet test tests/Xiuxian2.Tests/Xiuxian2.Tests.csproj`（317/317）
-- 存档版本：v8（v5→v6→v7→v8 迁移链完整）
+- 存档版本：v9（v5→v6→v7→v8→v9 迁移链完整）
 - 子系统：12 个活动模式全部代码落地，12 × 4 = 48 条精通定义总计 2080 悟性
 - 待人工验收：`TASK-06 场景文件 UTF-8 编码修复`
 - 延后到 V2：`TASK-11 宠物亲密度最小闭环`
@@ -200,6 +200,156 @@
   - 完整的亲密度等级、全局增益、互动/羁绊闭环已延后到 V2
   - `pet_affinity` 目前仍保留为累计资源/统计字段，`pet_mood` 仍会影响当前资源转化倍率
   - 等级、全局增益、互动/羁绊闭环统一延后到 V2 设计
+
+### V2 候选任务：阵法全局加成器重构
+
+#### TASK-FORM-01: 阵法状态专用化（P2）
+**状态**: 进行中（2026-03-30）
+**依赖**: TASK-38, TASK-40, TASK-41
+**背景**: 当前 `FormationState` 复用 `RecipeProgressState`，只能表达“当前制作配方 + 进度”，不足以承载“已拥有阵法 / 当前激活阵法 / 多槽位 / 自修复”等全局阵法玩法。
+
+**涉及文件**:
+- `scripts/services/FormationState.cs` — **新建**，阵法专用状态
+- `scripts/services/ServiceLocator.cs` — 阵法状态类型调整
+- `scripts/game/PrototypeRootController.cs` — 统一存档注册更新
+- `scripts/services/SaveMigrationRules.cs` — 旧阵法状态向新结构迁移
+
+**目标字段**:
+- `crafted_ids[]`
+- `inventory{formation_id: count}`
+- `active_primary_id`
+- `active_secondary_id`
+- `selected_recipe`
+- `progress`
+
+**验收标准**:
+- 阵法系统不再依赖 `RecipeProgressState` 作为运行时状态
+- 专用状态可完整 round-trip 持久化
+- 为双槽 / 自修复 / 当前激活阵法预留字段
+
+**当前进展**:
+- 已新增 `scripts/services/FormationState.cs`，承载 `crafted_ids`、`inventory`、`active_primary_id`、`active_secondary_id`、`selected_recipe`、`progress`
+- 已新增 `scripts/services/FormationPersistenceRules.cs`，将阵法专用状态从 Godot Node 持久化逻辑中剥离，便于纯规则测试
+- `project.godot`、`scripts/services/ServiceLocator.cs`、`scripts/game/PrototypeRootController.cs`、`scripts/game/ExploreProgressController.Runtime.cs` 已切到专用 `FormationState`
+- 已新增 `scripts/services/IRecipeProgressState.cs`，用于兼容当前通用配方推进链路，避免阵法专用化后打断现有加工模式运行时逻辑
+- `tests/Xiuxian2.Tests/SaveRoundTripTests.cs` 已补阵法状态 round-trip 覆盖，当前 `dotnet test tests/Xiuxian2.Tests/Xiuxian2.Tests.csproj` 通过（320/320）
+
+#### TASK-FORM-02: 阵法效果模型统一化（P2）
+**状态**: 进行中（2026-03-30）
+**依赖**: TASK-FORM-01
+**背景**: 当前 `FormationRules` 仅支持少量战斗/收益修正，且效果表达零散。需要升级为“全局可切换加成器”的统一效果模型。
+
+**涉及文件**:
+- `scripts/services/FormationRules.cs`
+- `scripts/services/ActivityEffectRules.cs`
+- `tests/Xiuxian2.Tests/FormationRulesTests.cs`
+
+**步骤**:
+1. 新增统一效果结构（建议 `FormationEffectProfile`）
+2. 统一表达以下维度：
+   - 战斗：攻击 / 防御 / 生存 / 掉落
+   - 采集：灵田 / 矿脉 / 灵渔速度或产量
+   - 加工：炼丹 / 炼器 / 符箓 / 烹饪 / 阵法速度或折扣
+   - 修行：灵气 / 悟性 / 修行效率
+3. 提供 `GetFormationProfile(formationId, masteryLevel)` 与 `GetMaxSlotCount(masteryLevel)`
+
+**首批建议阵法**:
+- `formation_spirit_plate`：聚灵阵（灵气收益）
+- `formation_guard_flag`：护体阵（战斗防御）
+- `formation_harvest_array`：丰饶阵（采集效率）
+- `formation_craft_array`：工巧阵（加工效率）
+
+**验收标准**:
+- 阵法效果不再只表现为单个 `CharacterStatModifier`
+- 所有阵法效果可通过统一 profile 查询
+- 阵法精通 Lv2/Lv3/Lv4 可自然映射到效果增强 / 双槽 / 自修复
+
+**当前进展**:
+- `scripts/services/FormationRules.cs` 已新增 `FormationEffectProfile`，统一表达战斗加成、灵气收益、采集速度、加工速度和“是否为已知阵法”
+- 现有 `formation_spirit_plate` / `formation_guard_flag` 已切到 profile 查询，同时补入 `formation_harvest_array` / `formation_craft_array` 两个首批非战斗阵法定义
+- `GetModifier()` / `GetLingqiRewardRate()` 已改为从 profile 派生，兼容现有调用点；新增 `GetGatherSpeedRate()` / `GetCraftSpeedRate()` 供后续全局接线使用
+- `scripts/services/ActivityEffectRules.cs` 已改为统一通过 `GetActiveFormationProfile(...)` 读取阵法效果，避免战斗 / 收益入口各自维护判定逻辑
+- `tests/Xiuxian2.Tests/FormationRulesTests.cs` 已补 profile 语义覆盖：战斗阵、采集阵、加工阵、精通倍率、双槽与自修复；当前 `dotnet test tests/Xiuxian2.Tests/Xiuxian2.Tests.csproj` 通过（322/322）
+
+#### TASK-FORM-03: 全局生效链路接入（P1）
+**状态**: 进行中（2026-03-30）
+**依赖**: TASK-FORM-02
+**背景**: 阵法需要成为真正的“全局策略姿态”，而不是只对战斗或灵气收益产生局部修正。
+
+**涉及文件**:
+- `scripts/game/ExploreProgressController.Runtime.cs`
+- `scripts/game/PrototypeRootController.cs`
+- `scripts/services/ActivityEffectRules.cs`
+- `tests/Xiuxian2.Tests/ActivityEffectRulesTests.cs`
+
+**步骤**:
+1. 战斗链：读取当前激活阵法并应用到战斗属性
+2. 收益链：将阵法加成接入灵气 / 悟性 / 掉落结算
+3. 采集链：将阵法加成接入灵田 / 矿脉 / 灵渔推进
+4. 加工链：将阵法加成接入炼丹 / 炼器 / 符箓 / 烹饪 / 阵法制作
+
+**验收标准**:
+- 切换当前阵法后，不同主行为的推进或收益会即时改变
+- 副本 / 采集 / 加工 / 修行至少各有 1 类阵法可感知收益
+- 测试覆盖不同上下文下的阵法生效结果
+
+**当前进展**:
+- `scripts/game/ExploreProgressController.Runtime.cs` 已将阵法采集速度加成接入 `AdvanceGardenByInput()` / `AdvanceMiningByInput()` / `AdvanceFishingByInput()`
+- 同文件已将阵法加工速度加成接入 `AdvanceAlchemyByInput()` / `AdvanceSmithingByInput()` / `AdvanceGenericRecipeByInput()`，通过统一 `ApplyProgressRate()` 缩放输入推进量
+- 当前推进链优先读取 `FormationState.ActivePrimaryId`，未激活时回退到 `SelectedRecipeId`，保证旧流程仍可感知阵法效果
+- `tests/Xiuxian2.Tests/ActivityEffectRulesTests.cs` 已补 `CollectFormationGatherSpeedRate()` / `CollectFormationCraftSpeedRate()` 运行时 helper 覆盖
+- 当前 `dotnet test tests/Xiuxian2.Tests/Xiuxian2.Tests.csproj` 通过（325/325）
+
+#### TASK-FORM-04: 阵法切换 UI 与可视化（P2）
+**状态**: 进行中（2026-03-30）
+**依赖**: TASK-FORM-01, TASK-FORM-02, TASK-FORM-03
+**背景**: 若玩家看不到“当前生效阵法”和“它正在加成什么”，阵法就仍然只是隐藏数值，而不是正式系统。
+
+**涉及文件**:
+- `scripts/ui/BookTabsController.cs`
+- `scripts/ui/UiText.cs`
+- `scripts/game/ExploreProgressPresentationRules.cs`
+
+**步骤**:
+1. 在书卷中新增阵法激活区：已拥有阵法、当前激活阵法、切换按钮
+2. 展示“当前主行为下，本阵法提供的加成摘要”
+3. 主底栏补充当前阵法简称 / 状态提示
+4. 为 V2 预留副阵槽 UI（Lv3 双槽）
+
+**验收标准**:
+- 玩家可在 UI 中查看并切换当前生效阵法
+- 当前阵法名称、效果摘要、适配方向可被清晰理解
+- 不需要阅读日志或代码即可知道阵法是否在生效
+
+**当前进展**:
+- `scripts/ui/BookTabsController.cs` 已新增阵法选择与“激活阵法”按钮，当前可在书卷中切换 `FormationState.ActivePrimaryId`
+- 阵法精通 Lv3 的双槽效果已接入：当前支持 `ActivePrimaryId + ActiveSecondaryId`，副阵按 50% 效果参与战斗 / 采集 / 加工 / 灵气收益结算
+- 制作阵法成功后会同步记录到 `FormationState` 的 `crafted_ids/inventory`，且首次制作会自动激活为当前主阵法
+- `scripts/ui/UiText.cs` 已新增阵法效果摘要文案，`scripts/game/ExploreProgressPresentationRules.cs` 已新增 `BuildFormationStatusText()`
+- 装备页 / 修炼概况 / 主战斗轨道文案现在会显示当前生效阵法；Lv3 解锁后书卷 UI 也可切换副阵
+- `tests/Xiuxian2.Tests/ExploreProgressPresentationRulesTests.cs`、`tests/Xiuxian2.Tests/FormationRulesTests.cs`、`tests/Xiuxian2.Tests/ActivityEffectRulesTests.cs` 已覆盖阵法状态文案、双槽叠加与副阵半效规则，当前 `dotnet test tests/Xiuxian2.Tests/Xiuxian2.Tests.csproj` 通过（331/331）
+
+#### TASK-FORM-05: 阵法存档迁移与测试收口（P1）
+**状态**: 进行中（2026-03-30）
+**依赖**: TASK-FORM-01, TASK-FORM-04
+**背景**: 阵法状态结构从“通用 recipe state”升级为“专用全局系统”后，需要补齐 migration 与测试，保证旧档兼容。
+
+**涉及文件**:
+- `scripts/services/SaveMigrationRules.cs`
+- `tests/Xiuxian2.Tests/SaveMigrationRulesTests.cs`
+- `tests/Xiuxian2.Tests/SaveRoundTripTests.cs`
+
+**验收标准**:
+- 旧档 `formation.state.selected_recipe/progress` 可自动迁移到新结构
+- `active_primary_id` / `inventory` / `crafted_ids` 有稳定默认值
+- `dotnet test tests/Xiuxian2.Tests/Xiuxian2.Tests.csproj` 全通过
+
+**当前进展**:
+- `scripts/services/SaveMigrationRules.cs` 已升级为 `LatestVersion = 9`，新增 `MigrateV8ToV9()`，将旧阵法通用状态迁移到专用结构
+- v8→v9 现会为 `formation.state` 补齐 `active_primary_id` / `active_secondary_id` / `crafted_ids` / `inventory`，并优先从旧背包中的阵法物品推导库存与默认激活阵法
+- `tests/Xiuxian2.Tests/SaveMigrationRulesTests.cs` 已新增 v8 阵法状态迁移断言，覆盖旧 `selected_recipe/progress` 向专用阵法结构的升级
+- `tests/Xiuxian2.Tests/SaveRoundTripTests.cs` 已补阵法空结构/默认值 round-trip 测试，验证专用状态在缺字段场景下稳定恢复
+- 当前 `dotnet test tests/Xiuxian2.Tests/Xiuxian2.Tests.csproj` 通过（327/327）
 
 ---
 

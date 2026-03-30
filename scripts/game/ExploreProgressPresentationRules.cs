@@ -104,6 +104,17 @@ namespace Xiuxian.Scripts.Game
             return $"垂钓：{pondName} {percent:0}%";
         }
 
+        public static string BuildFormationStatusText(string formationName, string summary, bool isActive)
+        {
+            if (string.IsNullOrEmpty(formationName))
+            {
+                return "阵法：未激活";
+            }
+
+            string suffix = isActive ? "（当前生效）" : string.Empty;
+            return $"阵法：{formationName}{suffix}｜{summary}";
+        }
+
         public static string GetPausedModeRoundLabel(string actionId, string alchemyText, string smithingText, string gardenText, string miningText, string fishingText)
         {
             return actionId switch

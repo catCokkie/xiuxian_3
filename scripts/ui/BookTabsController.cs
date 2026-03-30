@@ -79,6 +79,10 @@ public partial class BookTabsController : Control
     private Button _cultivationMiningStartButton = null!;
     private OptionButton _cultivationFishingOption = null!;
     private Button _cultivationFishingStartButton = null!;
+    private OptionButton _cultivationFormationOption = null!;
+    private Button _cultivationFormationActivateButton = null!;
+    private OptionButton _cultivationFormationSecondaryOption = null!;
+    private Button _cultivationFormationSecondaryActivateButton = null!;
     private RichTextLabel _cultivationContentLabel = null!;
     private BackpackGridController _backpackGrid = null!;
     private TextEdit _bugFeedbackInput = null!;
@@ -105,6 +109,7 @@ public partial class BookTabsController : Control
     private GardenState? _gardenState;
     private MiningState? _miningState;
     private FishingState? _fishingState;
+    private FormationState? _formationState;
     private ResourceWalletState? _resourceWalletState;
     private PlayerProgressState? _playerProgressState;
     private PlayerActionState? _playerActionState;
@@ -166,6 +171,7 @@ public partial class BookTabsController : Control
         _potionInventoryState = services?.PotionInventoryState;
         _smithingState = services?.SmithingState;
         _gardenState = services?.GardenState;
+        _formationState = services?.FormationState;
         _miningState = services?.MiningState;
         _fishingState = services?.FishingState;
         _resourceWalletState = services?.ResourceWalletState;
@@ -209,6 +215,10 @@ public partial class BookTabsController : Control
         if (_fishingState != null)
         {
             _fishingState.FishingChanged += OnFishingChanged;
+        }
+        if (_formationState != null)
+        {
+            _formationState.RecipeProgressChanged += OnFormationChanged;
         }
         if (_resourceWalletState != null)
         {
@@ -276,6 +286,10 @@ public partial class BookTabsController : Control
         if (_fishingState != null)
         {
             _fishingState.FishingChanged -= OnFishingChanged;
+        }
+        if (_formationState != null)
+        {
+            _formationState.RecipeProgressChanged -= OnFormationChanged;
         }
         if (_resourceWalletState != null)
         {
@@ -412,6 +426,11 @@ public partial class BookTabsController : Control
         RefreshDynamicTabContent();
     }
 
+    private void OnFormationChanged(string selectedRecipeId, float currentProgress, float requiredProgress)
+    {
+        RefreshDynamicTabContent();
+    }
+
     private void OnRealmProgressChanged(int realmLevel, double realmExp, double realmExpRequired)
     {
         RefreshDynamicTabContent();
@@ -494,7 +513,11 @@ public partial class BookTabsController : Control
             _levelConfigLoader.PlayerAttackPerRound);
         CharacterStatModifier[] bonusModifiers =
         {
-            ActivityEffectRules.CollectFormationModifier(ServiceLocator.Instance?.FormationState?.SelectedRecipeId ?? string.Empty, _backpackState.GetItemEntries()),
+            ActivityEffectRules.CollectFormationModifier(
+                ServiceLocator.Instance?.FormationState?.ActivePrimaryId ?? string.Empty,
+                ServiceLocator.Instance?.FormationState?.ActiveSecondaryId ?? string.Empty,
+                _backpackState.GetItemEntries(),
+                GetMasteryLevel(PlayerActionState.ModeFormation)),
             ActivityEffectRules.CollectPermanentProgressModifier(new PlayerProgressPersistenceRules.PlayerProgressSnapshot(
                 _playerProgressState.RealmLevel,
                 _playerProgressState.RealmExp,
@@ -520,6 +543,16 @@ public partial class BookTabsController : Control
         {
             double percent = _smithingState.RequiredProgress > 0.0f ? _smithingState.CurrentProgress / _smithingState.RequiredProgress * 100.0 : 0.0;
             text += $"\n\n强化目标\n- {target.DisplayName} +{target.EnhanceLevel} ({percent:0}%)";
+        }
+
+        if (_formationState != null)
+        {
+            string activeFormationId = _formationState.ActivePrimaryId;
+            text += $"\n\n当前阵法\n- {ExploreProgressPresentationRules.BuildFormationStatusText(UiText.BackpackItemName(activeFormationId), UiText.FormationSummary(activeFormationId), !string.IsNullOrEmpty(activeFormationId))}";
+            if (!string.IsNullOrEmpty(_formationState.ActiveSecondaryId))
+            {
+                text += $"\n- 副阵：{ExploreProgressPresentationRules.BuildFormationStatusText(UiText.BackpackItemName(_formationState.ActiveSecondaryId), UiText.FormationSummary(_formationState.ActiveSecondaryId) + "（50%）", true)}";
+            }
         }
 
         text += $"\n\n悟道加成\n- 灵气收益 +{_playerProgressState.EnlightenmentLingqiBonusRate * 100:0}%\n- 悟性收益 +{_playerProgressState.EnlightenmentInsightBonusRate * 100:0}%";
@@ -620,6 +653,16 @@ public partial class BookTabsController : Control
         {
             double percent = _smithingState.RequiredProgress > 0.0f ? _smithingState.CurrentProgress / _smithingState.RequiredProgress * 100.0 : 0.0;
             sb.AppendLine($"- 强化目标: {target.DisplayName} +{target.EnhanceLevel} ({percent:0}%)");
+        }
+
+        if (_formationState != null)
+        {
+            string activeFormationId = _formationState.ActivePrimaryId;
+            sb.AppendLine($"- 当前阵法: {ExploreProgressPresentationRules.BuildFormationStatusText(UiText.BackpackItemName(activeFormationId), UiText.FormationSummary(activeFormationId), !string.IsNullOrEmpty(activeFormationId))}");
+            if (!string.IsNullOrEmpty(_formationState.ActiveSecondaryId))
+            {
+                sb.AppendLine($"- 当前副阵: {ExploreProgressPresentationRules.BuildFormationStatusText(UiText.BackpackItemName(_formationState.ActiveSecondaryId), UiText.FormationSummary(_formationState.ActiveSecondaryId) + "（50%）", true)}");
+            }
         }
 
         sb.AppendLine();
@@ -900,6 +943,10 @@ public partial class BookTabsController : Control
             _cultivationMiningStartButton.Disabled = true;
             _cultivationFishingOption.Disabled = true;
             _cultivationFishingStartButton.Disabled = true;
+            _cultivationFormationOption.Disabled = true;
+            _cultivationFormationActivateButton.Disabled = true;
+            _cultivationFormationSecondaryOption.Disabled = true;
+            _cultivationFormationSecondaryActivateButton.Disabled = true;
             if (_cultivationMasteryLabel != null)
             {
                 _cultivationMasteryLabel.Text = UiText.CultivationUnavailable;
@@ -938,6 +985,7 @@ public partial class BookTabsController : Control
 
         RefreshAlchemyControls();
         RefreshGatheringControls();
+        RefreshFormationControls();
     }
 
     private void RefreshMasteryControls()
@@ -1208,6 +1256,78 @@ public partial class BookTabsController : Control
         RefreshCultivationPanelContent();
     }
 
+    private void OnFormationSelected(long index)
+    {
+        if (_formationState == null || index < 0 || index >= _cultivationFormationOption.ItemCount)
+        {
+            return;
+        }
+
+        string formationId = _cultivationFormationOption.GetItemMetadata((int)index).AsString();
+        _formationState.SelectRecipe(formationId);
+        RefreshDynamicTabContent();
+    }
+
+    private void OnFormationActivatePressed()
+    {
+        if (_formationState == null || string.IsNullOrEmpty(_formationState.SelectedRecipeId))
+        {
+            RefreshCultivationPanelContent();
+            return;
+        }
+
+        if (_formationState.TryActivatePrimary(_formationState.SelectedRecipeId))
+        {
+            _cultivationStatusLabel.Text = $"阵法已切换：{UiText.BackpackItemName(_formationState.ActivePrimaryId)}";
+        }
+        else
+        {
+            _cultivationStatusLabel.Text = "尚未拥有该阵法，需先完成一次制作。";
+        }
+
+        RefreshCultivationPanelContent();
+        RefreshDynamicTabContent();
+    }
+
+    private void OnFormationSecondarySelected(long index)
+    {
+        if (_formationState == null || index < 0 || index >= _cultivationFormationSecondaryOption.ItemCount)
+        {
+            return;
+        }
+
+        RefreshDynamicTabContent();
+    }
+
+    private void OnFormationSecondaryActivatePressed()
+    {
+        if (_formationState == null)
+        {
+            RefreshCultivationPanelContent();
+            return;
+        }
+
+        if (GetMasteryLevel(PlayerActionState.ModeFormation) < 3)
+        {
+            _cultivationStatusLabel.Text = "阵法精通 Lv3 后解锁副阵槽。";
+            RefreshCultivationPanelContent();
+            return;
+        }
+
+        string selectedFormationId = _cultivationFormationSecondaryOption.GetSelectedMetadata().AsString();
+        if (_formationState.TryActivateSecondary(selectedFormationId))
+        {
+            _cultivationStatusLabel.Text = $"副阵已切换：{UiText.BackpackItemName(_formationState.ActiveSecondaryId)}";
+        }
+        else
+        {
+            _cultivationStatusLabel.Text = "尚未拥有该阵法，无法设置副阵。";
+        }
+
+        RefreshCultivationPanelContent();
+        RefreshDynamicTabContent();
+    }
+
     private void RefreshAlchemyControls()
     {
         if (_cultivationAlchemyRecipeOption == null || _cultivationAlchemyStartButton == null)
@@ -1331,6 +1451,60 @@ public partial class BookTabsController : Control
         bool canStart = _fishingState.HasSelectedPond;
         _cultivationFishingOption.Disabled = false;
         _cultivationFishingStartButton.Disabled = !canStart;
+    }
+
+    private void RefreshFormationControls()
+    {
+        if (_cultivationFormationOption == null || _cultivationFormationActivateButton == null || _cultivationFormationSecondaryOption == null || _cultivationFormationSecondaryActivateButton == null || _formationState == null)
+        {
+            return;
+        }
+
+        if (_cultivationFormationOption.ItemCount == 0)
+        {
+            string[] formationIds =
+            {
+                "formation_spirit_plate",
+                "formation_guard_flag",
+                "formation_harvest_array",
+                "formation_craft_array",
+            };
+
+            for (int i = 0; i < formationIds.Length; i++)
+            {
+                string formationId = formationIds[i];
+                _cultivationFormationOption.AddItem(UiText.BackpackItemName(formationId), i);
+                _cultivationFormationOption.SetItemMetadata(i, formationId);
+            }
+        }
+
+        if (_cultivationFormationSecondaryOption.ItemCount == 0)
+        {
+            for (int i = 0; i < _cultivationFormationOption.ItemCount; i++)
+            {
+                _cultivationFormationSecondaryOption.AddItem(_cultivationFormationOption.GetItemText(i), i);
+                _cultivationFormationSecondaryOption.SetItemMetadata(i, _cultivationFormationOption.GetItemMetadata(i));
+            }
+        }
+
+        SelectCurrentOption(_cultivationFormationOption, _formationState.SelectedRecipeId);
+        SelectCurrentOption(_cultivationFormationSecondaryOption, _formationState.ActiveSecondaryId);
+        _cultivationFormationOption.Disabled = false;
+        _cultivationFormationActivateButton.Disabled = string.IsNullOrEmpty(_formationState.SelectedRecipeId);
+        _cultivationFormationActivateButton.TooltipText = string.IsNullOrEmpty(_formationState.ActivePrimaryId)
+            ? "选择已拥有阵法并设为当前生效"
+            : ExploreProgressPresentationRules.BuildFormationStatusText(
+                UiText.BackpackItemName(_formationState.ActivePrimaryId),
+                UiText.FormationSummary(_formationState.ActivePrimaryId),
+                true);
+
+        int formationMasteryLevel = GetMasteryLevel(PlayerActionState.ModeFormation);
+        bool secondaryUnlocked = FormationRules.GetMaxSlotCount(formationMasteryLevel) >= 2;
+        _cultivationFormationSecondaryOption.Disabled = !secondaryUnlocked;
+        _cultivationFormationSecondaryActivateButton.Disabled = !secondaryUnlocked;
+        _cultivationFormationSecondaryActivateButton.TooltipText = secondaryUnlocked
+            ? "为当前策略挂载副阵，副阵按 50% 效果生效。"
+            : "阵法精通 Lv3 后解锁副阵槽。";
     }
 
     private static void SelectCurrentOption(OptionButton option, string selectedId)
@@ -1806,6 +1980,28 @@ public partial class BookTabsController : Control
         _cultivationFishingStartButton.Text = "开始灵渔";
         _cultivationFishingStartButton.Pressed += OnFishingStartPressed;
         gatheringRow.AddChild(_cultivationFishingStartButton);
+
+        HBoxContainer formationRow = new();
+        formationRow.AddThemeConstantOverride("separation", 8);
+        _cultivationRoot.AddChild(formationRow);
+
+        _cultivationFormationOption = new OptionButton();
+        _cultivationFormationOption.ItemSelected += OnFormationSelected;
+        formationRow.AddChild(_cultivationFormationOption);
+
+        _cultivationFormationActivateButton = new Button();
+        _cultivationFormationActivateButton.Text = "激活阵法";
+        _cultivationFormationActivateButton.Pressed += OnFormationActivatePressed;
+        formationRow.AddChild(_cultivationFormationActivateButton);
+
+        _cultivationFormationSecondaryOption = new OptionButton();
+        _cultivationFormationSecondaryOption.ItemSelected += OnFormationSecondarySelected;
+        formationRow.AddChild(_cultivationFormationSecondaryOption);
+
+        _cultivationFormationSecondaryActivateButton = new Button();
+        _cultivationFormationSecondaryActivateButton.Text = "激活副阵";
+        _cultivationFormationSecondaryActivateButton.Pressed += OnFormationSecondaryActivatePressed;
+        formationRow.AddChild(_cultivationFormationSecondaryActivateButton);
 
         _cultivationMasteryLabel = new RichTextLabel();
         _cultivationMasteryLabel.FitContent = true;

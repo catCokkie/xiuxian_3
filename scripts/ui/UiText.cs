@@ -256,6 +256,8 @@ public static class UiText
             "food_dragon_soup" => "龙涎鱼汤",
             "formation_spirit_plate" => "聚灵阵盘",
             "formation_guard_flag" => "护体阵旗",
+            "formation_harvest_array" => "丰饶阵盘",
+            "formation_craft_array" => "工巧阵盘",
             "potion_huiqi_dan" => "回气丹",
             "potion_juling_san" => "聚灵散",
             _ => itemId
@@ -296,6 +298,18 @@ public static class UiText
             EquipmentSourceStage.Exchange => "兑换",
             EquipmentSourceStage.FirstClear => "首通奖励",
             _ => "来源未知",
+        };
+    }
+
+    public static string FormationSummary(string formationId)
+    {
+        return formationId switch
+        {
+            "formation_spirit_plate" => "灵气收益 +8%，战斗攻击 +2",
+            "formation_guard_flag" => "战斗防御 +5%",
+            "formation_harvest_array" => "采集推进 +12%",
+            "formation_craft_array" => "加工推进 +12%",
+            _ => "当前未激活阵法",
         };
     }
 

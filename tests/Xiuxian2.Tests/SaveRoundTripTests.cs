@@ -201,6 +201,50 @@ public sealed class SaveRoundTripTests
     }
 
     [Fact]
+    public void FormationPersistenceRules_RoundTripsCraftedInventoryActiveSlotsAndProgress()
+    {
+        FormationPersistenceRules.FormationSnapshot formation = new(
+            SelectedRecipeId: "formation_guard_flag",
+            Progress: 64.0f,
+            RequiredProgress: 220.0f,
+            ActivePrimaryId: "formation_spirit_plate",
+            ActiveSecondaryId: "formation_guard_flag",
+            CraftedIds: new[] { "formation_spirit_plate", "formation_guard_flag" },
+            Inventory: new Dictionary<string, int>
+            {
+                ["formation_spirit_plate"] = 2,
+                ["formation_guard_flag"] = 1,
+            });
+
+        FormationPersistenceRules.FormationSnapshot restored = FormationPersistenceRules.FromPlainDictionary(
+            FormationPersistenceRules.ToPlainDictionary(formation));
+
+        Assert.Equal(formation.SelectedRecipeId, restored.SelectedRecipeId);
+        Assert.Equal(formation.Progress, restored.Progress);
+        Assert.Equal(formation.RequiredProgress, restored.RequiredProgress);
+        Assert.Equal(formation.ActivePrimaryId, restored.ActivePrimaryId);
+        Assert.Equal(formation.ActiveSecondaryId, restored.ActiveSecondaryId);
+        Assert.Equal(formation.CraftedIds, restored.CraftedIds);
+        Assert.Equal(2, restored.Inventory["formation_spirit_plate"]);
+        Assert.Equal(1, restored.Inventory["formation_guard_flag"]);
+    }
+
+    [Fact]
+    public void FormationPersistenceRules_DefaultsEmptyStructureWhenFieldsMissing()
+    {
+        FormationPersistenceRules.FormationSnapshot restored = FormationPersistenceRules.FromPlainDictionary(
+            new Dictionary<string, object>());
+
+        Assert.Equal(string.Empty, restored.SelectedRecipeId);
+        Assert.Equal(0.0f, restored.Progress);
+        Assert.Equal(100.0f, restored.RequiredProgress);
+        Assert.Equal(string.Empty, restored.ActivePrimaryId);
+        Assert.Equal(string.Empty, restored.ActiveSecondaryId);
+        Assert.Empty(restored.CraftedIds);
+        Assert.Empty(restored.Inventory);
+    }
+
+    [Fact]
     public void EquipmentInstanceCodec_RoundTripsAllFields()
     {
         EquipmentInstanceData expected = BuildInstance(

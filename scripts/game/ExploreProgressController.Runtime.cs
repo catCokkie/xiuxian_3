@@ -98,7 +98,7 @@ namespace Xiuxian.Scripts.Game
         private FishingState? _fishingState;
         private RecipeProgressState? _talismanState;
         private RecipeProgressState? _cookingState;
-        private RecipeProgressState? _formationState;
+        private FormationState? _formationState;
         private RecipeProgressState? _enlightenmentState;
         private RecipeProgressState? _bodyCultivationState;
         private PlayerProgressState? _playerProgressState;
@@ -240,7 +240,7 @@ namespace Xiuxian.Scripts.Game
             _fishingState = GetNodeOrNull<FishingState>(FishingStatePath);
             _talismanState = GetNodeOrNull<RecipeProgressState>(TalismanStatePath);
             _cookingState = GetNodeOrNull<RecipeProgressState>(CookingStatePath);
-            _formationState = GetNodeOrNull<RecipeProgressState>(FormationStatePath);
+            _formationState = GetNodeOrNull<FormationState>(FormationStatePath);
             _enlightenmentState = GetNodeOrNull<RecipeProgressState>(EnlightenmentStatePath);
             _bodyCultivationState = GetNodeOrNull<RecipeProgressState>(BodyCultivationStatePath);
             _playerProgressState = GetNodeOrNull<PlayerProgressState>(PlayerProgressPath);
@@ -1554,7 +1554,7 @@ namespace Xiuxian.Scripts.Game
 
             if (_inBattle)
             {
-                _battleInfoLabel.Text = UiText.BattleInProgress(_battleMonsterName);
+                _battleInfoLabel.Text = UiText.BattleInProgress(_battleMonsterName) + BuildActiveFormationSuffix();
                 _battleInfoLabel.Visible = true;
                 int threshold = Mathf.Max(1, _inputsPerBattleRoundRuntime);
                 _roundInfoLabel.Text = $"{UiText.BattleRound(_battleRoundCounter, _battleMonsterName, _enemyHp)} | next {_pendingBattleInputEvents}/{threshold}";
@@ -1563,7 +1563,7 @@ namespace Xiuxian.Scripts.Game
             {
                 _battleInfoLabel.Text = "";
                 _battleInfoLabel.Visible = false;
-                _roundInfoLabel.Text = $"{UiText.ExploreProgress(_exploreProgress)} | {BuildFrontMoveStatus()}";
+                _roundInfoLabel.Text = $"{UiText.ExploreProgress(_exploreProgress)} | {BuildFrontMoveStatus()}{BuildActiveFormationSuffix()}";
             }
 
             UpdateHpLabels();
@@ -1682,7 +1682,7 @@ namespace Xiuxian.Scripts.Game
                 || actionId == PlayerActionState.ActionBodyCultivation;
         }
 
-        private RecipeProgressState? GetActiveGenericRecipeState()
+        private IRecipeProgressState? GetActiveGenericRecipeState()
         {
             return (_actionState?.ActionId ?? string.Empty) switch
             {
@@ -1714,6 +1714,8 @@ namespace Xiuxian.Scripts.Game
             {
                 return;
             }
+
+            inputEvents = ApplyFormationCraftSpeed(inputEvents);
 
             if (!_alchemyState.HasSelectedRecipe)
             {
@@ -1762,6 +1764,8 @@ namespace Xiuxian.Scripts.Game
             {
                 return;
             }
+
+            inputEvents = ApplyFormationCraftSpeed(inputEvents);
 
             if (!_smithingState.HasTarget || !_equippedItemsState.TryGetEquippedProfileById(_smithingState.TargetEquipmentId, out EquipmentStatProfile targetProfile))
             {
@@ -1813,6 +1817,8 @@ namespace Xiuxian.Scripts.Game
             {
                 return;
             }
+
+            inputEvents = ApplyFormationGatherSpeed(inputEvents);
 
             if (!_gardenState.HasSelectedCrop)
             {
@@ -1866,6 +1872,8 @@ namespace Xiuxian.Scripts.Game
                 return;
             }
 
+            inputEvents = ApplyFormationGatherSpeed(inputEvents);
+
             if (!_miningState.HasSelectedNode)
             {
                 _roundInfoLabel.Text = "矿脉待命（请先选择矿点）";
@@ -1918,6 +1926,8 @@ namespace Xiuxian.Scripts.Game
                 return;
             }
 
+            inputEvents = ApplyFormationGatherSpeed(inputEvents);
+
             if (!_fishingState.HasSelectedPond)
             {
                 _roundInfoLabel.Text = "灵渔待命（请先选择鱼塘）";
@@ -1965,11 +1975,13 @@ namespace Xiuxian.Scripts.Game
 
         private void AdvanceGenericRecipeByInput(int inputEvents)
         {
-            RecipeProgressState? state = GetActiveGenericRecipeState();
+            IRecipeProgressState? state = GetActiveGenericRecipeState();
             if (state == null || _backpackState == null || _resourceWalletState == null || inputEvents <= 0)
             {
                 return;
             }
+
+            inputEvents = ApplyFormationCraftSpeed(inputEvents);
 
             EnsureGenericRecipeSelected(state, GetActiveGenericSystemId());
             if (!state.HasSelectedRecipe)
@@ -1994,7 +2006,7 @@ namespace Xiuxian.Scripts.Game
             }
         }
 
-        private void EnsureGenericRecipeSelected(RecipeProgressState state, string systemId)
+        private void EnsureGenericRecipeSelected(IRecipeProgressState state, string systemId)
         {
             if (state.HasSelectedRecipe)
             {
@@ -2024,6 +2036,15 @@ namespace Xiuxian.Scripts.Game
                 return false;
             }
 
+            if (_formationState != null && recipeId.StartsWith("formation_", StringComparison.Ordinal))
+            {
+                _formationState.AddCraftedFormation(recipeId, 1);
+                if (string.IsNullOrEmpty(_formationState.ActivePrimaryId))
+                {
+                    _formationState.TryActivatePrimary(recipeId);
+                }
+            }
+
             if (_playerProgressState != null)
             {
                 if (recipeId == "enlightenment_meditation" || recipeId == "enlightenment_contemplation")
@@ -2045,6 +2066,53 @@ namespace Xiuxian.Scripts.Game
             _battleInfoLabel.Text = rewardText;
             _battleInfoLabel.Visible = true;
             return true;
+        }
+
+        private int ApplyFormationGatherSpeed(int inputEvents)
+        {
+            double rate = ActivityEffectRules.CollectFormationGatherSpeedRate(
+                _formationState?.ActivePrimaryId ?? string.Empty,
+                _formationState?.ActiveSecondaryId ?? string.Empty,
+                _backpackState?.GetItemEntries() ?? new Dictionary<string, int>(),
+                _subsystemMasteryState?.GetLevel(PlayerActionState.ModeFormation) ?? 1);
+            return ApplyProgressRate(inputEvents, rate);
+        }
+
+        private int ApplyFormationCraftSpeed(int inputEvents)
+        {
+            double rate = ActivityEffectRules.CollectFormationCraftSpeedRate(
+                _formationState?.ActivePrimaryId ?? string.Empty,
+                _formationState?.ActiveSecondaryId ?? string.Empty,
+                _backpackState?.GetItemEntries() ?? new Dictionary<string, int>(),
+                _subsystemMasteryState?.GetLevel(PlayerActionState.ModeFormation) ?? 1);
+            return ApplyProgressRate(inputEvents, rate);
+        }
+
+        private string GetCurrentFormationId()
+        {
+            return _formationState?.ActivePrimaryId ?? string.Empty;
+        }
+
+        private string BuildActiveFormationSuffix()
+        {
+            string primaryId = _formationState?.ActivePrimaryId ?? string.Empty;
+            string secondaryId = _formationState?.ActiveSecondaryId ?? string.Empty;
+            if (string.IsNullOrEmpty(primaryId))
+            {
+                return string.Empty;
+            }
+
+            if (string.IsNullOrEmpty(secondaryId))
+            {
+                return $" | 阵法:{UiText.BackpackItemName(primaryId)}";
+            }
+
+            return $" | 阵法:{UiText.BackpackItemName(primaryId)}+{UiText.BackpackItemName(secondaryId)}";
+        }
+
+        private static int ApplyProgressRate(int inputEvents, double rate)
+        {
+            return Mathf.Max(1, Mathf.RoundToInt((float)(inputEvents * (1.0 + System.Math.Max(0.0, rate)))));
         }
 
         private int GetActionModeSelectedIndex()
@@ -2148,7 +2216,7 @@ namespace Xiuxian.Scripts.Game
 
         private string BuildGenericRecipeProgressText()
         {
-            RecipeProgressState? state = GetActiveGenericRecipeState();
+            IRecipeProgressState? state = GetActiveGenericRecipeState();
             if (state == null || !state.HasSelectedRecipe)
             {
                 return $"{GetActionModeDisplayName()}待命（当前无可用项目）";
@@ -2168,7 +2236,11 @@ namespace Xiuxian.Scripts.Game
         {
             var result = new List<CharacterStatModifier>();
             Dictionary<string, int> items = _backpackState?.GetItemEntries() ?? new Dictionary<string, int>();
-            CharacterStatModifier formationModifier = ActivityEffectRules.CollectFormationModifier(_formationState?.SelectedRecipeId ?? string.Empty, items);
+            CharacterStatModifier formationModifier = ActivityEffectRules.CollectFormationModifier(
+                _formationState?.ActivePrimaryId ?? string.Empty,
+                _formationState?.ActiveSecondaryId ?? string.Empty,
+                items,
+                _subsystemMasteryState?.GetLevel(PlayerActionState.ModeFormation) ?? 1);
             if (!formationModifier.Equals(default(CharacterStatModifier)))
             {
                 result.Add(formationModifier);
@@ -2513,7 +2585,11 @@ namespace Xiuxian.Scripts.Game
         {
             if (_playerProgressState != null)
             {
-                lingqi *= 1.0 + ActivityEffectRules.CollectFormationLingqiRate(_formationState?.SelectedRecipeId ?? string.Empty, _backpackState?.GetItemEntries() ?? new Dictionary<string, int>());
+                lingqi *= 1.0 + ActivityEffectRules.CollectFormationLingqiRate(
+                    _formationState?.ActivePrimaryId ?? string.Empty,
+                    _formationState?.ActiveSecondaryId ?? string.Empty,
+                    _backpackState?.GetItemEntries() ?? new Dictionary<string, int>(),
+                    _subsystemMasteryState?.GetLevel(PlayerActionState.ModeFormation) ?? 1);
                 lingqi *= 1.0 + _playerProgressState.EnlightenmentLingqiBonusRate;
                 insight *= 1.0 + _playerProgressState.EnlightenmentInsightBonusRate;
             }

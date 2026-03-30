@@ -11,7 +11,7 @@ namespace Xiuxian.Scripts.Services
     /// </summary>
     public static class SaveMigrationRules
     {
-        public const int LatestVersion = 8;
+        public const int LatestVersion = 9;
 
         private const string DefaultLeftTab = "CultivationTab";
         private const string DefaultRightTab = "BugTab";
@@ -93,13 +93,17 @@ namespace Xiuxian.Scripts.Services
                             MigrateV6ToV7(cfg);
                             version = 7;
                             break;
-                        case 7:
-                            MigrateV7ToV8(cfg);
-                            version = 8;
-                            break;
-                        default:
-                            version = LatestVersion;
-                            break;
+                    case 7:
+                        MigrateV7ToV8(cfg);
+                        version = 8;
+                        break;
+                    case 8:
+                        MigrateV8ToV9(cfg);
+                        version = 9;
+                        break;
+                    default:
+                        version = LatestVersion;
+                        break;
                     }
                 }
                 catch (Exception ex)
@@ -139,6 +143,7 @@ namespace Xiuxian.Scripts.Services
                 (5, "resource", "wallet"),                      // v5→v6
                 (6, "mastery", "levels"),                       // v6→v7
                 (7, "progress", "player"),                      // v7→v8
+                (8, "formation", "state"),
             };
 
             foreach (var (fromMax, section, key) in requiredKeys)
@@ -396,6 +401,51 @@ namespace Xiuxian.Scripts.Services
             cfg.SetValue("mastery", "levels", mastery);
         }
 
+        private static void MigrateV8ToV9(IMigrationStore cfg)
+        {
+            Dictionary<string, object> formation = EnsureDictionaryValue(cfg, "formation", "state");
+            string selectedRecipeId = ReadString(GetDictionaryValue(formation, "selected_recipe"), string.Empty);
+            EnsureMissing(formation, "active_primary_id", string.Empty);
+            EnsureMissing(formation, "active_secondary_id", string.Empty);
+
+            if (!formation.ContainsKey("crafted_ids"))
+            {
+                formation["crafted_ids"] = BuildCraftedFormationIds(cfg, selectedRecipeId);
+            }
+
+            if (!formation.ContainsKey("inventory"))
+            {
+                formation["inventory"] = BuildFormationInventory(cfg, selectedRecipeId);
+            }
+
+            string activePrimaryId = ReadString(GetDictionaryValue(formation, "active_primary_id"), string.Empty);
+            if (string.IsNullOrEmpty(activePrimaryId))
+            {
+                Dictionary<string, object> inventory = GetDictionaryValue(formation, "inventory") as Dictionary<string, object>
+                    ?? new Dictionary<string, object>(StringComparer.Ordinal);
+                if (inventory.Count > 0)
+                {
+                    if (!string.IsNullOrEmpty(selectedRecipeId) && inventory.ContainsKey(selectedRecipeId))
+                    {
+                        formation["active_primary_id"] = selectedRecipeId;
+                    }
+                    else
+                    {
+                        foreach ((string formationId, object countValue) in inventory)
+                        {
+                            if (ReadInt(countValue, 0) > 0)
+                            {
+                                formation["active_primary_id"] = formationId;
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+
+            cfg.SetValue("formation", "state", formation);
+        }
+
         private static Dictionary<string, object> BuildGenericState()
         {
             return new Dictionary<string, object>(StringComparer.Ordinal)
@@ -404,6 +454,50 @@ namespace Xiuxian.Scripts.Services
                 ["progress"] = 0.0,
                 ["required_progress"] = 100.0,
             };
+        }
+
+        private static List<object> BuildCraftedFormationIds(IMigrationStore cfg, string selectedRecipeId)
+        {
+            Dictionary<string, object> inventory = BuildFormationInventory(cfg, selectedRecipeId);
+            var craftedIds = new List<object>();
+            foreach ((string formationId, object countValue) in inventory)
+            {
+                if (ReadInt(countValue, 0) > 0)
+                {
+                    craftedIds.Add(formationId);
+                }
+            }
+
+            return craftedIds;
+        }
+
+        private static Dictionary<string, object> BuildFormationInventory(IMigrationStore cfg, string selectedRecipeId)
+        {
+            Dictionary<string, object> backpack = EnsureDictionaryValue(cfg, "backpack", "items");
+            var inventory = new Dictionary<string, object>(StringComparer.Ordinal);
+            string[] formationIds =
+            {
+                "formation_spirit_plate",
+                "formation_guard_flag",
+                "formation_harvest_array",
+                "formation_craft_array",
+            };
+
+            foreach (string formationId in formationIds)
+            {
+                int count = backpack.ContainsKey(formationId) ? ReadInt(backpack[formationId], 0) : 0;
+                if (count > 0)
+                {
+                    inventory[formationId] = count;
+                }
+            }
+
+            if (!string.IsNullOrEmpty(selectedRecipeId) && !inventory.ContainsKey(selectedRecipeId))
+            {
+                inventory[selectedRecipeId] = 1;
+            }
+
+            return inventory;
         }
 
         private static void EnsureSectionState(IMigrationStore cfg, string section, Dictionary<string, object> defaults)

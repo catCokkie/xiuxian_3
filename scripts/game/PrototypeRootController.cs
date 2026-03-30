@@ -33,7 +33,7 @@ namespace Xiuxian.Scripts.Game
         private FishingState? _fishingState;
         private RecipeProgressState? _talismanState;
         private RecipeProgressState? _cookingState;
-        private RecipeProgressState? _formationState;
+        private FormationState? _formationState;
         private RecipeProgressState? _enlightenmentState;
         private RecipeProgressState? _bodyCultivationState;
         private ResourceWalletState? _resourceWalletState;
@@ -633,7 +633,11 @@ namespace Xiuxian.Scripts.Game
                 _levelConfigLoader.PlayerAttackPerRound);
             var extraModifiers = new List<CharacterStatModifier>
             {
-                ActivityEffectRules.CollectFormationModifier(_formationState?.SelectedRecipeId ?? string.Empty, _backpackState?.GetItemEntries() ?? new Dictionary<string, int>()),
+                ActivityEffectRules.CollectFormationModifier(
+                    _formationState?.ActivePrimaryId ?? string.Empty,
+                    _formationState?.ActiveSecondaryId ?? string.Empty,
+                    _backpackState?.GetItemEntries() ?? new Dictionary<string, int>(),
+                    _subsystemMasteryState?.GetLevel(PlayerActionState.ModeFormation) ?? 1),
                 ActivityEffectRules.CollectPermanentProgressModifier(new PlayerProgressPersistenceRules.PlayerProgressSnapshot(
                     _playerProgressState.RealmLevel,
                     _playerProgressState.RealmExp,
