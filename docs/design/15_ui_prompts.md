@@ -2,7 +2,7 @@
 
 > 用于在 v0.dev / Figma AI / Galileo AI 等工具中生成 UI 原型图。
 > 生成日期：2026-03-29
-> 页面总数：13（主底栏 + 书本外框 + 7 左 Tab + 1 右 Tab + 3 设置子页）
+> 页面总数：14（主底栏 + 书本外框 + 8 个核心内容页/卡片 + 1 右 Tab + 3 设置子页）
 
 ---
 
@@ -193,6 +193,70 @@ Bottom status line (right-aligned, 11px muted):
 
 Key design principle: this is the player's "inbox" — clean, scannable, no clutter.
 Font: 12-13px for entries, 11px for timestamps and status.
+```
+
+---
+
+## 4.6 修行节律提醒卡片 (Cultivation Rhythm Reminder Card)
+
+**文件**: `ToastController.cs` / `BookTabsController.cs` / future reminder overlay widget
+
+```
+Design an optional cultivation rhythm reminder card for a 修仙 desktop pet idle game.
+This is not a productivity app modal. It is a gentle “take a break + look what you gained”
+moment for long passive sessions. The card should feel like a small ritual slip or scholar's note
+floating above the bottom HUD, consistent with the warm parchment / wood / gold aesthetic.
+
+Context:
+- Triggered every 25 / 45 / 60 / 90 minutes depending on user setting
+- Reminder strength has 3 modes: 无提醒 / 弱提醒 / 强提醒
+- Default is 弱提醒
+- Must never feel like a forced interruption or system error
+
+Weak Reminder Layout (default):
+- Small horizontal parchment card, about 420×110px, bottom-center above the main HUD bar
+- Soft drop shadow, warm parchment background (#E7D8B8), 2px border #8E6440, rounded 8px
+- Left accent strip: muted gold (#C8A050), 6px wide
+- Top row:
+  - Title on left: "本轮修行小结" or "该休息了"
+  - Small elapsed time tag on right: "已连续修行 60 分钟"
+- Middle row: 3 compact stat chips with equal spacing
+  - "灵气 +328"
+  - "悟性 +14"
+  - "经验 +86"
+  Each chip is a tiny cream card with brown border, centered text
+- Bottom row:
+  - Left: one-line activity summary, e.g. "副本推进 +18%，击败妖兽 6，获得装备 1"
+  - Right: subtle suggestion text, e.g. "建议起身活动片刻"
+- Optional close icon on far top-right, very low emphasis
+- Animation: fade + slight upward slide, 0.2s in, 0.25s out
+
+Strong Reminder Layout:
+- Larger centered card, about 520×180px, appears above the HUD without covering the whole screen
+- Same parchment palette but with a brighter gold decorative top border and stronger shadow
+- Structure:
+  - Header: "该休息了" large title, warm dark brown text, gold divider line below
+  - Summary block: 2-column layout
+    - Left column: major gains this cycle (灵气 / 悟性 / 经验)
+    - Right column: current activity result (探索、炼丹、采集、突破、精通解锁 counts)
+  - Footer: one-line suggestion like
+    "你已持续修行一段时间。休息数分钟后再继续，也不会损失当前进度。"
+- One compact primary button: "知道了"
+- One low-emphasis text button: "本次不再提醒"
+- Important: still not a blocking modal, no dark fullscreen overlay, no focus stealing
+
+Visual language:
+- Feels like a scholar's memo tucked into a cultivation manual, not an operating system alert
+- Use parchment, wood-brown, muted gold, no neon colors, no modern productivity-app look
+- Typography should stay readable and compact, prioritizing quick scanning in 2-4 seconds
+
+Content examples:
+- "本轮修行小结｜灵气 +412｜悟性 +18｜副本推进 +22%｜获得法器 1"
+- "该休息了｜已连续修行 45 分钟｜炼丹完成 3 批，回气丹 +6"
+
+Design principle:
+- This card should make the player feel "I quietly accumulated something meaningful"
+  rather than "the software is interrupting my work".
 ```
 
 ---
