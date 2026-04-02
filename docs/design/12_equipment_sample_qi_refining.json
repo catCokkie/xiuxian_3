@@ -669,7 +669,7 @@
         "enhance_range": "+10 ~ +12",
         "primary": "equipment_shard x12 + talisman_shard x5",
         "auxiliary": [
-          { "item_id": "mithril_ore", "qty": 2 },
+          { "item_id": "mithril", "qty": 2 },
           { "item_id": "spirit_fruit", "qty": 1 },
           { "item_id": "spirit_pearl", "qty": 1 }
         ],

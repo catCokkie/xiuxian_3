@@ -37,7 +37,7 @@ xiuxian_4/
 | `02_systems.md` §4 | 副本循环模型，战斗失败后果，Boss 挑战，区域选择（原 06 已合并） |
 | `03_progression_and_balance.md` | 悟性消耗路径，日产消预算表，11 系统数值平衡 |
 | `13_offline_settlement.md` | §17 炼丹离线，§18 炼器离线，§18A-§18H 新系统离线 |
-| `14_save_migration.md` | v5→v6→v7→v8 迁移字段表 |
+| `14_save_migration.md` | v5→v6→v7→v8→v9 迁移字段表 |
 | `05_ui_style.md` | Toast 通知规范，11 模式选择器设计 |
 | `07_content_template.md` | §3.5 Boss 模板字段，§4a 丹药模板，采集/烹饪/体修模板 |
 | `01_core_loop.md` | 11 活动模式核心循环，资源蛛网，V2 扩展蓝图 |

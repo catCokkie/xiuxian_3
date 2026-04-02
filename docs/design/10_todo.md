@@ -11,7 +11,8 @@
 ## 当前进度记录（更新：2026-04-02）
 
 ### 总览
-- 代码任务：Phase 1–8 全部实现项除 `TASK-06` 外已全部落地，316/316 测试通过
+- 代码任务：Phase 1–8 主功能实现项除 `TASK-06` 外已全部落地
+- 测试现状：`dotnet test tests/Xiuxian2.Tests/Xiuxian2.Tests.csproj` 当前存在 1~2 项不稳定失败；2026-04-02 两次复跑分别为 `315/316` 与 `314/316`，集中在 `ActivityRegistryTests` / `GenericCraftingProgressionTests`
 - 存档版本：v9（v5→v6→v7→v8→v9 迁移链完整）
 - 子系统：11 个活动模式（原 12 个，悟道已移除），11 × 4 = 44 条精通定义总计 1900 悟性
 - 待人工验收：`TASK-06 场景文件 UTF-8 编码修复`
@@ -24,6 +25,7 @@
 | 优先级 | 编号 | 内容 | 对应文档 |
 |--------|------|------|---------|
 | P0 | N-04 | 符箓/体修代码↔文档对齐：代码中符箓只有 2 个英文名、体修只有 2 个功法，需补齐至文档定义的 3 个 | D-02/D-03 |
+| P0 | N-05 | ActivityRegistry / 通用配方测试稳定性修复：当前 `dotnet test` 复跑存在 1~2 项不稳定失败，集中在 `ActivityRegistryTests` / `GenericCraftingProgressionTests` | — |
 | P1 | — | 周天系统代码实现（§6.1 "运功周天"机制） | `02_systems.md` §6.1 |
 | P1 | — | 渐进解锁代码实现（§21 按 realm_level 解锁模式/Tab） | `02_systems.md` §21 |
 | P1 | — | 坊市系统代码实现（§22 四货架商店） | `02_systems.md` §22 |
@@ -99,7 +101,7 @@
 - **D-01 Toast 通知系统**：`ToastController.cs` 队列式通知，331 测试通过
 
 #### 2026-03-29
-- **`TASK-30~42` 全部落地**：熟练度/存档/UI/12 子系统横向扩展，存档升至 v8
+- **`TASK-30~42` 全部落地**：熟练度/存档/UI/原 12 子系统横向扩展，后续于 2026-04-02 清理为 11 系统，存档升至 v8
 - **存档安全加固**：SaveAllState 事务化、MigrateToLatest 按步回滚、ValidatePostMigration
 - **健壮性加固**：ReadStateSafe、null/负值防御、信号退订修复
 - **可维护性加固**：LevelDefaults 常量、IDictionaryPersistable、StatePersistenceManager
@@ -189,10 +191,9 @@
   - 已新增 `ISaveCloudProvider` / `NullCloudProvider` / `SteamCloudProvider`
   - `CloudSaveSyncService` 已改为 provider 工厂 + 接口调用，不再内嵌 Steam 反射桥实现
   - `dotnet test tests/Xiuxian2.Tests/Xiuxian2.Tests.csproj` 已通过（163/163）
-- `TASK-17 全局反挂机规则` ✅
-  - 已新增 `AfkDetectionRules`，定义 `60s -> 0.5x`、`120s -> 0x` 探索倍率
-  - `InputActivityState` 已追踪“距离上次输入秒数”和“本批输入前空闲秒数”
-  - 探索推进已接入反挂机倍率，AFK 时会暂停副本推进并显示暂停文案
+- `TASK-17 全局反挂机规则` ✅ → 已移除（2026-04-01）
+  - 原实现曾引入 `AfkDetectionRules` 与探索倍率衰减
+  - 现行版本已删除 AFK 检测、运行时倍率逻辑与相关存档/文档口径
 - `TASK-18 遭遇率境界缩放` ✅
   - 已按 `playerRealmLevel - zoneDangerLevel` 缩放遭遇率，并 clamp 到 `[0.05, 0.95]`
   - 当前关卡 `danger_level` 已接入运行时 `ActiveLevelManager` / `LevelConfigLoader`
@@ -259,7 +260,7 @@
 - 已新增 `scripts/services/FormationPersistenceRules.cs`，将阵法专用状态从 Godot Node 持久化逻辑中剥离，便于纯规则测试
 - `project.godot`、`scripts/services/ServiceLocator.cs`、`scripts/game/PrototypeRootController.cs`、`scripts/game/ExploreProgressController.Runtime.cs` 已切到专用 `FormationState`
 - 已新增 `scripts/services/IRecipeProgressState.cs`，用于兼容当前通用配方推进链路，避免阵法专用化后打断现有加工模式运行时逻辑
-- `tests/Xiuxian2.Tests/SaveRoundTripTests.cs` 已补阵法状态 round-trip 覆盖，当前 `dotnet test tests/Xiuxian2.Tests/Xiuxian2.Tests.csproj` 通过（320/320）
+- `tests/Xiuxian2.Tests/SaveRoundTripTests.cs` 已补阵法状态 round-trip 覆盖
 
 #### TASK-FORM-02: 阵法效果模型统一化（P2）
 **状态**: 进行中（2026-03-30）
@@ -296,7 +297,7 @@
 - 现有 `formation_spirit_plate` / `formation_guard_flag` 已切到 profile 查询，同时补入 `formation_harvest_array` / `formation_craft_array` 两个首批非战斗阵法定义
 - `GetModifier()` / `GetLingqiRewardRate()` 已改为从 profile 派生，兼容现有调用点；新增 `GetGatherSpeedRate()` / `GetCraftSpeedRate()` 供后续全局接线使用
 - `scripts/services/ActivityEffectRules.cs` 已改为统一通过 `GetActiveFormationProfile(...)` 读取阵法效果，避免战斗 / 收益入口各自维护判定逻辑
-- `tests/Xiuxian2.Tests/FormationRulesTests.cs` 已补 profile 语义覆盖：战斗阵、采集阵、加工阵、精通倍率、双槽与自修复；当前 `dotnet test tests/Xiuxian2.Tests/Xiuxian2.Tests.csproj` 通过（322/322）
+- `tests/Xiuxian2.Tests/FormationRulesTests.cs` 已补 profile 语义覆盖：战斗阵、采集阵、加工阵、精通倍率、双槽与自修复
 
 #### TASK-FORM-03: 全局生效链路接入（P1）
 **状态**: 进行中（2026-03-30）
@@ -325,7 +326,7 @@
 - 同文件已将阵法加工速度加成接入 `AdvanceAlchemyByInput()` / `AdvanceSmithingByInput()` / `AdvanceGenericRecipeByInput()`，通过统一 `ApplyProgressRate()` 缩放输入推进量
 - 当前推进链优先读取 `FormationState.ActivePrimaryId`，未激活时回退到 `SelectedRecipeId`，保证旧流程仍可感知阵法效果
 - `tests/Xiuxian2.Tests/ActivityEffectRulesTests.cs` 已补 `CollectFormationGatherSpeedRate()` / `CollectFormationCraftSpeedRate()` 运行时 helper 覆盖
-- 当前 `dotnet test tests/Xiuxian2.Tests/Xiuxian2.Tests.csproj` 通过（325/325）
+- 阵法对采集/加工链路的运行时 helper 覆盖已补齐
 
 #### TASK-FORM-04: 阵法切换 UI 与可视化（P2）
 **状态**: 进行中（2026-03-30）
@@ -354,7 +355,7 @@
 - 制作阵法成功后会同步记录到 `FormationState` 的 `crafted_ids/inventory`，且首次制作会自动激活为当前主阵法
 - `scripts/ui/UiText.cs` 已新增阵法效果摘要文案，`scripts/game/ExploreProgressPresentationRules.cs` 已新增 `BuildFormationStatusText()`
 - 装备页 / 修炼概况 / 主战斗轨道文案现在会显示当前生效阵法；Lv3 解锁后书卷 UI 也可切换副阵
-- `tests/Xiuxian2.Tests/ExploreProgressPresentationRulesTests.cs`、`tests/Xiuxian2.Tests/FormationRulesTests.cs`、`tests/Xiuxian2.Tests/ActivityEffectRulesTests.cs` 已覆盖阵法状态文案、双槽叠加与副阵半效规则，当前 `dotnet test tests/Xiuxian2.Tests/Xiuxian2.Tests.csproj` 通过（331/331）
+- `tests/Xiuxian2.Tests/ExploreProgressPresentationRulesTests.cs`、`tests/Xiuxian2.Tests/FormationRulesTests.cs`、`tests/Xiuxian2.Tests/ActivityEffectRulesTests.cs` 已覆盖阵法状态文案、双槽叠加与副阵半效规则
 
 #### TASK-FORM-05: 阵法存档迁移与测试收口（P1）
 **状态**: 进行中（2026-03-30）
@@ -376,7 +377,7 @@
 - v8→v9 现会为 `formation.state` 补齐 `active_primary_id` / `active_secondary_id` / `crafted_ids` / `inventory`，并优先从旧背包中的阵法物品推导库存与默认激活阵法
 - `tests/Xiuxian2.Tests/SaveMigrationRulesTests.cs` 已新增 v8 阵法状态迁移断言，覆盖旧 `selected_recipe/progress` 向专用阵法结构的升级
 - `tests/Xiuxian2.Tests/SaveRoundTripTests.cs` 已补阵法空结构/默认值 round-trip 测试，验证专用状态在缺字段场景下稳定恢复
-- 当前 `dotnet test tests/Xiuxian2.Tests/Xiuxian2.Tests.csproj` 通过（327/327）
+- 阵法专用状态的迁移与 round-trip 测试已补覆盖
 
 ---
 
