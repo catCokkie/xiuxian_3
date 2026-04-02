@@ -10,8 +10,8 @@ public sealed class SubsystemMasteryRulesTests
     {
         var all = SubsystemMasteryRules.GetAllDefinitions();
 
-        Assert.Equal(48, all.Count);
-        Assert.Equal(12, all.Select(def => def.SystemId).Distinct().Count());
+        Assert.Equal(44, all.Count);
+        Assert.Equal(11, all.Select(def => def.SystemId).Distinct().Count());
         Assert.All(all.GroupBy(def => def.SystemId), group =>
         {
             Assert.Equal(new[] { 1, 2, 3, 4 }, group.Select(def => def.Level).OrderBy(level => level).ToArray());
@@ -145,14 +145,6 @@ public sealed class SubsystemMasteryRulesTests
     }
 
     [Fact]
-    public void GetEffectValue_ReturnsEnlightenmentMeditationCapBonusAtLevel3()
-    {
-        double effect = SubsystemMasteryRules.GetEffectValue(PlayerActionState.ModeEnlightenment, 3, SubsystemMasteryRules.EnlightenmentMeditationCapBonusEffectId);
-
-        Assert.Equal(10.0, effect);
-    }
-
-    [Fact]
     public void GetEffectValue_ReturnsBodyCultivationTemperCapBonusAtLevel3()
     {
         double effect = SubsystemMasteryRules.GetEffectValue(PlayerActionState.ModeBodyCultivation, 3, SubsystemMasteryRules.BodyCultivationTemperCapBonusEffectId);
@@ -165,6 +157,6 @@ public sealed class SubsystemMasteryRulesTests
     {
         double total = SubsystemMasteryRules.GetAllDefinitions().Sum(def => def.InsightCost);
 
-        Assert.Equal(2080.0, total);
+        Assert.Equal(1900.0, total);
     }
 }

@@ -162,7 +162,7 @@ public sealed class SaveMigrationRulesTests
 
         Assert.Equal(9, System.Convert.ToInt32(cfg.GetValue("meta", "version", 0)));
         var mastery = (System.Collections.Generic.Dictionary<string, object>)cfg.GetValue("mastery", "levels", new System.Collections.Generic.Dictionary<string, object>());
-        Assert.Equal(12, mastery.Count);
+        Assert.Equal(11, mastery.Count);
         Assert.Equal(1L, System.Convert.ToInt64(mastery[PlayerActionState.ModeDungeon]));
         Assert.Equal(1L, System.Convert.ToInt64(mastery[PlayerActionState.ModeBodyCultivation]));
 
@@ -177,7 +177,6 @@ public sealed class SaveMigrationRulesTests
         Assert.Equal(100.0, System.Convert.ToDouble(formation["required_progress"]));
 
         var progress = (System.Collections.Generic.Dictionary<string, object>)cfg.GetValue("progress", "player", new System.Collections.Generic.Dictionary<string, object>());
-        Assert.Equal(0.0, System.Convert.ToDouble(progress["enlightenment_insight_bonus_rate"]));
         Assert.Equal(0L, System.Convert.ToInt64(progress["body_cultivation_temper_count"]));
     }
 
@@ -219,7 +218,6 @@ public sealed class SaveMigrationRulesTests
         Assert.Equal(100.0, System.Convert.ToDouble(body["required_progress"]));
 
         var progress = (System.Collections.Generic.Dictionary<string, object>)cfg.GetValue("progress", "player", new System.Collections.Generic.Dictionary<string, object>());
-        Assert.Equal(0.0, System.Convert.ToDouble(progress["enlightenment_lingqi_bonus_rate"]));
         Assert.Equal(0L, System.Convert.ToInt64(progress["body_cultivation_boneforge_count"]));
     }
 

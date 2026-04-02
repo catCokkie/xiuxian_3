@@ -38,7 +38,6 @@ namespace Xiuxian.Scripts.Game
                 PlayerActionState.ActionTalisman => "符箓",
                 PlayerActionState.ActionCooking => "烹饪",
                 PlayerActionState.ActionFormation => "阵法",
-                PlayerActionState.ActionEnlightenment => "悟道",
                 PlayerActionState.ActionBodyCultivation => "体修",
                 _ => "副本",
             };

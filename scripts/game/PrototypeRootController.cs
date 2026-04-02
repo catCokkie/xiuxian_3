@@ -35,7 +35,6 @@ namespace Xiuxian.Scripts.Game
         private RecipeProgressState? _talismanState;
         private RecipeProgressState? _cookingState;
         private FormationState? _formationState;
-        private RecipeProgressState? _enlightenmentState;
         private RecipeProgressState? _bodyCultivationState;
         private ResourceWalletState? _resourceWalletState;
         private PlayerProgressState? _playerProgressState;
@@ -76,7 +75,6 @@ namespace Xiuxian.Scripts.Game
             _talismanState = services?.TalismanState;
             _cookingState = services?.CookingState;
             _formationState = services?.FormationState;
-            _enlightenmentState = services?.EnlightenmentState;
             _bodyCultivationState = services?.BodyCultivationState;
             _resourceWalletState = services?.ResourceWalletState;
             _playerProgressState = services?.PlayerProgressState;
@@ -100,7 +98,6 @@ namespace Xiuxian.Scripts.Game
             _persistenceManager.Register("talisman", "state", _talismanState);
             _persistenceManager.Register("cooking", "state", _cookingState);
             _persistenceManager.Register("formation", "state", _formationState);
-            _persistenceManager.Register("enlightenment", "state", _enlightenmentState);
             _persistenceManager.Register("body_cultivation", "state", _bodyCultivationState);
             _persistenceManager.Register("resource", "wallet", _resourceWalletState);
             _persistenceManager.Register("progress", "player", _playerProgressState);
@@ -161,10 +158,6 @@ namespace Xiuxian.Scripts.Game
             if (_formationState != null)
             {
                 _formationState.RecipeProgressChanged += OnGenericRecipeProgressChanged;
-            }
-            if (_enlightenmentState != null)
-            {
-                _enlightenmentState.RecipeProgressChanged += OnGenericRecipeProgressChanged;
             }
             if (_bodyCultivationState != null)
             {
@@ -275,10 +268,6 @@ namespace Xiuxian.Scripts.Game
             {
                 _formationState.RecipeProgressChanged -= OnGenericRecipeProgressChanged;
             }
-            if (_enlightenmentState != null)
-            {
-                _enlightenmentState.RecipeProgressChanged -= OnGenericRecipeProgressChanged;
-            }
             if (_bodyCultivationState != null)
             {
                 _bodyCultivationState.RecipeProgressChanged -= OnGenericRecipeProgressChanged;
@@ -338,7 +327,7 @@ namespace Xiuxian.Scripts.Game
             }
         }
 
-        private void OnEconomyStateChanged(double lingqi, double insight, double petAffinity, int spiritStones)
+        private void OnEconomyStateChanged(double lingqi, double insight, int spiritStones)
         {
             MarkDirty();
         }
@@ -583,9 +572,7 @@ namespace Xiuxian.Scripts.Game
                     apPerInput: GameBalanceConstants.Offline.ApPerInput,
                     lingqiFactor: GameBalanceConstants.ResourceConversion.LingqiFactor,
                     insightFactor: GameBalanceConstants.ResourceConversion.InsightFactor,
-                    petAffinityFactor: GameBalanceConstants.ResourceConversion.PetAffinityFactor,
                     realmExpFromLingqiRate: GameBalanceConstants.ResourceConversion.RealmExpFromLingqiRate,
-                    moodMultiplier: _playerProgressState.GetMoodMultiplier(),
                     realmMultiplier: _playerProgressState.GetRealmMultiplier(),
                     inputExpActive: false,
                     actionTargetId: _playerActionState.ActionTargetId)
@@ -598,7 +585,6 @@ namespace Xiuxian.Scripts.Game
 
             _resourceWalletState.AddLingqi(result.LingqiGain);
             _resourceWalletState.AddInsight(result.InsightGain);
-            _resourceWalletState.AddPetAffinity(result.PetAffinityGain);
             _playerProgressState.AddRealmExp(result.RealmExpGain);
             if (_backpackState != null)
             {
@@ -627,7 +613,7 @@ namespace Xiuxian.Scripts.Game
         {
             if (_levelConfigLoader == null || _equippedItemsState == null || _playerProgressState == null)
             {
-                return new ActionSettlementResult(PlayerActionState.ActionDungeon, _playerActionState?.ActionTargetId ?? string.Empty, "offline_dungeon", 0, 0, 0, 0, 0, 0, 0, new Dictionary<string, int>(), Array.Empty<EquipmentInstanceData>());
+                return new ActionSettlementResult(PlayerActionState.ActionDungeon, _playerActionState?.ActionTargetId ?? string.Empty, "offline_dungeon", 0, 0, 0, 0, 0, 0, new Dictionary<string, int>(), Array.Empty<EquipmentInstanceData>());
             }
 
             double offlineInputBudget = OfflineSettlementRules.CalculateOfflineInputBudget(offlineSeconds);
@@ -645,16 +631,11 @@ namespace Xiuxian.Scripts.Game
                 ActivityEffectRules.CollectPermanentProgressModifier(new PlayerProgressPersistenceRules.PlayerProgressSnapshot(
                     _playerProgressState.RealmLevel,
                     _playerProgressState.RealmExp,
-                    _playerProgressState.PetMood,
                     _playerProgressState.HasUnlockedAdvancedAlchemyStudy,
                     _playerProgressState.CurrentRealmActiveSeconds,
-                    _playerProgressState.EnlightenmentInsightBonusRate,
-                    _playerProgressState.EnlightenmentLingqiBonusRate,
                     _playerProgressState.BodyCultivationMaxHpFlat,
                     _playerProgressState.BodyCultivationAttackFlat,
                     _playerProgressState.BodyCultivationDefenseFlat,
-                    _playerProgressState.MeditationCount,
-                    _playerProgressState.ContemplationCount,
                     _playerProgressState.TemperCount,
                     _playerProgressState.BoneforgeCount))
             };

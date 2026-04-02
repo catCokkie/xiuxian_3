@@ -25,7 +25,6 @@ namespace Xiuxian.Scripts.Services
         public const string ModeTalisman = "talisman";
         public const string ModeCooking = "cooking";
         public const string ModeFormation = "formation";
-        public const string ModeEnlightenment = "enlightenment";
         public const string ModeBodyCultivation = "body_cultivation";
 
         public const string ActionDungeon = ModeDungeon;
@@ -38,7 +37,6 @@ namespace Xiuxian.Scripts.Services
         public const string ActionTalisman = ModeTalisman;
         public const string ActionCooking = ModeCooking;
         public const string ActionFormation = ModeFormation;
-        public const string ActionEnlightenment = ModeEnlightenment;
         public const string ActionBodyCultivation = ModeBodyCultivation;
 
         private string _actionId = ActionDungeon;
@@ -89,7 +87,7 @@ namespace Xiuxian.Scripts.Services
             ActionDungeon, ActionCultivation, ActionAlchemy, ActionSmithing,
             ActionGarden, ActionMining, ActionFishing,
             ActionTalisman, ActionCooking, ActionFormation,
-            ActionEnlightenment, ActionBodyCultivation,
+            ActionBodyCultivation,
         };
 
         public void ToggleMode()

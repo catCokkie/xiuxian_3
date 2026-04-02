@@ -70,7 +70,6 @@ namespace Xiuxian.Scripts.Services
             RegisterTalisman();
             RegisterCooking();
             RegisterFormation();
-            RegisterEnlightenment();
             RegisterBodyCultivation();
         }
 
@@ -366,42 +365,7 @@ namespace Xiuxian.Scripts.Services
             Register(formation);
         }
 
-        private static void RegisterEnlightenment()
-        {
-            var enlightenment = new SimpleActivityDefinition
-            {
-                SystemId = PlayerActionState.ModeEnlightenment,
-                DisplayName = "悟道",
-                Category = ActivityCategory.Cultivation,
-                SupportsOffline = true,
-                OfflineEfficiency = 0.5,
-            };
 
-            enlightenment.AddRecipe(new SimpleRecipeDefinition
-            {
-                RecipeId = "enlightenment_meditation",
-                SystemId = PlayerActionState.ModeEnlightenment,
-                DisplayName = "冥想",
-                Inputs = System.Array.Empty<MaterialCost>(),
-                LingqiCost = 200.0,
-                RequiredInputEvents = 240,
-                Outputs = System.Array.Empty<MaterialOutput>(),
-                RequiredMasteryLevel = 1,
-            });
-            enlightenment.AddRecipe(new SimpleRecipeDefinition
-            {
-                RecipeId = "enlightenment_contemplation",
-                SystemId = PlayerActionState.ModeEnlightenment,
-                DisplayName = "参悟",
-                Inputs = new[] { new MaterialCost("spirit_pearl", 1) },
-                LingqiCost = 500.0,
-                RequiredInputEvents = 320,
-                Outputs = System.Array.Empty<MaterialOutput>(),
-                RequiredMasteryLevel = 2,
-            });
-
-            Register(enlightenment);
-        }
 
         private static void RegisterBodyCultivation()
         {

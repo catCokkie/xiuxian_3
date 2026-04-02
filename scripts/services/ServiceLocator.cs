@@ -19,7 +19,6 @@ namespace Xiuxian.Scripts.Services
         public RecipeProgressState? TalismanState { get; private set; }
         public RecipeProgressState? CookingState { get; private set; }
         public FormationState? FormationState { get; private set; }
-        public RecipeProgressState? EnlightenmentState { get; private set; }
         public RecipeProgressState? BodyCultivationState { get; private set; }
         public ResourceWalletState? ResourceWalletState { get; private set; }
         public PlayerProgressState? PlayerProgressState { get; private set; }
@@ -63,7 +62,6 @@ namespace Xiuxian.Scripts.Services
             TalismanState = GetNodeOrNull<RecipeProgressState>("/root/TalismanState");
             CookingState = GetNodeOrNull<RecipeProgressState>("/root/CookingState");
             FormationState = GetNodeOrNull<FormationState>("/root/FormationState");
-            EnlightenmentState = GetNodeOrNull<RecipeProgressState>("/root/EnlightenmentState");
             BodyCultivationState = GetNodeOrNull<RecipeProgressState>("/root/BodyCultivationState");
             ResourceWalletState = GetNodeOrNull<ResourceWalletState>("/root/ResourceWalletState");
             PlayerProgressState = GetNodeOrNull<PlayerProgressState>("/root/PlayerProgressState");

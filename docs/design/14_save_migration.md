@@ -84,7 +84,7 @@
 ## 已实现迁移：v6 -> v7（子系统熟练度 INSIGHT-MASTERY-CHANGE）
 
 > 关联任务：TASK-31
-> 核心变更：新增 `mastery.*` 存档字段，支持 12 系统熟练度持久化。
+> 核心变更：新增 `mastery.*` 存档字段，支持 11 系统熟练度持久化。
 
 ### 新增字段
 
@@ -139,9 +139,6 @@
 
 | 字段路径 | 默认值 | 来源 |
 |---------|---------|------|
-| `enlightenment.selected_technique` | `""` | 悟道：当前功法 |
-| `enlightenment.meditation_count` | `0` | 悟道：冥想累计次数 |
-| `enlightenment.insight_count` | `0` | 悟道：参悟累计次数 |
 | `body_cult.selected_technique` | `""` | 体修：当前功法 |
 | `body_cult.temper_count` | `0` | 体修：淬体累计次数 |
 | `body_cult.forge_count` | `0` | 体修：炼骨累计次数 |
@@ -156,13 +153,12 @@
 | `mastery.talisman_level` | `1` | 符箓精通 |
 | `mastery.cooking_level` | `1` | 烹饪精通 |
 | `mastery.formation_level` | `1` | 阵法精通 |
-| `mastery.enlightenment_level` | `1` | 悟道精通 |
 | `mastery.body_cultivation_level` | `1` | 体修精通 |
 
 ### 迁移特殊处理
 - 所有新字段均使用空/零默认值，无需从旧字段推导。
 - `formation.active_id = ""`：新存档无激活阵盘。
-- 全部 8 个新精通字段默认 `1`（初始等级）。
+- 全部 7 个新精通字段默认 `1`（初始等级）。
 - `garden.last_harvest_unix = 0`：首次收获时由运行时写入。
 
 ### 模式字段迁移

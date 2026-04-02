@@ -41,7 +41,7 @@ public sealed class ActivityEffectRulesTests
     public void CollectPermanentProgressModifier_ReturnsBodyCultivationStats()
     {
         CharacterStatModifier modifier = ActivityEffectRules.CollectPermanentProgressModifier(
-            new PlayerProgressPersistenceRules.PlayerProgressSnapshot(1, 0.0, 60, false, 0.0, 0.05, 0.08, 10, 4, 3, 2, 1, 3, 2));
+            new PlayerProgressPersistenceRules.PlayerProgressSnapshot(1, 0.0, false, 0.0, 10, 4, 3, 3, 2));
 
         Assert.Equal(10, modifier.MaxHpFlat);
         Assert.Equal(4, modifier.AttackFlat);

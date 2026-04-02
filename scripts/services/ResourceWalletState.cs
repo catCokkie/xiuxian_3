@@ -8,15 +8,13 @@ namespace Xiuxian.Scripts.Services
     public partial class ResourceWalletState : Node, IDictionaryPersistable
     {
         [Signal]
-        public delegate void WalletChangedEventHandler(double lingqi, double insight, double petAffinity, int spiritStones);
+        public delegate void WalletChangedEventHandler(double lingqi, double insight, int spiritStones);
 
         public double Lingqi { get; private set; }
         public double Insight { get; private set; }
-        public double PetAffinity { get; private set; }
         public int SpiritStones { get; private set; }
         public double TotalEarnedLingqi { get; private set; }
         public double TotalEarnedInsight { get; private set; }
-        public double TotalEarnedPetAffinity { get; private set; }
         public int TotalEarnedSpiritStones { get; private set; }
 
         public void AddLingqi(double amount)
@@ -28,7 +26,7 @@ namespace Xiuxian.Scripts.Services
 
             Lingqi += amount;
             TotalEarnedLingqi += amount;
-            EmitSignal(SignalName.WalletChanged, Lingqi, Insight, PetAffinity, SpiritStones);
+            EmitSignal(SignalName.WalletChanged, Lingqi, Insight, SpiritStones);
         }
 
         public bool SpendLingqi(double amount)
@@ -44,7 +42,7 @@ namespace Xiuxian.Scripts.Services
             }
 
             Lingqi -= amount;
-            EmitSignal(SignalName.WalletChanged, Lingqi, Insight, PetAffinity, SpiritStones);
+            EmitSignal(SignalName.WalletChanged, Lingqi, Insight, SpiritStones);
             return true;
         }
 
@@ -57,7 +55,7 @@ namespace Xiuxian.Scripts.Services
 
             Insight += amount;
             TotalEarnedInsight += amount;
-            EmitSignal(SignalName.WalletChanged, Lingqi, Insight, PetAffinity, SpiritStones);
+            EmitSignal(SignalName.WalletChanged, Lingqi, Insight, SpiritStones);
         }
 
         public bool SpendInsight(double amount)
@@ -73,20 +71,8 @@ namespace Xiuxian.Scripts.Services
             }
 
             Insight -= amount;
-            EmitSignal(SignalName.WalletChanged, Lingqi, Insight, PetAffinity, SpiritStones);
+            EmitSignal(SignalName.WalletChanged, Lingqi, Insight, SpiritStones);
             return true;
-        }
-
-        public void AddPetAffinity(double amount)
-        {
-            if (amount <= 0.0)
-            {
-                return;
-            }
-
-            PetAffinity += amount;
-            TotalEarnedPetAffinity += amount;
-            EmitSignal(SignalName.WalletChanged, Lingqi, Insight, PetAffinity, SpiritStones);
         }
 
         public void AddSpiritStones(int amount)
@@ -98,7 +84,7 @@ namespace Xiuxian.Scripts.Services
 
             SpiritStones += amount;
             TotalEarnedSpiritStones += amount;
-            EmitSignal(SignalName.WalletChanged, Lingqi, Insight, PetAffinity, SpiritStones);
+            EmitSignal(SignalName.WalletChanged, Lingqi, Insight, SpiritStones);
         }
 
         public bool SpendSpiritStones(int amount)
@@ -114,7 +100,7 @@ namespace Xiuxian.Scripts.Services
             }
 
             SpiritStones -= amount;
-            EmitSignal(SignalName.WalletChanged, Lingqi, Insight, PetAffinity, SpiritStones);
+            EmitSignal(SignalName.WalletChanged, Lingqi, Insight, SpiritStones);
             return true;
         }
 
@@ -123,11 +109,9 @@ namespace Xiuxian.Scripts.Services
             ResourceWalletPersistenceRules.WalletSnapshot snapshot = new(
                 Lingqi,
                 Insight,
-                PetAffinity,
                 SpiritStones,
                 TotalEarnedLingqi,
                 TotalEarnedInsight,
-                TotalEarnedPetAffinity,
                 TotalEarnedSpiritStones);
             return SaveValueConversionRules.ToVariantDictionary(ResourceWalletPersistenceRules.ToPlainDictionary(snapshot));
         }
@@ -138,13 +122,11 @@ namespace Xiuxian.Scripts.Services
                 SaveValueConversionRules.ToPlainDictionary(data));
             Lingqi = snapshot.Lingqi;
             Insight = snapshot.Insight;
-            PetAffinity = snapshot.PetAffinity;
             SpiritStones = snapshot.SpiritStones;
             TotalEarnedLingqi = snapshot.TotalEarnedLingqi;
             TotalEarnedInsight = snapshot.TotalEarnedInsight;
-            TotalEarnedPetAffinity = snapshot.TotalEarnedPetAffinity;
             TotalEarnedSpiritStones = snapshot.TotalEarnedSpiritStones;
-            EmitSignal(SignalName.WalletChanged, Lingqi, Insight, PetAffinity, SpiritStones);
+            EmitSignal(SignalName.WalletChanged, Lingqi, Insight, SpiritStones);
         }
     }
 }

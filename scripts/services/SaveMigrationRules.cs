@@ -378,17 +378,12 @@ namespace Xiuxian.Scripts.Services
             EnsureSectionState(cfg, "talisman", BuildGenericState());
             EnsureSectionState(cfg, "cooking", BuildGenericState());
             EnsureSectionState(cfg, "formation", BuildGenericState());
-            EnsureSectionState(cfg, "enlightenment", BuildGenericState());
             EnsureSectionState(cfg, "body_cultivation", BuildGenericState());
 
             Dictionary<string, object> progress = EnsureDictionaryValue(cfg, "progress", "player");
-            EnsureMissing(progress, "enlightenment_insight_bonus_rate", 0.0);
-            EnsureMissing(progress, "enlightenment_lingqi_bonus_rate", 0.0);
             EnsureMissing(progress, "body_cultivation_max_hp_flat", 0);
             EnsureMissing(progress, "body_cultivation_attack_flat", 0);
             EnsureMissing(progress, "body_cultivation_defense_flat", 0);
-            EnsureMissing(progress, "enlightenment_meditation_count", 0);
-            EnsureMissing(progress, "enlightenment_contemplation_count", 0);
             EnsureMissing(progress, "body_cultivation_temper_count", 0);
             EnsureMissing(progress, "body_cultivation_boneforge_count", 0);
             cfg.SetValue("progress", "player", progress);

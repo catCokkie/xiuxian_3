@@ -10,7 +10,6 @@ namespace Xiuxian.Scripts.Services
             double apConsumed,
             double lingqiGain,
             double insightGain,
-            double petAffinityGain,
             double realmExpGain)
         {
             return new ActionSettlementResult(
@@ -20,7 +19,6 @@ namespace Xiuxian.Scripts.Services
                 ApConsumed: Math.Max(0.0, apConsumed),
                 LingqiGain: Math.Max(0.0, lingqiGain),
                 InsightGain: Math.Max(0.0, insightGain),
-                PetAffinityGain: Math.Max(0.0, petAffinityGain),
                 RealmExpGain: Math.Max(0.0, realmExpGain),
                 ExploreProgressGain: 0.0,
                 BattleRoundsAdvanced: 0,
@@ -46,7 +44,6 @@ namespace Xiuxian.Scripts.Services
                 ApConsumed: 0.0,
                 LingqiGain: Math.Max(0.0, lingqiGain),
                 InsightGain: Math.Max(0.0, insightGain),
-                PetAffinityGain: 0.0,
                 RealmExpGain: Math.Max(0.0, realmExpGain),
                 ExploreProgressGain: Math.Max(0.0, exploreProgressGain),
                 BattleRoundsAdvanced: Math.Max(0, battleRoundsAdvanced),

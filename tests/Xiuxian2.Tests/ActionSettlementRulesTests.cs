@@ -12,7 +12,6 @@ public sealed class ActionSettlementRulesTests
             apConsumed: 42,
             lingqiGain: 30,
             insightGain: 2,
-            petAffinityGain: 1,
             realmExpGain: 0);
 
         Assert.Equal(PlayerActionState.ActionCultivation, result.ActionId);
@@ -71,14 +70,12 @@ public sealed class ActionSettlementRulesTests
             apConsumed: -5,
             lingqiGain: -1,
             insightGain: -2,
-            petAffinityGain: -3,
             realmExpGain: -4);
 
         Assert.Equal(string.Empty, result.ActionTargetId);
         Assert.Equal(0.0, result.ApConsumed);
         Assert.Equal(0.0, result.LingqiGain);
         Assert.Equal(0.0, result.InsightGain);
-        Assert.Equal(0.0, result.PetAffinityGain);
         Assert.Equal(0.0, result.RealmExpGain);
         Assert.False(result.HasAnyReward);
     }

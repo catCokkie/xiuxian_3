@@ -46,10 +46,6 @@ namespace Xiuxian.Scripts.Services
             {
                 gains.Add($"悟性+{result.InsightGain:0}");
             }
-            if (result.PetAffinityGain > 0.0)
-            {
-                gains.Add($"灵宠亲和+{result.PetAffinityGain:0}");
-            }
             if (result.RealmExpGain > 0.0)
             {
                 gains.Add($"境界经验+{result.RealmExpGain:0}");

@@ -12,7 +12,6 @@ namespace Xiuxian.Scripts.Services
             double apFinal10s,
             double lingqiGain,
             double insightGain,
-            double petAffinityGain,
             double realmExpGain);
 
         [Export] public NodePath ActivityStatePath = "/root/InputActivityState";
@@ -23,7 +22,6 @@ namespace Xiuxian.Scripts.Services
         [Export] public double SettlementIntervalSeconds = 10.0;
         [Export] public double LingqiFactor = GameBalanceConstants.ResourceConversion.LingqiFactor;
         [Export] public double InsightFactor = GameBalanceConstants.ResourceConversion.InsightFactor;
-        [Export] public double PetAffinityFactor = GameBalanceConstants.ResourceConversion.PetAffinityFactor;
         [Export] public double RealmExpFromLingqiRate = GameBalanceConstants.ResourceConversion.RealmExpFromLingqiRate;
         [Export] public bool CultivationInputExpEnabled = true;
         [Export] public double CultivationExpPerInput = GameBalanceConstants.ResourceConversion.CultivationExpPerInput;
@@ -120,22 +118,20 @@ namespace Xiuxian.Scripts.Services
 
             _progressState.AddRealmActiveSeconds(SettlementIntervalSeconds);
 
-            double moodMul = _progressState.GetMoodMultiplier();
+            double moodMul = 1.0;
             double realmMul = _progressState.GetRealmMultiplier();
 
             double lingqiGain = apFinal10s * LingqiFactor * moodMul * realmMul;
             double insightGain = apFinal10s * InsightFactor;
-            double petAffinityGain = apFinal10s * PetAffinityFactor;
             bool inputExpActive = CultivationInputExpEnabled
                 && PlayerActionCapabilityRules.HasCapability(_actionState, PlayerActionCapability.GrantsCultivationInputExp);
             double realmExpGain = inputExpActive ? 0.0 : lingqiGain * RealmExpFromLingqiRate;
 
             _walletState.AddLingqi(lingqiGain);
             _walletState.AddInsight(insightGain);
-            _walletState.AddPetAffinity(petAffinityGain);
             _progressState.AddRealmExp(realmExpGain);
 
-            EmitSignal(SignalName.SettlementApplied, apFinal10s, lingqiGain, insightGain, petAffinityGain, realmExpGain);
+            EmitSignal(SignalName.SettlementApplied, apFinal10s, lingqiGain, insightGain, realmExpGain);
         }
     }
 }

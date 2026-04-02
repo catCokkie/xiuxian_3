@@ -27,9 +27,6 @@ namespace Xiuxian.Scripts.Services
         public const string FormationEffectBonusEffectId = "formation_effect_bonus";
         public const string FormationDualSlotEffectId = "formation_dual_slot";
         public const string FormationSelfRepairEffectId = "formation_self_repair";
-        public const string EnlightenmentEfficiencyBonusEffectId = "enlightenment_efficiency_bonus";
-        public const string EnlightenmentMeditationCapBonusEffectId = "enlightenment_meditation_cap_bonus";
-        public const string EnlightenmentContemplationCapBonusEffectId = "enlightenment_contemplation_cap_bonus";
         public const string BodyCultivationEfficiencyBonusEffectId = "body_cultivation_efficiency_bonus";
         public const string BodyCultivationTemperCapBonusEffectId = "body_cultivation_temper_cap_bonus";
         public const string BodyCultivationBoneforgeCapBonusEffectId = "body_cultivation_boneforge_cap_bonus";
@@ -55,7 +52,6 @@ namespace Xiuxian.Scripts.Services
             PlayerActionState.ModeTalisman,
             PlayerActionState.ModeCooking,
             PlayerActionState.ModeFormation,
-            PlayerActionState.ModeEnlightenment,
             PlayerActionState.ModeBodyCultivation,
         };
 
@@ -230,11 +226,6 @@ namespace Xiuxian.Scripts.Services
                 Def(PlayerActionState.ModeFormation, 2, 30, 1, FormationEffectBonusEffectId, "阵法精通 Lv2 — 效果+10%", 0.10),
                 Def(PlayerActionState.ModeFormation, 3, 60, 2, FormationDualSlotEffectId, "阵法精通 Lv3 — 双槽", 2.0),
                 Def(PlayerActionState.ModeFormation, 4, 100, 3, FormationSelfRepairEffectId, "阵法精通 Lv4 — 自修复", 1.0),
-
-                Def(PlayerActionState.ModeEnlightenment, 1, 0, 1, "enlightenment_base", "悟道精通 Lv1", 0.0),
-                Def(PlayerActionState.ModeEnlightenment, 2, 30, 1, EnlightenmentEfficiencyBonusEffectId, "悟道精通 Lv2 — 效率+10%", 0.10),
-                Def(PlayerActionState.ModeEnlightenment, 3, 60, 2, EnlightenmentMeditationCapBonusEffectId, "悟道精通 Lv3 — 冥想上限+10", 10.0),
-                Def(PlayerActionState.ModeEnlightenment, 4, 90, 3, EnlightenmentContemplationCapBonusEffectId, "悟道精通 Lv4 — 参悟上限+5", 5.0),
 
                 Def(PlayerActionState.ModeBodyCultivation, 1, 0, 1, "body_cultivation_base", "体修精通 Lv1", 0.0),
                 Def(PlayerActionState.ModeBodyCultivation, 2, 30, 1, BodyCultivationEfficiencyBonusEffectId, "体修精通 Lv2 — 效率+10%", 0.10),

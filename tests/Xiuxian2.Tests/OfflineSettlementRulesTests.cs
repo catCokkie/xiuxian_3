@@ -49,9 +49,7 @@ public sealed class OfflineSettlementRulesTests
             apPerInput: 1.0,
             lingqiFactor: 0.9,
             insightFactor: 0.08,
-            petAffinityFactor: 0.03,
             realmExpFromLingqiRate: 0.25,
-            moodMultiplier: 1.0,
             realmMultiplier: 1.0,
             inputExpActive: false);
 
@@ -59,7 +57,6 @@ public sealed class OfflineSettlementRulesTests
         Assert.True(result.ApConsumed > 0.0);
         Assert.True(result.LingqiGain > 0.0);
         Assert.True(result.InsightGain > 0.0);
-        Assert.True(result.PetAffinityGain > 0.0);
         Assert.True(result.RealmExpGain > 0.0);
     }
 }

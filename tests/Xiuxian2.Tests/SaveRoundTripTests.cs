@@ -80,11 +80,9 @@ public sealed class SaveRoundTripTests
         ResourceWalletPersistenceRules.WalletSnapshot expected = new(
             Lingqi: 100.5,
             Insight: 14.5,
-            PetAffinity: 9.0,
             SpiritStones: 12,
             TotalEarnedLingqi: 120.5,
             TotalEarnedInsight: 18.0,
-            TotalEarnedPetAffinity: 9.0,
             TotalEarnedSpiritStones: 16);
 
         Dictionary<string, object> data = ResourceWalletPersistenceRules.ToPlainDictionary(expected);
@@ -92,11 +90,9 @@ public sealed class SaveRoundTripTests
 
         Assert.Equal(100.5, restored.Lingqi, 6);
         Assert.Equal(14.5, restored.Insight, 6);
-        Assert.Equal(9.0, restored.PetAffinity, 6);
         Assert.Equal(12, restored.SpiritStones);
         Assert.Equal(120.5, restored.TotalEarnedLingqi, 6);
         Assert.Equal(18.0, restored.TotalEarnedInsight, 6);
-        Assert.Equal(9.0, restored.TotalEarnedPetAffinity, 6);
         Assert.Equal(16, restored.TotalEarnedSpiritStones);
     }
 
@@ -106,11 +102,8 @@ public sealed class SaveRoundTripTests
         PlayerProgressPersistenceRules.PlayerProgressSnapshot expected = new(
             RealmLevel: 2,
             RealmExp: 37.5,
-            PetMood: 88,
             AdvancedAlchemyStudyUnlocked: true,
             CurrentRealmActiveSeconds: 123.4,
-            EnlightenmentInsightBonusRate: 0.05,
-            EnlightenmentLingqiBonusRate: 0.08,
             BodyCultivationMaxHpFlat: 10,
             BodyCultivationAttackFlat: 4,
             BodyCultivationDefenseFlat: 3);
@@ -120,11 +113,8 @@ public sealed class SaveRoundTripTests
 
         Assert.Equal(2, restored.RealmLevel);
         Assert.Equal(37.5, restored.RealmExp, 6);
-        Assert.Equal(88, restored.PetMood);
         Assert.True(restored.AdvancedAlchemyStudyUnlocked);
         Assert.Equal(123.4, restored.CurrentRealmActiveSeconds, 6);
-        Assert.Equal(0.05, restored.EnlightenmentInsightBonusRate, 6);
-        Assert.Equal(0.08, restored.EnlightenmentLingqiBonusRate, 6);
         Assert.Equal(10, restored.BodyCultivationMaxHpFlat);
         Assert.Equal(4, restored.BodyCultivationAttackFlat);
         Assert.Equal(3, restored.BodyCultivationDefenseFlat);

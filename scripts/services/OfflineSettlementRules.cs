@@ -59,9 +59,7 @@ namespace Xiuxian.Scripts.Services
             double apPerInput,
             double lingqiFactor,
             double insightFactor,
-            double petAffinityFactor,
             double realmExpFromLingqiRate,
-            double moodMultiplier,
             double realmMultiplier,
             bool inputExpActive,
             string actionTargetId = "")
@@ -70,9 +68,8 @@ namespace Xiuxian.Scripts.Services
             double inputBudget = CalculateOfflineInputBudget(evaluated.EffectiveOfflineSeconds);
             double offlineAp = inputBudget * apPerInput;
 
-            double lingqiGain = offlineAp * lingqiFactor * moodMultiplier * realmMultiplier;
+            double lingqiGain = offlineAp * lingqiFactor * realmMultiplier;
             double insightGain = offlineAp * insightFactor;
-            double petAffinityGain = offlineAp * petAffinityFactor;
             double realmExpGain = inputExpActive ? 0.0 : lingqiGain * realmExpFromLingqiRate;
 
             return ActionSettlementRules.BuildCultivationSettlement(
@@ -80,7 +77,6 @@ namespace Xiuxian.Scripts.Services
                 offlineAp,
                 lingqiGain,
                 insightGain,
-                petAffinityGain,
                 realmExpGain);
         }
 

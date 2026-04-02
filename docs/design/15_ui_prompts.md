@@ -1,8 +1,8 @@
-# UI 页面设计提示词
+@# UI 页面设计提示词
 
 > 用于在 v0.dev / Figma AI / Galileo AI 等工具中生成 UI 原型图。
 > 生成日期：2026-03-29
-> 页面总数：14（主底栏 + 书本外框 + 8 个核心内容页/卡片 + 1 右 Tab + 3 设置子页）
+> 页面总数：16（主底栏 + 书本外框 + 6 左 Tab + 坊市 + 1 右 Tab + 4 设置子页 + 首启隐私卡片）
 
 ---
 
@@ -48,7 +48,7 @@ Row 1 — Battle Visualization (top, Y:6–164):
 Row 2 — Controls (bottom strip, Y:172, height:26px):
 Left group:
 - RealmStageLabel: "炼气3层 45%" (gold text)
-- ActionMode dropdown: "副本" (shows 12 modes: 副本/修炼/炼丹/炼器/灵田/矿脉/灵渔/符箓/烹饪/阵法/悟道/体修)
+- ActionMode dropdown: "副本" (only shows unlocked modes; initial: 副本/修炼/炼丹; others unlock progressively by realm_level, see 02_systems.md §21)
 - LevelOption dropdown: "幽泉洞外围 (lv_qi_001)"
 
 Center-right group:
@@ -77,10 +77,13 @@ Structure:
 - Top-left: "X" close button (44×32)
 - Top strip (Y:8–46): horizontal tab bar
   - Left-aligned tabs (toggle buttons, separated 4px):
-    "修炼概况" | "动态" | "战斗日志" | "装备情况" | "背包" | "统计概览" | "配置校验"
+    Only shows unlocked tabs. Initial: "修炼概况" | "动态"
+    Unlock later: "装备情况" (first equipment) | "背包" (first item) | "统计概览" (realm≥3) | "配置校验" (dev toggle)
     Active tab: darker brown fill, pressed state
   - Right-aligned tabs (separated 6px):
-    "Bug反馈" | "设置"
+    "Bug反馈" | "设置" (always visible)
+  - New tab unlock: tab appears with 3s gold glow animation, then returns to normal style
+  - See 02_systems.md §21 for full unlock conditions
 - Center body (Y:54–456): SpreadBody panel, #D7C7A7 background, 2px border #8E6440, rounded 8px
   - Inner LeftPage panel (12px margins): #CDB896 background, 1px border, rounded 6px
     - LeftTitle label (top-left, 16px from edges)
@@ -128,32 +131,9 @@ Bottom section — Scrollable RichText:
 
 ---
 
-## 4. 战斗日志 (Battle Log Tab)
+## 4. 动态 (Event Feed Tab — includes Battle Log)
 
-**文件**: `BookTabsController.cs` → `BuildBattleLogText()`
-
-```
-Design the "战斗日志" (Battle Log) page, 856×336px, parchment background.
-
-Simple scrollable text log with recent combat entries, newest at top.
-Each battle entry block:
-- Header line: "[14:32:05] 遭遇 阴潮蛇 (精英)" — timestamp + enemy name + type badge
-  Elite enemies: amber highlight. Boss: red highlight. Normal: no highlight.
-- Result line: "战斗胜利 — 3 回合" or "战斗失败 — 超时"
-  Win: green text. Loss: red text.
-- Rewards line: "掉落：灵草 x2, 灵气 +45, 寒铁矿 x1"
-  Items in brackets with quantity.
-- Separator: thin horizontal line (#B8A080)
-
-If no battles yet: centered placeholder text "暂无战斗记录。开始探索后，战斗日志将显示在此处。"
-
-Layout: pure vertical scroll, no columns, monospace-like alignment for readability.
-Font size: 12px for entries, 11px for timestamps.
-```
-
----
-
-## 4.5 动态 (Event Feed Tab)
+> 原"战斗日志"Tab 已合并至此。战斗事件通过"战斗"筛选按钮查看，不再有独立战斗日志 Tab。
 
 **文件**: `BookTabsController.cs` → `BuildEventFeedUi()` / `EventLogState.cs`
 
@@ -165,22 +145,33 @@ looks away — they can scroll through everything that happened while they were 
 
 Top — Filter Row (horizontal, 8px gap):
 - 7 small toggle buttons, each a category filter:
-  "全部" (default active, gold highlight) | "战斗" | "制作" | "突破" | "精通" | "装备" | "系统"
+  "全部" (default active, gold highlight) | "战斗" | "制作" | "突破" | "精通" | "装备" | "系统" | "周天"
   Active: filled gold accent (#C8A050). Inactive: outline only.
   Multiple filters can be active simultaneously. "全部" deselects others.
 
 Middle — Scrollable Event List (full remaining height):
 Each event entry is a single row or compact block:
 - Timestamp (left, 11px, muted #5C4633): "14:32"
-- Category icon (inline, 12px): ⚔ battle / ⚗ craft / ⬆ breakthrough / ⭐ mastery / 🛡 equipment / ⌛ system
+- Category icon (inline, 12px): ⚔ battle / ⚗ craft / ⬆ breakthrough / ⭐ mastery / 🛡 equipment / ⌛ system / 🔄 cycle
 - Message (13px, dark text #4B3622):
-  - Battle: "击败 阴潮蛇（精英）— 掉落：灵草×2, 寒铁×1"
+  - Battle: "击败 阴潮蛇（精英）— 3回合 — 掉落：灵草×2, 寒铁×1"
+  - Battle loss: "败于 暗穴蛛王 — 超时"
   - Craft: "炼丹完成 ×5 — 回气丹×3, 聚灵散×2"
   - Breakthrough: "突破成功 → 炼气3层" (金色 #C8A050)
   - Mastery: "领悟成功 → 副本精通 Lv3" (金色)
   - Equipment: "获得 寒铁剑 [法器]" (稀有度着色)
-  - System: "离线结算：2.5 小时 — 灵气+1200, 惟性+45"
+  - System: "离线结算：2.5 小时 — 灵气+1200, 悟性+45"
+  - Cycle: "小周天·第3轮圆满 — 悟性+3（周天奖励）"
 - Separator: 1px horizontal line (#D0C0A0), subtle
+
+"战斗" filter view (selecting "战斗" button):
+- Shows only battle events, but with expanded detail compared to "全部" view:
+  - Header line: "[14:32:05] 遭遇 阴潮蛇 (精英)" — timestamp + enemy name + type badge
+    Elite enemies: amber highlight. Boss: red highlight. Normal: no highlight.
+  - Result line: "战斗胜利 — 3 回合" or "战斗失败 — 超时"
+    Win: green text. Loss: red text.
+  - Rewards line: "掉落：灵草 x2, 灵气 +45, 寒铁矿 x1"
+  This expanded format replaces the former standalone "战斗日志" Tab.
 
 High-value events have accent styling:
 - Breakthrough / 宝器-tier equipment: gold left-border (3px #C8A050)
@@ -193,70 +184,6 @@ Bottom status line (right-aligned, 11px muted):
 
 Key design principle: this is the player's "inbox" — clean, scannable, no clutter.
 Font: 12-13px for entries, 11px for timestamps and status.
-```
-
----
-
-## 4.6 修行节律提醒卡片 (Cultivation Rhythm Reminder Card)
-
-**文件**: `ToastController.cs` / `BookTabsController.cs` / future reminder overlay widget
-
-```
-Design an optional cultivation rhythm reminder card for a 修仙 desktop pet idle game.
-This is not a productivity app modal. It is a gentle “take a break + look what you gained”
-moment for long passive sessions. The card should feel like a small ritual slip or scholar's note
-floating above the bottom HUD, consistent with the warm parchment / wood / gold aesthetic.
-
-Context:
-- Triggered every 25 / 45 / 60 / 90 minutes depending on user setting
-- Reminder strength has 3 modes: 无提醒 / 弱提醒 / 强提醒
-- Default is 弱提醒
-- Must never feel like a forced interruption or system error
-
-Weak Reminder Layout (default):
-- Small horizontal parchment card, about 420×110px, bottom-center above the main HUD bar
-- Soft drop shadow, warm parchment background (#E7D8B8), 2px border #8E6440, rounded 8px
-- Left accent strip: muted gold (#C8A050), 6px wide
-- Top row:
-  - Title on left: "本轮修行小结" or "该休息了"
-  - Small elapsed time tag on right: "已连续修行 60 分钟"
-- Middle row: 3 compact stat chips with equal spacing
-  - "灵气 +328"
-  - "悟性 +14"
-  - "经验 +86"
-  Each chip is a tiny cream card with brown border, centered text
-- Bottom row:
-  - Left: one-line activity summary, e.g. "副本推进 +18%，击败妖兽 6，获得装备 1"
-  - Right: subtle suggestion text, e.g. "建议起身活动片刻"
-- Optional close icon on far top-right, very low emphasis
-- Animation: fade + slight upward slide, 0.2s in, 0.25s out
-
-Strong Reminder Layout:
-- Larger centered card, about 520×180px, appears above the HUD without covering the whole screen
-- Same parchment palette but with a brighter gold decorative top border and stronger shadow
-- Structure:
-  - Header: "该休息了" large title, warm dark brown text, gold divider line below
-  - Summary block: 2-column layout
-    - Left column: major gains this cycle (灵气 / 悟性 / 经验)
-    - Right column: current activity result (探索、炼丹、采集、突破、精通解锁 counts)
-  - Footer: one-line suggestion like
-    "你已持续修行一段时间。休息数分钟后再继续，也不会损失当前进度。"
-- One compact primary button: "知道了"
-- One low-emphasis text button: "本次不再提醒"
-- Important: still not a blocking modal, no dark fullscreen overlay, no focus stealing
-
-Visual language:
-- Feels like a scholar's memo tucked into a cultivation manual, not an operating system alert
-- Use parchment, wood-brown, muted gold, no neon colors, no modern productivity-app look
-- Typography should stay readable and compact, prioritizing quick scanning in 2-4 seconds
-
-Content examples:
-- "本轮修行小结｜灵气 +412｜悟性 +18｜副本推进 +22%｜获得法器 1"
-- "该休息了｜已连续修行 45 分钟｜炼丹完成 3 批，回气丹 +6"
-
-Design principle:
-- This card should make the player feel "I quietly accumulated something meaningful"
-  rather than "the software is interrupting my work".
 ```
 
 ---
@@ -293,7 +220,6 @@ Bottom — Equipped Items (scrollable):
   "强化目标：寒铁剑 +3 (65%)" with progress bar
 
 - Permanent bonuses section:
-  "悟道加成：灵气收益 +4%, 悟性收益 +10%"
   "体修加成：气血 +3, 攻击 +2, 防御 +1"
 ```
 
@@ -339,39 +265,72 @@ Empty state: centered text "背包空空如也" in muted brown.
 ## 7. 统计概览 (Stats Overview Tab)
 
 **文件**: `BookTabsController.cs` → `BuildStatsOverviewText()`
+**解锁**: realm ≥ 3（渐进解锁 §21）
 
 ```
 Design the "统计概览" (Stats Overview) page, 856×336px, parchment background.
-Pure text page, no interactive elements. Scrollable.
+Scrollable vertical layout. No interactive elements, pure data dashboard.
 
-Title: "统计概览" (dark brown, 16px)
+Title: "统计概览" (dark brown, 16px bold)
 
-Content organized as a vertical list of stat entries, left-aligned:
-Each entry: "● 统计名称：数值" format, 13px text, 6px line spacing.
+Content: 5 collapsible sections, each with header + stat entries.
+Section headers: 14px bold, gold left-border 3px #C8A050, 
+  click to collapse/expand (default all expanded).
+Stat entries: "● 统计名称：数值" format, 13px, 6px line spacing.
+Numbers right-aligned for easy scanning.
+Subtle horizontal dividers (#D4C4A0, 1px) between sections.
 
-Section "输入统计":
-- 累计按键次数：12,345
-- 累计鼠标点击：8,901
-- 累计滚轮刻度：2,456
-- 累计鼠标移动距离：1,234,567 像素
-- 累计在线时长：14,520 秒 (≈4.0 小时)
+--- Section 1: "总览" ---
+- 游戏总时长：14h 32m（活跃输入时间）
+- 真实经过天数：7 天
+- 累计按键次数：34,567
+- 累计鼠标点击：12,345
+- 累计滚轮刻度：5,678
+- 小周天完成数：42
+- 大周天完成数：8
+- 调息次数：38
 
-Section "成长统计":
-- 历史最高境界：炼气 5 层
-- 当前境界天数：2.3 天
-
-Section "战斗统计":
-- 累计战斗场次：567
-- 战斗胜率：78.3%
-
-Section "资源统计":
-- 累计获得灵气：45,678
+--- Section 2: "资源" ---
+- 累计获得灵气：145,678
+- 累计消耗灵气：132,400
+- 累计获得灵石：2,340
+- 累计消耗灵石：1,870（坊市 1,200 / 种子 450 / 其他 220）
 - 累计获得悟性：890.5
-- 累计获得亲密度：234
-- 累计获得灵石：56
+- 累计消耗悟性：720.0
 
-Clean, data-dashboard feel. Numbers right-aligned or tabulated for easy scanning.
-Subtle horizontal dividers between sections.
+--- Section 3: "战斗" ---
+- 累计战斗场次：567
+- 总胜率：78.3%
+- 累计击杀怪物：443
+- 最高连胜：23 场
+- Boss 首杀记录：（列表，每行 = Boss名 + 首杀日期）
+  - 蛛后·幽缠 — 第 2 天
+  - 蝠王·暗啸 — 第 4 天
+- 累计消耗丹药：45
+- 累计消耗符咒：23
+
+--- Section 4: "制作与采集" ---
+Per-system stats, one line each:
+- 炼丹：制作 89 次 | 精通 Lv 3
+- 炼器：制作 34 次 | 精通 Lv 2
+- 符箓：制作 12 次 | 精通 Lv 1
+- 烹饪：制作 28 次 | 精通 Lv 2
+- 矿脉：采集 156 次 | 精通 Lv 3
+- 灵渔：采集 98 次 | 精通 Lv 2
+- 修炼：完成 234 次
+
+--- Section 5: "灵田" ---
+- 总播种次数：67
+- 总收获次数：62
+- 作物统计：（列表）
+  - 灵草：收获 35 次，产出 105 株
+  - 灵花：收获 18 次，产出 36 朵
+  - 灵果：收获 9 次，产出 9 颗
+- 催熟使用次数：5
+- 田位数量：4 / 6
+
+Data source: ResourceWalletState.TotalEarned* fields + 
+  new PlayerStatsState tracking object (cumulative counters).
 ```
 
 ---
@@ -451,8 +410,8 @@ Clean, minimal, focused on text input. No complex layout.
 ```
 Design the "设置 > 系统" (Settings > System) page, 856×336px, parchment background.
 
-Top — Section navigation (3 toggle buttons, horizontal):
-"系统" (active, highlighted) | "画面" | "进度"
+Top — Section navigation (4 toggle buttons, horizontal):
+"系统" (active, highlighted) | "画面" | "进度" | "隐私"
 Active: darker brown fill. Inactive: outline only.
 
 Content — Vertical list of setting rows, each row is:
@@ -481,7 +440,7 @@ Clean form layout, aligned labels and controls.
 ```
 Design the "设置 > 画面" (Settings > Display) page, same frame as System tab.
 
-Top: "系统" | "画面" (active) | "进度" navigation
+Top: "系统" | "画面" (active) | "进度" | "隐私" navigation
 
 Setting rows:
 1. "主界面分辨率" — Dropdown: "1280x720" / "1600x900" / "1920x1080" / "2560x1440"
@@ -502,7 +461,7 @@ Same form layout style as System section.
 ```
 Design the "设置 > 进度" (Settings > Progress) page, same frame as System tab.
 
-Top: "系统" | "画面" | "进度" (active) navigation
+Top: "系统" | "画面" | "进度" (active) | "隐私" navigation
 
 Setting rows:
 1. "自动存档频率" — Dropdown: "5秒" / "10秒" / "30秒" / "60秒"
@@ -511,6 +470,106 @@ Setting rows:
 3. "全局调试信息" — Checkbox toggle (shows debug overlay)
 
 Fewer items than other sections. Clean, spacious layout.
+```
+
+---
+
+## 13. 设置 — 隐私与采集 (Settings → Privacy)
+
+**文件**: `BookTabsController.cs` → `BuildSettingsUi()`
+
+```
+Design the "设置 > 隐私" (Settings > Privacy) page, same frame as System tab.
+
+Top: "系统" | "画面" | "进度" | "隐私" (active) navigation
+
+Setting rows:
+1. "输入采集" — Toggle switch (开/关), default ON
+   Hint text below: "关闭后游戏将暂停所有键鼠统计，修炼进度停止。"
+2. "采集状态" — Read-only label, dynamic:
+   ON → "采集中 · 本次会话已记录 {N} 次操作"
+   OFF → "已暂停"
+3. "隐私声明" — Read-only text block (muted, small font):
+   "本应用仅统计键盘/鼠标操作次数，不记录按键内容或屏幕信息。
+    所有数据仅存储在本地，不上传至任何服务器。
+    您可随时通过上方开关暂停采集。"
+
+Clean layout, generous vertical spacing. Privacy statement text uses
+#8B7355 color, 12px font.
+```
+
+---
+
+## 14. 首次启动隐私说明卡片 (First-Launch Privacy Card)
+
+**文件**: `PrototypeRootController.cs` → `ShowFirstLaunchPrivacyCard()`
+
+```
+Design a first-launch privacy notice card, centered on screen.
+Only shown ONCE on first ever launch (flag saved to local config).
+
+Card: 480×220px, parchment background (#F5E6C8), rounded corners 8px,
+      subtle drop shadow, border 1px #C8A050.
+
+Content (centered, vertical stack, 16px padding):
+- Icon: lock SVG, 32px, centered
+- Title: "隐私说明" — bold, 18px, #4A3728
+- Body (14px, #6B5B4E, line-height 1.6):
+  "本应用通过统计键盘与鼠标的操作次数来驱动游戏进度。
+   我们不记录任何按键内容或屏幕信息。
+   所有数据仅保存在您的电脑上。"
+- Spacer 12px
+- Button: "了解，开始修行" — gold fill (#C8A050), white text,
+  centered, 160×36px, click → close card & set flag
+
+Background: semi-transparent dark overlay (#000, 0.3 opacity)
+Card appears with a gentle fade-in (0.3s).
+```
+
+---
+
+## §15 坊市页面（Spirit Stone Shop）
+
+> realm ≥ 2 解锁，书本窗口左侧 Tab 之一。Melvor GP Shop 风格分类货架。
+
+```
+Page: "坊市" — Spirit Stone Shop
+Layout: Left vertical sub-tabs (4 categories) + right content area
+
+Top bar:
+- Title: "坊市" — bold 18px #4A3728
+- Balance badge (right-aligned): coin icon + "灵石: {amount}" — 16px #C8A050
+
+Left sub-tabs (vertical, 80px wide, stacked):
+- "消耗品" (default selected)
+- "扩容"
+- "便利"
+- "稀有"
+Active tab: gold left-border 3px #C8A050, bg #FAF0DC
+Inactive: bg transparent, text #8B7355
+
+Right content area — scrollable grid of shop items:
+Each item card (full-width row, 48px height):
+- Left: item icon (24×24)
+- Center: item name (14px bold #4A3728) + description (12px #8B7355)
+- Right: price button
+  - Affordable: gold bg #C8A050, white text "{price} 灵石", clickable
+  - Cannot afford: border #C8A050, text #C8A050 dim, price in red
+  - Sold out (limited purchase): grey bg #D0C8B8, text "已购" 
+  - Daily limit reached: grey bg, text "今日已购 {n}/{max}"
+
+Item rows separated by 1px #E8DCC8 divider.
+
+Sub-tab: "扩容"
+- Items that require mastery level show lock icon + "需精通Lv{n}"
+  if mastery not met — item visible but not purchasable.
+
+Sub-tab: "稀有"
+- Items with collection mechanic: show progress "残页 {owned}/10"
+  below item name in 11px #8B7355.
+
+Toast on purchase: "购入 {item_name} ×{qty}" — standard event toast style.
+Purchase also writes to 动态 Tab: "坊市：购入 {item_name} ×{qty}，花费 {price} 灵石"
 ```
 
 ---

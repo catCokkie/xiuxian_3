@@ -48,12 +48,10 @@ public sealed class ActivityRegistryTests
         Assert.Equal("符箓", ActivityRegistry.GetBySystem(PlayerActionState.ModeTalisman)!.DisplayName);
         Assert.Equal("烹饪", ActivityRegistry.GetBySystem(PlayerActionState.ModeCooking)!.DisplayName);
         Assert.Equal("阵法", ActivityRegistry.GetBySystem(PlayerActionState.ModeFormation)!.DisplayName);
-        Assert.Equal("悟道", ActivityRegistry.GetBySystem(PlayerActionState.ModeEnlightenment)!.DisplayName);
         Assert.Equal("体修", ActivityRegistry.GetBySystem(PlayerActionState.ModeBodyCultivation)!.DisplayName);
         Assert.Equal("talisman_fire_charm", ActivityRegistry.GetRecipe("talisman_fire_charm")!.Outputs[0].ItemId);
         Assert.Equal("food_spirit_porridge", ActivityRegistry.GetRecipe("cooking_spirit_porridge")!.Outputs[0].ItemId);
         Assert.Equal("formation_spirit_plate", ActivityRegistry.GetRecipe("formation_spirit_plate")!.Outputs[0].ItemId);
-        Assert.Empty(ActivityRegistry.GetRecipe("enlightenment_meditation")!.Outputs);
         Assert.Empty(ActivityRegistry.GetRecipe("body_cultivation_temper")!.Outputs);
     }
 
@@ -104,7 +102,7 @@ public sealed class ActivityRegistryTests
         ActivityRegistry.ResetForTesting();
         IReadOnlyDictionary<string, IActivityDefinition> all = ActivityRegistry.GetAll();
 
-        Assert.Equal(10, all.Count);
+        Assert.Equal(9, all.Count);
         Assert.True(all.ContainsKey(PlayerActionState.ModeAlchemy));
         Assert.True(all.ContainsKey(PlayerActionState.ModeSmithing));
         Assert.True(all.ContainsKey(PlayerActionState.ModeGarden));
@@ -113,7 +111,6 @@ public sealed class ActivityRegistryTests
         Assert.True(all.ContainsKey(PlayerActionState.ModeTalisman));
         Assert.True(all.ContainsKey(PlayerActionState.ModeCooking));
         Assert.True(all.ContainsKey(PlayerActionState.ModeFormation));
-        Assert.True(all.ContainsKey(PlayerActionState.ModeEnlightenment));
         Assert.True(all.ContainsKey(PlayerActionState.ModeBodyCultivation));
     }
 
@@ -143,7 +140,7 @@ public sealed class ActivityRegistryTests
 
         Assert.NotNull(ActivityRegistry.GetBySystem(PlayerActionState.ModeGarden));
         Assert.NotNull(ActivityRegistry.GetRecipe("garden_spirit_herb"));
-        Assert.Equal(10, ActivityRegistry.GetAll().Count);
+        Assert.Equal(9, ActivityRegistry.GetAll().Count);
     }
 
     [Fact]
@@ -171,7 +168,6 @@ public sealed class ActivityRegistryTests
         Assert.Equal(ActivityCategory.Processing, ActivityRegistry.GetBySystem(PlayerActionState.ModeTalisman)!.Category);
         Assert.Equal(ActivityCategory.Processing, ActivityRegistry.GetBySystem(PlayerActionState.ModeCooking)!.Category);
         Assert.Equal(ActivityCategory.Processing, ActivityRegistry.GetBySystem(PlayerActionState.ModeFormation)!.Category);
-        Assert.Equal(ActivityCategory.Cultivation, ActivityRegistry.GetBySystem(PlayerActionState.ModeEnlightenment)!.Category);
         Assert.Equal(ActivityCategory.Cultivation, ActivityRegistry.GetBySystem(PlayerActionState.ModeBodyCultivation)!.Category);
     }
 

@@ -390,7 +390,7 @@ public partial class BookTabsController : Control
         RefreshDynamicTabContent();
     }
 
-    private void OnWalletChanged(double lingqi, double insight, double petAffinity, int spiritStones)
+    private void OnWalletChanged(double lingqi, double insight, int spiritStones)
     {
         RefreshCoinLabel();
         RefreshDynamicTabContent();
@@ -521,16 +521,11 @@ public partial class BookTabsController : Control
             ActivityEffectRules.CollectPermanentProgressModifier(new PlayerProgressPersistenceRules.PlayerProgressSnapshot(
                 _playerProgressState.RealmLevel,
                 _playerProgressState.RealmExp,
-                _playerProgressState.PetMood,
                 _playerProgressState.HasUnlockedAdvancedAlchemyStudy,
                 _playerProgressState.CurrentRealmActiveSeconds,
-                _playerProgressState.EnlightenmentInsightBonusRate,
-                _playerProgressState.EnlightenmentLingqiBonusRate,
                 _playerProgressState.BodyCultivationMaxHpFlat,
                 _playerProgressState.BodyCultivationAttackFlat,
                 _playerProgressState.BodyCultivationDefenseFlat,
-                _playerProgressState.MeditationCount,
-                _playerProgressState.ContemplationCount,
                 _playerProgressState.TemperCount,
                 _playerProgressState.BoneforgeCount))
         };
@@ -555,7 +550,6 @@ public partial class BookTabsController : Control
             }
         }
 
-        text += $"\n\n悟道加成\n- 灵气收益 +{_playerProgressState.EnlightenmentLingqiBonusRate * 100:0}%\n- 悟性收益 +{_playerProgressState.EnlightenmentInsightBonusRate * 100:0}%";
         text += $"\n\n体修加成\n- 气血 +{_playerProgressState.BodyCultivationMaxHpFlat}\n- 攻击 +{_playerProgressState.BodyCultivationAttackFlat}\n- 防御 +{_playerProgressState.BodyCultivationDefenseFlat}";
 
         return text;
@@ -1585,7 +1579,6 @@ public partial class BookTabsController : Control
                 winRate,
                 _resourceWalletState.TotalEarnedLingqi,
                 _resourceWalletState.TotalEarnedInsight,
-                _resourceWalletState.TotalEarnedPetAffinity,
                 _resourceWalletState.TotalEarnedSpiritStones);
     }
 

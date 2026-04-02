@@ -12,7 +12,6 @@ public sealed class OfflineSummaryPresentationRulesTests
             apConsumed: 240,
             lingqiGain: 120,
             insightGain: 8,
-            petAffinityGain: 3,
             realmExpGain: 30);
 
         Assert.Equal("离线修炼完成", OfflineSummaryPresentationRules.BuildTitle(result));

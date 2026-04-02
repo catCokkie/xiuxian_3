@@ -156,14 +156,14 @@
         "enemy_min_damage_per_round": 2
       },
       "spawn_table": [
-        { "monster_id": "monster_slime_moss", "weight": 20, "min_count": 1, "max_count": 2 },
+        { "monster_id": "monster_yin_serpentling", "weight": 20, "min_count": 1, "max_count": 2 },
         { "monster_id": "monster_bat_shadow", "weight": 50, "min_count": 1, "max_count": 2 },
         { "monster_id": "monster_spider_cave", "weight": 30, "min_count": 1, "max_count": 1 }
       ],
       "monster_wave": [
         "monster_bat_shadow",
+        "monster_yin_serpentling",
         "monster_bat_shadow",
-        "monster_slime_moss",
         "monster_spider_cave"
       ],
       "boss_monster_id": "monster_yin_tide_serpent",
@@ -215,13 +215,13 @@
         "enemy_min_damage_per_round": 2
       },
       "spawn_table": [
-        { "monster_id": "monster_slime_moss", "weight": 25, "min_count": 1, "max_count": 2 },
+        { "monster_id": "monster_sporeling", "weight": 25, "min_count": 1, "max_count": 2 },
         { "monster_id": "monster_bat_shadow", "weight": 25, "min_count": 1, "max_count": 2 },
         { "monster_id": "monster_spider_cave", "weight": 50, "min_count": 1, "max_count": 1 }
       ],
       "monster_wave": [
         "monster_spider_cave",
-        "monster_slime_moss",
+        "monster_sporeling",
         "monster_bat_shadow",
         "monster_spider_cave"
       ],
@@ -274,13 +274,13 @@
         "enemy_min_damage_per_round": 3
       },
       "spawn_table": [
-        { "monster_id": "monster_slime_moss", "weight": 15, "min_count": 1, "max_count": 2 },
+        { "monster_id": "monster_bone_servant", "weight": 15, "min_count": 1, "max_count": 2 },
         { "monster_id": "monster_bat_shadow", "weight": 35, "min_count": 1, "max_count": 2 },
         { "monster_id": "monster_spider_cave", "weight": 50, "min_count": 1, "max_count": 1 }
       ],
       "monster_wave": [
         "monster_bat_shadow",
-        "monster_spider_cave",
+        "monster_bone_servant",
         "monster_bat_shadow",
         "monster_spider_cave"
       ],
@@ -324,8 +324,7 @@
       },
       "behavior": {
         "skill_list": ["sticky_slow_10pct_1round"],
-        "phase_rules": [],
-        "anti_afk_rule": "player_damage_minus_10pct_if_low_input_for_3_rounds"
+        "phase_rules": []
       },
       "visual": {
         "portrait": "res://assets/ui/actor_placeholder.svg",
@@ -362,8 +361,7 @@
       },
       "behavior": {
         "skill_list": ["first_strike_plus_15pct"],
-        "phase_rules": ["attack_speed_plus_10pct_below_30hp"],
-        "anti_afk_rule": ""
+        "phase_rules": ["attack_speed_plus_10pct_below_30hp"]
       },
       "visual": {
         "portrait": "res://assets/ui/actor_placeholder.svg",
@@ -400,8 +398,7 @@
       },
       "behavior": {
         "skill_list": ["silk_debuff_minus_20pct_damage_next_round"],
-        "phase_rules": ["summon_spiderling_every_2_rounds_below_50hp"],
-        "anti_afk_rule": "silk_trigger_plus_20pct_if_low_input"
+        "phase_rules": ["summon_spiderling_every_2_rounds_below_50hp"]
       },
       "visual": {
         "portrait": "res://assets/ui/actor_placeholder.svg",
@@ -423,6 +420,120 @@
       }
     },
     {
+      "monster_id": "monster_yin_serpentling",
+      "monster_name": "Yin Tide Serpentling",
+      "rarity": "normal",
+      "move_category": "normal",
+      "realm_recommend": "Qi 5",
+      "tags": ["yao", "aquatic", "yin"],
+      "combat": {
+        "hp": 34,
+        "attack": 7,
+        "defense": 3,
+        "inputs_per_round": 19,
+        "speed_factor": 1.08
+      },
+      "behavior": {
+        "skill_list": ["yin_frost_slow_10pct_2rounds"],
+        "phase_rules": ["regenerate_2pct_hp_every_3_rounds_above_50hp"]
+      },
+      "visual": {
+        "portrait": "res://assets/ui/actor_placeholder.svg",
+        "animation": "hover",
+        "anim_speed": 2.0,
+        "anim_amplitude": 3.0,
+        "tint": [0.50, 0.65, 0.90, 1.0]
+      },
+      "drops": {
+        "drop_table_id": "drop_qi_rift_normal",
+        "drop_roll_count": 1,
+        "guaranteed_drop": [{ "item_id": "lingqi_shard", "qty": 2 }],
+        "unique_drop": { "item_id": "water_spirit_amber", "chance": 0.05, "qty": 1 }
+      },
+      "settlement_reward": {
+        "lingqi_min": 30,
+        "lingqi_max": 48,
+        "insight_min": 4,
+        "insight_max": 7
+      }
+    },
+    {
+      "monster_id": "monster_sporeling",
+      "monster_name": "Abyss Sporeling",
+      "rarity": "normal",
+      "move_category": "normal",
+      "realm_recommend": "Qi 7",
+      "tags": ["yao", "fungus", "poison"],
+      "combat": {
+        "hp": 40,
+        "attack": 8,
+        "defense": 4,
+        "inputs_per_round": 20,
+        "speed_factor": 0.92
+      },
+      "behavior": {
+        "skill_list": ["spore_puff_poison_2pct_per_round_2rounds"],
+        "phase_rules": ["defense_plus_15pct_below_40hp"]
+      },
+      "visual": {
+        "portrait": "res://assets/ui/actor_placeholder.svg",
+        "animation": "pulse",
+        "anim_speed": 2.5,
+        "anim_amplitude": 0.05,
+        "tint": [0.65, 0.85, 0.50, 1.0]
+      },
+      "drops": {
+        "drop_table_id": "drop_qi_abyss_normal",
+        "drop_roll_count": 1,
+        "guaranteed_drop": [{ "item_id": "lingqi_shard", "qty": 2 }],
+        "unique_drop": { "item_id": "toxic_spore_powder", "chance": 0.05, "qty": 1 }
+      },
+      "settlement_reward": {
+        "lingqi_min": 38,
+        "lingqi_max": 58,
+        "insight_min": 5,
+        "insight_max": 9
+      }
+    },
+    {
+      "monster_id": "monster_bone_servant",
+      "monster_name": "Nether Bone Servant",
+      "rarity": "normal",
+      "move_category": "normal",
+      "realm_recommend": "Qi 9",
+      "tags": ["yao", "undead", "nether"],
+      "combat": {
+        "hp": 48,
+        "attack": 10,
+        "defense": 6,
+        "inputs_per_round": 21,
+        "speed_factor": 0.88
+      },
+      "behavior": {
+        "skill_list": ["bone_shield_reduce_damage_10pct_2rounds"],
+        "phase_rules": ["attack_plus_15pct_below_35hp"]
+      },
+      "visual": {
+        "portrait": "res://assets/ui/actor_placeholder.svg",
+        "animation": "hover",
+        "anim_speed": 1.5,
+        "anim_amplitude": 2.5,
+        "tint": [0.85, 0.75, 0.55, 1.0]
+      },
+      "drops": {
+        "drop_table_id": "drop_qi_nether_normal",
+        "drop_roll_count": 1,
+        "guaranteed_drop": [{ "item_id": "lingqi_shard", "qty": 3 }],
+        "unique_drop": { "item_id": "nether_bone_shard", "chance": 0.05, "qty": 1 }
+      },
+      "settlement_reward": {
+        "lingqi_min": 46,
+        "lingqi_max": 70,
+        "insight_min": 7,
+        "insight_max": 11
+      }
+    },
+    {
       "monster_id": "monster_spider_cave_queen",
       "monster_name": "Cave Spider Queen",
       "rarity": "boss",
@@ -438,8 +549,7 @@
       },
       "behavior": {
         "skill_list": ["venom_bite_plus_1_stack", "silk_prison_reduce_damage_25pct"],
-        "phase_rules": ["summon_spiderling_every_3_rounds_below_70hp", "attack_plus_20pct_below_35hp"],
-        "anti_afk_rule": "boss_enrage_plus_30pct_if_low_input"
+        "phase_rules": ["summon_spiderling_every_3_rounds_below_70hp", "attack_plus_20pct_below_35hp"]
       },
       "visual": {
         "portrait": "res://assets/ui/actor_placeholder.svg",
@@ -479,8 +589,7 @@
       },
       "behavior": {
         "skill_list": ["sonic_shriek_stun_1_round", "shadow_dive_ignore_defense_50pct"],
-        "phase_rules": ["attack_speed_plus_20pct_below_50hp", "summon_bat_swarm_every_3_rounds_below_40hp"],
-        "anti_afk_rule": "boss_enrage_plus_30pct_if_low_input"
+        "phase_rules": ["attack_speed_plus_20pct_below_50hp", "summon_bat_swarm_every_3_rounds_below_40hp"]
       },
       "boss_fields": {
         "bind_level_id": "lv_qi_002",
@@ -531,8 +640,7 @@
       },
       "behavior": {
         "skill_list": ["tidal_crush_aoe_15pct", "yin_frost_reduce_speed_30pct_2rounds"],
-        "phase_rules": ["regenerate_5pct_hp_every_3_rounds_above_50hp", "attack_plus_25pct_below_30hp"],
-        "anti_afk_rule": "boss_enrage_plus_30pct_if_low_input"
+        "phase_rules": ["regenerate_5pct_hp_every_3_rounds_above_50hp", "attack_plus_25pct_below_30hp"]
       },
       "boss_fields": {
         "bind_level_id": "lv_qi_003",
@@ -584,8 +692,7 @@
       },
       "behavior": {
         "skill_list": ["spore_cloud_poison_3pct_per_round_3rounds", "fungal_slam_reduce_defense_20pct"],
-        "phase_rules": ["regenerate_3pct_hp_every_2_rounds_above_60hp", "summon_sporeling_every_3_rounds_below_40hp"],
-        "anti_afk_rule": "boss_enrage_plus_30pct_if_low_input"
+        "phase_rules": ["regenerate_3pct_hp_every_2_rounds_above_60hp", "summon_sporeling_every_3_rounds_below_40hp"]
       },
       "boss_fields": {
         "bind_level_id": "lv_qi_004",
@@ -637,8 +744,7 @@
       },
       "behavior": {
         "skill_list": ["bone_lance_pierce_ignore_defense_30pct", "soul_drain_lifesteal_20pct"],
-        "phase_rules": ["bone_armor_reduce_damage_taken_15pct_above_60hp", "attack_plus_30pct_below_25hp", "summon_skeleton_every_2_rounds_below_35hp"],
-        "anti_afk_rule": "boss_enrage_plus_30pct_if_low_input"
+        "phase_rules": ["bone_armor_reduce_damage_taken_15pct_above_60hp", "attack_plus_30pct_below_25hp", "summon_skeleton_every_2_rounds_below_35hp"]
       },
       "boss_fields": {
         "bind_level_id": "lv_qi_005",
@@ -787,14 +893,15 @@
     {
       "drop_table_id": "drop_qi_rift_normal",
       "bind_level_id": "lv_qi_003",
-      "bind_monster_ids": ["monster_slime_moss", "monster_bat_shadow"],
+      "bind_monster_ids": ["monster_yin_serpentling", "monster_bat_shadow"],
       "entries": [
         { "item_id": "lingqi_shard", "weight": 30, "min_qty": 2, "max_qty": 5 },
         { "item_id": "spirit_herb", "weight": 25, "min_qty": 2, "max_qty": 3 },
         { "item_id": "broken_talisman", "weight": 15, "min_qty": 2, "max_qty": 4 },
         { "item_id": "spirit_ink", "weight": 15, "min_qty": 1, "max_qty": 2, "_comment": "符箓系统材料" },
         { "item_id": "beast_bone", "weight": 10, "min_qty": 1, "max_qty": 1, "_comment": "体修系统材料" },
-        { "item_id": "toxic_gland", "weight": 5, "min_qty": 1, "max_qty": 1, "_comment": "体修系统材料" }
+        { "item_id": "toxic_gland", "weight": 5, "min_qty": 1, "max_qty": 1, "_comment": "体修系统材料" },
+        { "item_id": "water_spirit_amber", "weight": 5, "min_qty": 1, "max_qty": 1, "_comment": "阴潮蛇崽专属——炼器水属性辅料" }
       ],
       "pity": {
         "counter_key": "pity_qi_rift_normal",
@@ -833,14 +940,15 @@
     {
       "drop_table_id": "drop_qi_abyss_normal",
       "bind_level_id": "lv_qi_004",
-      "bind_monster_ids": ["monster_slime_moss", "monster_bat_shadow"],
+      "bind_monster_ids": ["monster_sporeling", "monster_bat_shadow"],
       "entries": [
         { "item_id": "lingqi_shard", "weight": 25, "min_qty": 3, "max_qty": 6 },
         { "item_id": "spirit_herb", "weight": 20, "min_qty": 2, "max_qty": 4 },
         { "item_id": "broken_talisman", "weight": 18, "min_qty": 3, "max_qty": 5 },
         { "item_id": "spirit_ink", "weight": 15, "min_qty": 1, "max_qty": 3, "_comment": "符箓系统材料" },
         { "item_id": "beast_bone", "weight": 12, "min_qty": 1, "max_qty": 2, "_comment": "体修系统材料" },
-        { "item_id": "toxic_gland", "weight": 10, "min_qty": 1, "max_qty": 2, "_comment": "体修系统材料" }
+        { "item_id": "toxic_gland", "weight": 10, "min_qty": 1, "max_qty": 2, "_comment": "体修系统材料" },
+        { "item_id": "toxic_spore_powder", "weight": 5, "min_qty": 1, "max_qty": 1, "_comment": "孢子幼体专属——炼丹解毒丹材料" }
       ],
       "pity": {
         "counter_key": "pity_qi_abyss_normal",
@@ -879,14 +987,15 @@
     {
       "drop_table_id": "drop_qi_nether_normal",
       "bind_level_id": "lv_qi_005",
-      "bind_monster_ids": ["monster_slime_moss", "monster_bat_shadow"],
+      "bind_monster_ids": ["monster_bone_servant", "monster_bat_shadow"],
       "entries": [
         { "item_id": "lingqi_shard", "weight": 22, "min_qty": 4, "max_qty": 7 },
         { "item_id": "spirit_herb", "weight": 18, "min_qty": 3, "max_qty": 5 },
         { "item_id": "broken_talisman", "weight": 20, "min_qty": 4, "max_qty": 6 },
         { "item_id": "spirit_ink", "weight": 15, "min_qty": 2, "max_qty": 4, "_comment": "符箓系统材料" },
         { "item_id": "beast_bone", "weight": 13, "min_qty": 2, "max_qty": 3, "_comment": "体修系统材料" },
-        { "item_id": "toxic_gland", "weight": 12, "min_qty": 1, "max_qty": 3, "_comment": "体修系统材料" }
+        { "item_id": "toxic_gland", "weight": 12, "min_qty": 1, "max_qty": 3, "_comment": "体修系统材料" },
+        { "item_id": "nether_bone_shard", "weight": 5, "min_qty": 1, "max_qty": 1, "_comment": "骨仆从专属——炼器高级材料" }
       ],
       "pity": {
         "counter_key": "pity_qi_nether_normal",
@@ -998,7 +1107,7 @@
         { "item_id": "spirit_herb", "weight": 20, "min_qty": 5, "max_qty": 7 },
         { "item_id": "lingqi_core_fragment", "weight": 30, "min_qty": 4, "max_qty": 6 },
         { "item_id": "beast_bone", "weight": 25, "min_qty": 3, "max_qty": 4, "_comment": "体修系统材料" },
-        { "item_id": "spirit_pearl", "weight": 15, "min_qty": 1, "max_qty": 2, "_comment": "悟道系统材料" },
+        { "item_id": "spirit_pearl", "weight": 15, "min_qty": 1, "max_qty": 2, "_comment": "精通/灵渔系统材料" },
         { "item_id": "toxic_gland", "weight": 10, "min_qty": 2, "max_qty": 4, "_comment": "体修系统材料" }
       ],
       "pity": {

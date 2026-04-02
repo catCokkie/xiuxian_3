@@ -19,7 +19,6 @@ public sealed class UiTextStatsTests
             winRate: 0.75,
             totalLingqi: 888.0,
             totalInsight: 66.0,
-            totalPetAffinity: 22.0,
             totalSpiritStones: 40);
 
         Assert.Contains("累计在线时长", text);

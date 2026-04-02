@@ -140,7 +140,6 @@ public static class UiText
         double expPercent,
         double lingqi,
         double insight,
-        double petAffinity,
         int spiritStones)
     {
         return
@@ -149,7 +148,6 @@ public static class UiText
             $"- 境界经验: {realmExp:0.0}/{realmExpRequired:0.0} ({expPercent:0}%)\n" +
             $"- 灵气: {lingqi:0.0}\n" +
             $"- 悟性: {insight:0.0}\n" +
-            $"- 灵宠亲和: {petAffinity:0.0}\n" +
             $"- 灵石: {spiritStones}";
     }
 
@@ -179,7 +177,6 @@ public static class UiText
         double winRate,
         double totalLingqi,
         double totalInsight,
-        double totalPetAffinity,
         int totalSpiritStones)
     {
         return
@@ -199,7 +196,6 @@ public static class UiText
             $"资源统计\n" +
             $"● 累计获得灵气：{totalLingqi:N0}\n" +
             $"● 累计获得悟性：{totalInsight:0.0}\n" +
-            $"● 累计获得亲密度：{totalPetAffinity:0.0}\n" +
             $"● 累计获得灵石：{totalSpiritStones}";
     }
 

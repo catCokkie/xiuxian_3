@@ -49,7 +49,6 @@ namespace Xiuxian.Scripts.Game
         [Export] public NodePath TalismanStatePath = "/root/TalismanState";
         [Export] public NodePath CookingStatePath = "/root/CookingState";
         [Export] public NodePath FormationStatePath = "/root/FormationState";
-        [Export] public NodePath EnlightenmentStatePath = "/root/EnlightenmentState";
         [Export] public NodePath BodyCultivationStatePath = "/root/BodyCultivationState";
         [Export] public NodePath PlayerProgressPath = "/root/PlayerProgressState";
         [Export] public NodePath EquippedItemsStatePath = "/root/EquippedItemsState";
@@ -99,7 +98,6 @@ namespace Xiuxian.Scripts.Game
         private RecipeProgressState? _talismanState;
         private RecipeProgressState? _cookingState;
         private FormationState? _formationState;
-        private RecipeProgressState? _enlightenmentState;
         private RecipeProgressState? _bodyCultivationState;
         private PlayerProgressState? _playerProgressState;
         private EquippedItemsState? _equippedItemsState;
@@ -149,7 +147,6 @@ namespace Xiuxian.Scripts.Game
             PlayerActionState.ModeTalisman,
             PlayerActionState.ModeCooking,
             PlayerActionState.ModeFormation,
-            PlayerActionState.ModeEnlightenment,
             PlayerActionState.ModeBodyCultivation,
         };
         private bool _offlineSummaryVisible;
@@ -241,7 +238,6 @@ namespace Xiuxian.Scripts.Game
             _talismanState = GetNodeOrNull<RecipeProgressState>(TalismanStatePath);
             _cookingState = GetNodeOrNull<RecipeProgressState>(CookingStatePath);
             _formationState = GetNodeOrNull<FormationState>(FormationStatePath);
-            _enlightenmentState = GetNodeOrNull<RecipeProgressState>(EnlightenmentStatePath);
             _bodyCultivationState = GetNodeOrNull<RecipeProgressState>(BodyCultivationStatePath);
             _playerProgressState = GetNodeOrNull<PlayerProgressState>(PlayerProgressPath);
             _equippedItemsState = GetNodeOrNull<EquippedItemsState>(EquippedItemsStatePath);
@@ -741,21 +737,8 @@ namespace Xiuxian.Scripts.Game
 
         private bool AdvanceExploreByInput(int inputEvents)
         {
-            double afkSeconds = _activityState?.SecondsSinceLastInputBeforeLatestBatch ?? 0.0;
-            double progressMultiplier = AfkDetectionRules.GetProgressMultiplier(afkSeconds);
-            if (progressMultiplier <= 0.0)
-            {
-                _battleInfoLabel.Text = "主行为：副本（AFK 暂停）";
-                _battleInfoLabel.Visible = true;
-                _roundInfoLabel.Text = $"空闲 {afkSeconds:0}s，探索暂停";
-                _progressBar.Value = _exploreProgress;
-                RefreshMoveDebugLabel();
-                RefreshDebugPanel();
-                return false;
-            }
-
             SyncLogicFromControllerState();
-            ExploreGameLogic.ExploreAdvanceResult result = _logic.AdvanceExploreByInput(inputEvents, (float)(ProgressPerInput * progressMultiplier), MaxProgress);
+            ExploreGameLogic.ExploreAdvanceResult result = _logic.AdvanceExploreByInput(inputEvents, (float)ProgressPerInput, MaxProgress);
             _progressBar.Value = _exploreProgress;
             int frames = MoveMonsterQueueByInputs(inputEvents);
             _logic.RegisterTrackMovement(frames, _battleTrackVisualizer.QueueMoveInputPending);
@@ -764,9 +747,7 @@ namespace Xiuxian.Scripts.Game
 
             _battleInfoLabel.Text = UiText.ExploreFrame(_moveFrameCounter);
             _battleInfoLabel.Visible = false;
-            _roundInfoLabel.Text = progressMultiplier < 1.0
-                ? $"{UiText.ExploreProgress(_exploreProgress)} | {BuildFrontMoveStatus()} | 反挂机 {progressMultiplier:0.0}x"
-                : $"{UiText.ExploreProgress(_exploreProgress)} | {BuildFrontMoveStatus()}";
+            _roundInfoLabel.Text = $"{UiText.ExploreProgress(_exploreProgress)} | {BuildFrontMoveStatus()}";
             RefreshMoveDebugLabel();
 
             if (result.CompletedLevel)
@@ -1678,7 +1659,6 @@ namespace Xiuxian.Scripts.Game
             return actionId == PlayerActionState.ActionTalisman
                 || actionId == PlayerActionState.ActionCooking
                 || actionId == PlayerActionState.ActionFormation
-                || actionId == PlayerActionState.ActionEnlightenment
                 || actionId == PlayerActionState.ActionBodyCultivation;
         }
 
@@ -1689,7 +1669,6 @@ namespace Xiuxian.Scripts.Game
                 PlayerActionState.ActionTalisman => _talismanState,
                 PlayerActionState.ActionCooking => _cookingState,
                 PlayerActionState.ActionFormation => _formationState,
-                PlayerActionState.ActionEnlightenment => _enlightenmentState,
                 PlayerActionState.ActionBodyCultivation => _bodyCultivationState,
                 _ => null,
             };
@@ -1702,7 +1681,6 @@ namespace Xiuxian.Scripts.Game
                 PlayerActionState.ActionTalisman => PlayerActionState.ModeTalisman,
                 PlayerActionState.ActionCooking => PlayerActionState.ModeCooking,
                 PlayerActionState.ActionFormation => PlayerActionState.ModeFormation,
-                PlayerActionState.ActionEnlightenment => PlayerActionState.ModeEnlightenment,
                 PlayerActionState.ActionBodyCultivation => PlayerActionState.ModeBodyCultivation,
                 _ => string.Empty,
             };
@@ -2047,14 +2025,7 @@ namespace Xiuxian.Scripts.Game
 
             if (_playerProgressState != null)
             {
-                if (recipeId == "enlightenment_meditation" || recipeId == "enlightenment_contemplation")
-                {
-                    _playerProgressState.ApplyEnlightenmentReward(recipeId);
-                    rewardText = recipeId == "enlightenment_meditation"
-                        ? "悟道完成，悟性收益提升 +5%"
-                        : "悟道完成，灵气收益提升 +8%";
-                }
-                else if (recipeId == "body_cultivation_temper" || recipeId == "body_cultivation_boneforge")
+                if (recipeId == "body_cultivation_temper" || recipeId == "body_cultivation_boneforge")
                 {
                     _playerProgressState.ApplyBodyCultivationReward(recipeId);
                     rewardText = recipeId == "body_cultivation_temper"
@@ -2143,7 +2114,6 @@ namespace Xiuxian.Scripts.Game
             if (actionId == PlayerActionState.ActionTalisman
                 || actionId == PlayerActionState.ActionCooking
                 || actionId == PlayerActionState.ActionFormation
-                || actionId == PlayerActionState.ActionEnlightenment
                 || actionId == PlayerActionState.ActionBodyCultivation)
             {
                 return BuildGenericRecipeProgressText();
@@ -2252,16 +2222,11 @@ namespace Xiuxian.Scripts.Game
                     new PlayerProgressPersistenceRules.PlayerProgressSnapshot(
                         _playerProgressState.RealmLevel,
                         _playerProgressState.RealmExp,
-                        _playerProgressState.PetMood,
                         _playerProgressState.HasUnlockedAdvancedAlchemyStudy,
                         _playerProgressState.CurrentRealmActiveSeconds,
-                        _playerProgressState.EnlightenmentInsightBonusRate,
-                        _playerProgressState.EnlightenmentLingqiBonusRate,
                         _playerProgressState.BodyCultivationMaxHpFlat,
                         _playerProgressState.BodyCultivationAttackFlat,
                         _playerProgressState.BodyCultivationDefenseFlat,
-                        _playerProgressState.MeditationCount,
-                        _playerProgressState.ContemplationCount,
                         _playerProgressState.TemperCount,
                         _playerProgressState.BoneforgeCount));
                 if (!permanentModifier.Equals(default(CharacterStatModifier)))
@@ -2590,8 +2555,6 @@ namespace Xiuxian.Scripts.Game
                     _formationState?.ActiveSecondaryId ?? string.Empty,
                     _backpackState?.GetItemEntries() ?? new Dictionary<string, int>(),
                     _subsystemMasteryState?.GetLevel(PlayerActionState.ModeFormation) ?? 1);
-                lingqi *= 1.0 + _playerProgressState.EnlightenmentLingqiBonusRate;
-                insight *= 1.0 + _playerProgressState.EnlightenmentInsightBonusRate;
             }
 
             if (lingqi > 0.0)
