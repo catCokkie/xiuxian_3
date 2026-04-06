@@ -11,7 +11,7 @@ namespace Xiuxian.Scripts.Services
     /// </summary>
     public static class SaveMigrationRules
     {
-        public const int LatestVersion = 9;
+        public const int LatestVersion = 12;
 
         private const string DefaultLeftTab = "CultivationTab";
         private const string DefaultRightTab = "BugTab";
@@ -93,17 +93,29 @@ namespace Xiuxian.Scripts.Services
                             MigrateV6ToV7(cfg);
                             version = 7;
                             break;
-                    case 7:
-                        MigrateV7ToV8(cfg);
-                        version = 8;
-                        break;
-                    case 8:
-                        MigrateV8ToV9(cfg);
-                        version = 9;
-                        break;
-                    default:
-                        version = LatestVersion;
-                        break;
+                        case 7:
+                            MigrateV7ToV8(cfg);
+                            version = 8;
+                            break;
+                        case 8:
+                            MigrateV8ToV9(cfg);
+                            version = 9;
+                            break;
+                        case 9:
+                            MigrateV9ToV10(cfg);
+                            version = 10;
+                            break;
+                        case 10:
+                            MigrateV10ToV11(cfg);
+                            version = 11;
+                            break;
+                        case 11:
+                            MigrateV11ToV12(cfg);
+                            version = 12;
+                            break;
+                        default:
+                            version = LatestVersion;
+                            break;
                     }
                 }
                 catch (Exception ex)
@@ -144,6 +156,9 @@ namespace Xiuxian.Scripts.Services
                 (6, "mastery", "levels"),                       // v6→v7
                 (7, "progress", "player"),                      // v7→v8
                 (8, "formation", "state"),
+                (9, "rhythm", "state"),
+                (10, "shop", "state"),
+                (11, "garden", "state"),
             };
 
             foreach (var (fromMax, section, key) in requiredKeys)
@@ -386,6 +401,8 @@ namespace Xiuxian.Scripts.Services
             EnsureMissing(progress, "body_cultivation_defense_flat", 0);
             EnsureMissing(progress, "body_cultivation_temper_count", 0);
             EnsureMissing(progress, "body_cultivation_boneforge_count", 0);
+            EnsureMissing(progress, "body_cultivation_bloodflow_count", 0);
+            EnsureMissing(progress, "body_cultivation_post_battle_heal_rate", 0.0);
             cfg.SetValue("progress", "player", progress);
 
             Dictionary<string, object> mastery = EnsureDictionaryValue(cfg, "mastery", "levels");
@@ -439,6 +456,42 @@ namespace Xiuxian.Scripts.Services
             }
 
             cfg.SetValue("formation", "state", formation);
+        }
+
+        private static void MigrateV9ToV10(IMigrationStore cfg)
+        {
+            Dictionary<string, object> progress = EnsureDictionaryValue(cfg, "progress", "player");
+            EnsureMissing(progress, "zhoutian_max_hp_rate", 0.0);
+            EnsureMissing(progress, "zhoutian_attack_rate", 0.0);
+            EnsureMissing(progress, "zhoutian_defense_rate", 0.0);
+            cfg.SetValue("progress", "player", progress);
+
+            EnsureSectionState(cfg, "rhythm", new Dictionary<string, object>(StringComparer.Ordinal)
+            {
+                ["enabled"] = true,
+                ["strength"] = CultivationRhythmRules.StrengthWeak,
+                ["cycle_minutes"] = CultivationRhythmRules.DefaultCycleMinutes,
+                ["current_cycle_active_seconds"] = 0.0,
+                ["small_cycle_count"] = 0,
+                ["total_small_cycles"] = 0,
+                ["total_grand_cycles"] = 0,
+                ["rest_remaining_seconds"] = 0.0,
+                ["is_grand_rest"] = false,
+                ["total_rest_count"] = 0,
+                ["total_meditation_insights"] = 0,
+            });
+        }
+
+        private static void MigrateV10ToV11(IMigrationStore cfg)
+        {
+            EnsureSectionState(cfg, "shop", ShopPersistenceRules.ToPlainDictionary(ShopPersistenceRules.CreateDefault()));
+        }
+
+        private static void MigrateV11ToV12(IMigrationStore cfg)
+        {
+            Dictionary<string, object> garden = EnsureDictionaryValue(cfg, "garden", "state");
+            GardenPersistenceRules.GardenSnapshot snapshot = GardenPersistenceRules.FromPlainDictionary(garden);
+            cfg.SetValue("garden", "state", GardenPersistenceRules.ToPlainDictionary(snapshot));
         }
 
         private static Dictionary<string, object> BuildGenericState()

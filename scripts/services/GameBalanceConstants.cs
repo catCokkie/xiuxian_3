@@ -2,12 +2,10 @@ namespace Xiuxian.Scripts.Services
 {
     public static class GameBalanceConstants
     {
-        public static class InputDecay
+        public static class InputAntiAbuse
         {
-            public const double ApBaseline = 6.0;
-            public const double DecayThreshold = 1.0;
-            public const double DecayRate = 0.25;
-            public const double MinDecayMultiplier = 0.45;
+            public const double WindowSeconds = 60.0;
+            public const int MaxInputPerMinute = 600;
         }
 
         public static class ResourceConversion

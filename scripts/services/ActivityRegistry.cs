@@ -15,7 +15,11 @@ namespace Xiuxian.Scripts.Services
 
         public static void EnsureInitialized()
         {
-            if (_initialized) return;
+            if (_initialized)
+            {
+                return;
+            }
+
             _initialized = true;
             RegisterBuiltInActivities();
         }
@@ -52,7 +56,7 @@ namespace Xiuxian.Scripts.Services
             return Activities;
         }
 
-        /// <summary>Reset state — intended for testing only.</summary>
+        /// <summary>Reset state, intended for testing only.</summary>
         public static void ResetForTesting()
         {
             Activities.Clear();
@@ -104,8 +108,6 @@ namespace Xiuxian.Scripts.Services
 
         private static void RegisterSmithing()
         {
-            // Smithing is level-based (not fixed-recipe). We register a single placeholder
-            // recipe representing the base enhancement tier so the system is discoverable.
             var smithing = new SimpleActivityDefinition
             {
                 SystemId = PlayerActionState.ModeSmithing,
@@ -127,7 +129,7 @@ namespace Xiuxian.Scripts.Services
                 },
                 LingqiCost = baseCost.Lingqi,
                 RequiredInputEvents = baseCost.RequiredInputs,
-                Outputs = System.Array.Empty<MaterialOutput>(),
+                Outputs = Array.Empty<MaterialOutput>(),
                 RequiredMasteryLevel = 1,
             });
 
@@ -152,7 +154,7 @@ namespace Xiuxian.Scripts.Services
                     RecipeId = crop.RecipeId,
                     SystemId = PlayerActionState.ModeGarden,
                     DisplayName = crop.DisplayName,
-                    Inputs = System.Array.Empty<MaterialCost>(),
+                    Inputs = Array.Empty<MaterialCost>(),
                     LingqiCost = 0.0,
                     RequiredInputEvents = crop.RequiredInputs,
                     Outputs = new[] { new MaterialOutput(crop.OutputItemId, crop.OutputCount) },
@@ -181,7 +183,7 @@ namespace Xiuxian.Scripts.Services
                     RecipeId = node.RecipeId,
                     SystemId = PlayerActionState.ModeMining,
                     DisplayName = node.DisplayName,
-                    Inputs = System.Array.Empty<MaterialCost>(),
+                    Inputs = Array.Empty<MaterialCost>(),
                     LingqiCost = 0.0,
                     RequiredInputEvents = node.RequiredInputs,
                     Outputs = new[] { new MaterialOutput(node.OutputItemId, node.OutputCount) },
@@ -210,7 +212,7 @@ namespace Xiuxian.Scripts.Services
                     RecipeId = pond.RecipeId,
                     SystemId = PlayerActionState.ModeFishing,
                     DisplayName = pond.DisplayName,
-                    Inputs = System.Array.Empty<MaterialCost>(),
+                    Inputs = Array.Empty<MaterialCost>(),
                     LingqiCost = 0.0,
                     RequiredInputEvents = pond.RequiredInputs,
                     Outputs = new[] { new MaterialOutput(pond.OutputItemId, pond.OutputCount) },
@@ -232,28 +234,20 @@ namespace Xiuxian.Scripts.Services
                 OfflineEfficiency = 0.5,
             };
 
-            talisman.AddRecipe(new SimpleRecipeDefinition
+            foreach (TalismanRules.RecipeSpec recipe in TalismanRules.GetRecipes())
             {
-                RecipeId = "talisman_fire_charm",
-                SystemId = PlayerActionState.ModeTalisman,
-                DisplayName = "火符",
-                Inputs = new[] { new MaterialCost("broken_talisman", 2), new MaterialCost("spirit_ink", 1) },
-                LingqiCost = 0.0,
-                RequiredInputEvents = 180,
-                Outputs = new[] { new MaterialOutput("talisman_fire_charm", 1) },
-                RequiredMasteryLevel = 1,
-            });
-            talisman.AddRecipe(new SimpleRecipeDefinition
-            {
-                RecipeId = "talisman_shield_charm",
-                SystemId = PlayerActionState.ModeTalisman,
-                DisplayName = "盾符",
-                Inputs = new[] { new MaterialCost("broken_talisman", 3), new MaterialCost("beast_bone", 1) },
-                LingqiCost = 0.0,
-                RequiredInputEvents = 220,
-                Outputs = new[] { new MaterialOutput("talisman_shield_charm", 1) },
-                RequiredMasteryLevel = 2,
-            });
+                talisman.AddRecipe(new SimpleRecipeDefinition
+                {
+                    RecipeId = recipe.RecipeId,
+                    SystemId = PlayerActionState.ModeTalisman,
+                    DisplayName = recipe.DisplayName,
+                    Inputs = recipe.Inputs,
+                    LingqiCost = recipe.LingqiCost,
+                    RequiredInputEvents = recipe.RequiredInputEvents,
+                    Outputs = new[] { new MaterialOutput(recipe.RecipeId, 1) },
+                    RequiredMasteryLevel = recipe.RequiredMasteryLevel,
+                });
+            }
 
             Register(talisman);
         }
@@ -284,7 +278,7 @@ namespace Xiuxian.Scripts.Services
             {
                 RecipeId = "cooking_fruit_jelly",
                 SystemId = PlayerActionState.ModeCooking,
-                DisplayName = "灵果蜜饯",
+                DisplayName = "灵果蜜饮",
                 Inputs = new[] { new MaterialCost("spirit_fruit", 2), new MaterialCost("spirit_flower", 1) },
                 LingqiCost = 60.0,
                 RequiredInputEvents = 240,
@@ -365,8 +359,6 @@ namespace Xiuxian.Scripts.Services
             Register(formation);
         }
 
-
-
         private static void RegisterBodyCultivation()
         {
             var bodyCultivation = new SimpleActivityDefinition
@@ -378,28 +370,20 @@ namespace Xiuxian.Scripts.Services
                 OfflineEfficiency = 0.5,
             };
 
-            bodyCultivation.AddRecipe(new SimpleRecipeDefinition
+            foreach (BodyCultivationRules.TechniqueSpec technique in BodyCultivationRules.GetTechniques())
             {
-                RecipeId = "body_cultivation_temper",
-                SystemId = PlayerActionState.ModeBodyCultivation,
-                DisplayName = "淬体",
-                Inputs = new[] { new MaterialCost("beast_bone", 2) },
-                LingqiCost = 300.0,
-                RequiredInputEvents = 260,
-                Outputs = System.Array.Empty<MaterialOutput>(),
-                RequiredMasteryLevel = 1,
-            });
-            bodyCultivation.AddRecipe(new SimpleRecipeDefinition
-            {
-                RecipeId = "body_cultivation_boneforge",
-                SystemId = PlayerActionState.ModeBodyCultivation,
-                DisplayName = "炼骨",
-                Inputs = new[] { new MaterialCost("cold_iron_ore", 2) },
-                LingqiCost = 500.0,
-                RequiredInputEvents = 320,
-                Outputs = System.Array.Empty<MaterialOutput>(),
-                RequiredMasteryLevel = 2,
-            });
+                bodyCultivation.AddRecipe(new SimpleRecipeDefinition
+                {
+                    RecipeId = technique.RecipeId,
+                    SystemId = PlayerActionState.ModeBodyCultivation,
+                    DisplayName = technique.DisplayName,
+                    Inputs = technique.Inputs,
+                    LingqiCost = technique.LingqiCost,
+                    RequiredInputEvents = technique.RequiredInputEvents,
+                    Outputs = Array.Empty<MaterialOutput>(),
+                    RequiredMasteryLevel = technique.RequiredMasteryLevel,
+                });
+            }
 
             Register(bodyCultivation);
         }

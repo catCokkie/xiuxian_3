@@ -6,7 +6,7 @@ namespace Xiuxian.Tests;
 public sealed class SubsystemMasteryRulesTests
 {
     [Fact]
-    public void Definitions_Cover12SystemsAcross4Levels()
+    public void Definitions_Cover11SystemsAcross4Levels()
     {
         var all = SubsystemMasteryRules.GetAllDefinitions();
 
@@ -121,9 +121,9 @@ public sealed class SubsystemMasteryRulesTests
     }
 
     [Fact]
-    public void GetEffectValue_ReturnsTalismanDoubleOutputAtLevel2()
+    public void GetEffectValue_ReturnsTalismanMaterialDiscountAtLevel3()
     {
-        double effect = SubsystemMasteryRules.GetEffectValue(PlayerActionState.ModeTalisman, 2, SubsystemMasteryRules.TalismanDoubleOutputEffectId);
+        double effect = SubsystemMasteryRules.GetEffectValue(PlayerActionState.ModeTalisman, 3, SubsystemMasteryRules.TalismanMaterialDiscountEffectId);
 
         Assert.Equal(0.10, effect);
     }
@@ -145,15 +145,15 @@ public sealed class SubsystemMasteryRulesTests
     }
 
     [Fact]
-    public void GetEffectValue_ReturnsBodyCultivationTemperCapBonusAtLevel3()
+    public void GetEffectValue_ReturnsBodyCultivationExtraCapAtLevel4()
     {
-        double effect = SubsystemMasteryRules.GetEffectValue(PlayerActionState.ModeBodyCultivation, 3, SubsystemMasteryRules.BodyCultivationTemperCapBonusEffectId);
+        double effect = SubsystemMasteryRules.GetEffectValue(PlayerActionState.ModeBodyCultivation, 4, SubsystemMasteryRules.BodyCultivationExtraCapEffectId);
 
-        Assert.Equal(10.0, effect);
+        Assert.Equal(5.0, effect);
     }
 
     [Fact]
-    public void TotalUnlockCost_AcrossAll12Systems_MatchesCurrentRegistryBudget()
+    public void TotalUnlockCost_AcrossAll11Systems_MatchesCurrentRegistryBudget()
     {
         double total = SubsystemMasteryRules.GetAllDefinitions().Sum(def => def.InsightCost);
 

@@ -27,6 +27,7 @@ namespace Xiuxian.Scripts.Game
             ResourceWalletState? resourceWalletState,
             int alchemyMasteryLevel,
             PotionInventoryState? potionInventoryState,
+            int outputMultiplier,
             out string rewardText)
         {
             rewardText = string.Empty;
@@ -52,8 +53,9 @@ namespace Xiuxian.Scripts.Game
                 return false;
             }
 
-            potionInventoryState.AddPotion(result.PotionItemId, result.PotionCount);
-            rewardText = $"炼丹完成，获得 {UiText.BackpackItemName(result.PotionItemId)} x{result.PotionCount}";
+            int finalPotionCount = result.PotionCount * System.Math.Max(1, outputMultiplier);
+            potionInventoryState.AddPotion(result.PotionItemId, finalPotionCount);
+            rewardText = $"炼丹完成，获得 {UiText.BackpackItemName(result.PotionItemId)} x{finalPotionCount}";
             return true;
         }
 
@@ -132,14 +134,8 @@ namespace Xiuxian.Scripts.Game
             return true;
         }
 
-        // --- Generic activity framework methods ---
-
         public readonly record struct GenericProgressResult(float ProgressPercent, bool CompletedBatch);
 
-        /// <summary>
-        /// Advance progress for any recipe registered in <see cref="ActivityRegistry"/>.
-        /// Returns progress percentage and whether a batch completed.
-        /// </summary>
         public static GenericProgressResult AdvanceGenericRecipe(
             string recipeId,
             float currentProgress,
@@ -158,14 +154,12 @@ namespace Xiuxian.Scripts.Game
             return new GenericProgressResult(percent, completed);
         }
 
-        /// <summary>
-        /// Consume inputs and produce outputs for a completed generic recipe batch.
-        /// Returns false if the player cannot afford the cost.
-        /// </summary>
         public static bool TryCompleteGenericBatch(
             string recipeId,
             BackpackState? backpackState,
             ResourceWalletState? resourceWalletState,
+            int masteryLevel,
+            int outputMultiplier,
             out string rewardText)
         {
             rewardText = string.Empty;
@@ -175,53 +169,106 @@ namespace Xiuxian.Scripts.Game
                 return false;
             }
 
-            // Check lingqi
+            if (masteryLevel < recipe.RequiredMasteryLevel)
+            {
+                return false;
+            }
+
+            MaterialCost[] effectiveInputs = GetEffectiveInputs(recipe, masteryLevel);
+
             if (resourceWalletState.Lingqi < recipe.LingqiCost)
             {
                 return false;
             }
 
-            // Check material inputs
-            foreach (MaterialCost input in recipe.Inputs)
+            for (int i = 0; i < effectiveInputs.Length; i++)
             {
-                if (backpackState.GetItemCount(input.ItemId) < input.Count)
+                if (backpackState.GetItemCount(effectiveInputs[i].ItemId) < effectiveInputs[i].Count)
                 {
                     return false;
                 }
             }
 
-            // Deduct lingqi
             if (!resourceWalletState.SpendLingqi(recipe.LingqiCost))
             {
                 return false;
             }
 
-            // Deduct materials (with rollback on failure)
-            for (int i = 0; i < recipe.Inputs.Count; i++)
+            for (int i = 0; i < effectiveInputs.Length; i++)
             {
-                MaterialCost input = recipe.Inputs[i];
+                MaterialCost input = effectiveInputs[i];
                 if (!backpackState.RemoveItem(input.ItemId, input.Count))
                 {
-                    // Rollback previously removed inputs
                     for (int j = 0; j < i; j++)
                     {
-                        backpackState.AddItem(recipe.Inputs[j].ItemId, recipe.Inputs[j].Count);
+                        backpackState.AddItem(effectiveInputs[j].ItemId, effectiveInputs[j].Count);
                     }
+
                     resourceWalletState.AddLingqi(recipe.LingqiCost);
                     return false;
                 }
             }
 
-            // Grant outputs
             foreach (MaterialOutput output in recipe.Outputs)
             {
-                backpackState.AddItem(output.ItemId, output.Count);
+                backpackState.AddItem(output.ItemId, output.Count * System.Math.Max(1, outputMultiplier));
             }
 
             rewardText = recipe.Outputs.Count > 0
-                ? $"{recipe.DisplayName}完成，获得 {recipe.Outputs[0].ItemId} x{recipe.Outputs[0].Count}"
+                ? $"{recipe.DisplayName}完成，获得 {UiText.BackpackItemName(recipe.Outputs[0].ItemId)} x{recipe.Outputs[0].Count * System.Math.Max(1, outputMultiplier)}"
                 : $"{recipe.DisplayName}完成";
             return true;
+        }
+
+        public static bool CanAffordGenericRecipe(
+            string recipeId,
+            BackpackState? backpackState,
+            ResourceWalletState? resourceWalletState,
+            int masteryLevel)
+        {
+            IRecipeDefinition? recipe = ActivityRegistry.GetRecipe(recipeId);
+            if (recipe == null || backpackState == null || resourceWalletState == null || masteryLevel < recipe.RequiredMasteryLevel)
+            {
+                return false;
+            }
+
+            if (resourceWalletState.Lingqi < recipe.LingqiCost)
+            {
+                return false;
+            }
+
+            MaterialCost[] effectiveInputs = GetEffectiveInputs(recipe, masteryLevel);
+            for (int i = 0; i < effectiveInputs.Length; i++)
+            {
+                if (backpackState.GetItemCount(effectiveInputs[i].ItemId) < effectiveInputs[i].Count)
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        private static MaterialCost[] GetEffectiveInputs(IRecipeDefinition recipe, int masteryLevel)
+        {
+            double discount = recipe.SystemId switch
+            {
+                PlayerActionState.ModeTalisman => TalismanRules.GetMaterialDiscount(masteryLevel),
+                PlayerActionState.ModeBodyCultivation => BodyCultivationRules.GetMaterialDiscount(masteryLevel),
+                _ => 0.0,
+            };
+
+            MaterialCost[] effectiveInputs = new MaterialCost[recipe.Inputs.Count];
+            for (int i = 0; i < recipe.Inputs.Count; i++)
+            {
+                MaterialCost input = recipe.Inputs[i];
+                int count = discount > 0.0
+                    ? Math.Max(0, (int)Math.Floor(input.Count * (1.0 - discount)))
+                    : input.Count;
+                effectiveInputs[i] = new MaterialCost(input.ItemId, count);
+            }
+
+            return effectiveInputs;
         }
     }
 }

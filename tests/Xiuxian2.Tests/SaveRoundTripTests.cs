@@ -106,7 +106,10 @@ public sealed class SaveRoundTripTests
             CurrentRealmActiveSeconds: 123.4,
             BodyCultivationMaxHpFlat: 10,
             BodyCultivationAttackFlat: 4,
-            BodyCultivationDefenseFlat: 3);
+            BodyCultivationDefenseFlat: 3,
+            ZhouTianMaxHpRate: 0.004,
+            ZhouTianAttackRate: 0.006,
+            ZhouTianDefenseRate: 0.002);
 
         Dictionary<string, object> data = PlayerProgressPersistenceRules.ToPlainDictionary(expected);
         PlayerProgressPersistenceRules.PlayerProgressSnapshot restored = PlayerProgressPersistenceRules.FromPlainDictionary(data);
@@ -118,6 +121,69 @@ public sealed class SaveRoundTripTests
         Assert.Equal(10, restored.BodyCultivationMaxHpFlat);
         Assert.Equal(4, restored.BodyCultivationAttackFlat);
         Assert.Equal(3, restored.BodyCultivationDefenseFlat);
+        Assert.Equal(0.004, restored.ZhouTianMaxHpRate, 6);
+        Assert.Equal(0.006, restored.ZhouTianAttackRate, 6);
+        Assert.Equal(0.002, restored.ZhouTianDefenseRate, 6);
+    }
+
+    [Fact]
+    public void CultivationRhythmPersistenceRules_RoundTripsSettingsProgressAndRestState()
+    {
+        CultivationRhythmPersistenceRules.RhythmSnapshot expected = new(
+            Enabled: true,
+            Strength: CultivationRhythmRules.StrengthStrong,
+            CycleMinutes: 45,
+            CurrentCycleActiveSeconds: 780.0,
+            SmallCycleCount: 2,
+            TotalSmallCycles: 6,
+            TotalGrandCycles: 1,
+            RestRemainingSeconds: 120.0,
+            IsGrandRest: true,
+            TotalRestCount: 6,
+            TotalMeditationInsights: 1);
+
+        Dictionary<string, object> data = CultivationRhythmPersistenceRules.ToPlainDictionary(expected);
+        CultivationRhythmPersistenceRules.RhythmSnapshot restored = CultivationRhythmPersistenceRules.FromPlainDictionary(data);
+
+        Assert.Equal(expected.Enabled, restored.Enabled);
+        Assert.Equal(expected.Strength, restored.Strength);
+        Assert.Equal(expected.CycleMinutes, restored.CycleMinutes);
+        Assert.Equal(expected.CurrentCycleActiveSeconds, restored.CurrentCycleActiveSeconds, 6);
+        Assert.Equal(expected.SmallCycleCount, restored.SmallCycleCount);
+        Assert.Equal(expected.TotalSmallCycles, restored.TotalSmallCycles);
+        Assert.Equal(expected.TotalGrandCycles, restored.TotalGrandCycles);
+        Assert.Equal(expected.RestRemainingSeconds, restored.RestRemainingSeconds, 6);
+        Assert.Equal(expected.IsGrandRest, restored.IsGrandRest);
+        Assert.Equal(expected.TotalRestCount, restored.TotalRestCount);
+        Assert.Equal(expected.TotalMeditationInsights, restored.TotalMeditationInsights);
+    }
+
+    [Fact]
+    public void ShopPersistenceRules_RoundTripsPurchasesDailyStateAndActiveBuff()
+    {
+        ShopPersistenceRules.ShopSnapshot expected = new(
+            LifetimePurchases: new Dictionary<string, int>
+            {
+                [ShopRules.ItemBackpackExpand1] = 1,
+                [ShopRules.ItemBreakthroughPill] = 1,
+            },
+            DailyPurchases: new Dictionary<string, int>
+            {
+                [ShopRules.ItemDoubleYield] = 2,
+                [ShopRules.ItemPageFragment] = 1,
+            },
+            DailyResetDate: "2026-04-06",
+            ActiveDoubleYieldSeconds: 1800.0);
+
+        Dictionary<string, object> data = ShopPersistenceRules.ToPlainDictionary(expected);
+        ShopPersistenceRules.ShopSnapshot restored = ShopPersistenceRules.FromPlainDictionary(data);
+
+        Assert.Equal(1, restored.LifetimePurchases[ShopRules.ItemBackpackExpand1]);
+        Assert.Equal(1, restored.LifetimePurchases[ShopRules.ItemBreakthroughPill]);
+        Assert.Equal(2, restored.DailyPurchases[ShopRules.ItemDoubleYield]);
+        Assert.Equal(1, restored.DailyPurchases[ShopRules.ItemPageFragment]);
+        Assert.Equal("2026-04-06", restored.DailyResetDate);
+        Assert.Equal(1800.0, restored.ActiveDoubleYieldSeconds, 6);
     }
 
     [Fact]
@@ -177,7 +243,10 @@ public sealed class SaveRoundTripTests
     [Fact]
     public void GatheringPersistenceRules_RoundTripGardenMiningAndFishingState()
     {
-        GardenPersistenceRules.GardenSnapshot garden = new("garden_spirit_flower", 88.0f, 240.0f);
+        GardenPersistenceRules.GardenPlotSnapshot[] plots = GardenPersistenceRules.CreateEmptyPlots();
+        plots[0] = new GardenPersistenceRules.GardenPlotSnapshot("garden_spirit_flower", 123456789L, false);
+        plots[2] = new GardenPersistenceRules.GardenPlotSnapshot("garden_spirit_herb", 123456999L, true);
+        GardenPersistenceRules.GardenSnapshot garden = new("garden_spirit_flower", 2, plots);
         MiningPersistenceRules.MiningSnapshot mining = new("mining_spirit_jade", 42.0f, 220.0f, 73);
         FishingPersistenceRules.FishingSnapshot fishing = new("fishing_deep_pond", 95.0f, 240.0f);
 
@@ -185,7 +254,15 @@ public sealed class SaveRoundTripTests
         MiningPersistenceRules.MiningSnapshot restoredMining = MiningPersistenceRules.FromPlainDictionary(MiningPersistenceRules.ToPlainDictionary(mining));
         FishingPersistenceRules.FishingSnapshot restoredFishing = FishingPersistenceRules.FromPlainDictionary(FishingPersistenceRules.ToPlainDictionary(fishing));
 
-        Assert.Equal(garden, restoredGarden);
+        Assert.Equal(garden.SelectedRecipeId, restoredGarden.SelectedRecipeId);
+        Assert.Equal(garden.SelectedPlotIndex, restoredGarden.SelectedPlotIndex);
+        Assert.Equal(GardenRules.MaxPlotCount, restoredGarden.Plots.Length);
+        Assert.Equal("garden_spirit_flower", restoredGarden.Plots[0].CropId);
+        Assert.Equal(123456789L, restoredGarden.Plots[0].PlantedAtUnix);
+        Assert.False(restoredGarden.Plots[0].IsReady);
+        Assert.Equal("garden_spirit_herb", restoredGarden.Plots[2].CropId);
+        Assert.Equal(123456999L, restoredGarden.Plots[2].PlantedAtUnix);
+        Assert.True(restoredGarden.Plots[2].IsReady);
         Assert.Equal(mining, restoredMining);
         Assert.Equal(fishing, restoredFishing);
     }

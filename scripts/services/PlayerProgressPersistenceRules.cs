@@ -13,7 +13,12 @@ namespace Xiuxian.Scripts.Services
             int BodyCultivationAttackFlat = 0,
             int BodyCultivationDefenseFlat = 0,
             int TemperCount = 0,
-            int BoneforgeCount = 0);
+            int BoneforgeCount = 0,
+            int BloodflowCount = 0,
+            double BodyCultivationPostBattleHealRate = 0.0,
+            double ZhouTianMaxHpRate = 0.0,
+            double ZhouTianAttackRate = 0.0,
+            double ZhouTianDefenseRate = 0.0);
 
         public static Dictionary<string, object> ToPlainDictionary(PlayerProgressSnapshot snapshot)
         {
@@ -28,6 +33,11 @@ namespace Xiuxian.Scripts.Services
                 ["body_cultivation_defense_flat"] = snapshot.BodyCultivationDefenseFlat,
                 ["body_cultivation_temper_count"] = snapshot.TemperCount,
                 ["body_cultivation_boneforge_count"] = snapshot.BoneforgeCount,
+                ["body_cultivation_bloodflow_count"] = snapshot.BloodflowCount,
+                ["body_cultivation_post_battle_heal_rate"] = snapshot.BodyCultivationPostBattleHealRate,
+                ["zhoutian_max_hp_rate"] = snapshot.ZhouTianMaxHpRate,
+                ["zhoutian_attack_rate"] = snapshot.ZhouTianAttackRate,
+                ["zhoutian_defense_rate"] = snapshot.ZhouTianDefenseRate,
             };
         }
 
@@ -42,7 +52,12 @@ namespace Xiuxian.Scripts.Services
                 BodyCultivationAttackFlat: System.Math.Max(0, SaveValueConversionRules.GetInt(data, "body_cultivation_attack_flat", 0)),
                 BodyCultivationDefenseFlat: System.Math.Max(0, SaveValueConversionRules.GetInt(data, "body_cultivation_defense_flat", 0)),
                 TemperCount: System.Math.Max(0, SaveValueConversionRules.GetInt(data, "body_cultivation_temper_count", 0)),
-                BoneforgeCount: System.Math.Max(0, SaveValueConversionRules.GetInt(data, "body_cultivation_boneforge_count", 0)));
+                BoneforgeCount: System.Math.Max(0, SaveValueConversionRules.GetInt(data, "body_cultivation_boneforge_count", 0)),
+                BloodflowCount: System.Math.Max(0, SaveValueConversionRules.GetInt(data, "body_cultivation_bloodflow_count", 0)),
+                BodyCultivationPostBattleHealRate: System.Math.Max(0.0, SaveValueConversionRules.GetDouble(data, "body_cultivation_post_battle_heal_rate", 0.0)),
+                ZhouTianMaxHpRate: System.Math.Max(0.0, SaveValueConversionRules.GetDouble(data, "zhoutian_max_hp_rate", 0.0)),
+                ZhouTianAttackRate: System.Math.Max(0.0, SaveValueConversionRules.GetDouble(data, "zhoutian_attack_rate", 0.0)),
+                ZhouTianDefenseRate: System.Math.Max(0.0, SaveValueConversionRules.GetDouble(data, "zhoutian_defense_rate", 0.0)));
         }
     }
 }

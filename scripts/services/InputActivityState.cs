@@ -1,13 +1,12 @@
 using Godot;
-using System;
 using System.Collections.Generic;
 
 namespace Xiuxian.Scripts.Services
 {
     /// <summary>
     /// Event-driven input aggregator with anti-abuse guards:
-    /// 1) rolling-window frequency decay
-    /// 2) per-minute soft cap
+    /// 1) aggregate input into short batches
+    /// 2) clamp effective discrete inputs with a 60s sliding window hard cap
     /// </summary>
     public partial class InputActivityState : Node, IDictionaryPersistable
     {
@@ -17,7 +16,7 @@ namespace Xiuxian.Scripts.Services
         [Signal]
         public delegate void InputBatchTickEventHandler(int inputEventsThisBatch, double apFinal);
 
-        // Latest batch counters (updated every frame when pending input exists)
+        // Latest effective batch counters (after hard cap filtering).
         public int KeyDownCount { get; private set; }
         public int MouseClickCount { get; private set; }
         public int MouseScrollSteps { get; private set; }
@@ -25,7 +24,7 @@ namespace Xiuxian.Scripts.Services
         public int JoypadButtonCount { get; private set; }
         public int JoypadAxisInputCount { get; private set; }
 
-        // Lifetime counters
+        // Lifetime counters (raw captured input, unaffected by the hard cap).
         public long TotalKeyDownCount { get; private set; }
         public long TotalMouseClickCount { get; private set; }
         public long TotalMouseScrollSteps { get; private set; }
@@ -42,28 +41,21 @@ namespace Xiuxian.Scripts.Services
         public double ApAccumulator { get; private set; }
         public int InputEventsThisSecond { get; private set; }
 
-        [Export] public double ApBaseline { get; set; } = GameBalanceConstants.InputDecay.ApBaseline;
         [Export] public double KeyDownWeight { get; set; } = 1.0;
         [Export] public double MouseClickWeight { get; set; } = 1.2;
         [Export] public double ScrollStepWeight { get; set; } = 0.4;
         [Export] public double MovePxDivider { get; set; } = 600.0;
         [Export] public double JoypadButtonWeight { get; set; } = 1.0;
         [Export] public double JoypadAxisWeight { get; set; } = 0.8;
-
-        [Export] public double DecayThreshold { get; set; } = GameBalanceConstants.InputDecay.DecayThreshold;
-        [Export] public double DecayRate { get; set; } = GameBalanceConstants.InputDecay.DecayRate;
-        [Export] public double MinDecayMultiplier { get; set; } = GameBalanceConstants.InputDecay.MinDecayMultiplier;
-
-        [Export] public double RollingWindowSeconds { get; set; } = 10.0;
-        [Export] public double SoftCapPerMinute { get; set; } = 420.0;
-        [Export] public double MinCapMultiplier { get; set; } = 0.20;
+        [Export] public double InputWindowSeconds { get; set; } = GameBalanceConstants.InputAntiAbuse.WindowSeconds;
+        [Export] public int MaxInputPerMinute { get; set; } = GameBalanceConstants.InputAntiAbuse.MaxInputPerMinute;
         [Export] public double AccumulatorDrainPerSecond { get; set; } = 0.6;
 
-        private readonly object _pendingLock = new();
-        private readonly Queue<(double time, double rawAp)> _rollingEvents = new();
+        private const int MaxRollingQueueSize = 10000;
 
-        private double _pendingRawAp;
-        private int _pendingInputEvents;
+        private readonly object _pendingLock = new();
+        private readonly Queue<(double time, int acceptedInputCount)> _acceptedInputWindow = new();
+
         private int _pendingKeyDown;
         private int _pendingMouseClick;
         private int _pendingMouseScroll;
@@ -71,10 +63,8 @@ namespace Xiuxian.Scripts.Services
         private int _pendingJoypadButton;
         private int _pendingJoypadAxis;
 
-        private double _rollingRawApSum;
+        private int _acceptedInputCountInWindow;
         private double _runtimeSeconds;
-        private double _minuteWindowStartSeconds;
-        private double _apFinalThisMinute;
         private double _pendingIdleSecondsBeforeBatch;
         private bool _hasPendingIdleSnapshot;
 
@@ -82,53 +72,64 @@ namespace Xiuxian.Scripts.Services
         {
             _runtimeSeconds += delta;
             SecondsSinceLastInput += delta;
-
-            if (_runtimeSeconds - _minuteWindowStartSeconds >= 60.0)
-            {
-                _minuteWindowStartSeconds = _runtimeSeconds;
-                _apFinalThisMinute = 0.0;
-            }
+            PruneAcceptedInputWindow();
 
             DrainPendingInput(
-                out double apRawBatch,
-                out int inputBatch,
                 out int keyBatch,
                 out int clickBatch,
                 out int scrollBatch,
                 out double moveBatch,
                 out int joypadButtonBatch,
                 out int joypadAxisBatch);
-            if (apRawBatch <= 0.0 && inputBatch <= 0)
+
+            InputActivityRules.DiscreteInputBatch rawDiscreteBatch = new(
+                keyBatch,
+                clickBatch,
+                scrollBatch,
+                joypadButtonBatch,
+                joypadAxisBatch);
+            if (rawDiscreteBatch.TotalCount <= 0 && moveBatch <= 0.0)
             {
                 return;
             }
 
-            KeyDownCount = keyBatch;
-            MouseClickCount = clickBatch;
-            MouseScrollSteps = scrollBatch;
+            int remainingAllowance = InputActivityRules.CalculateRemainingWindowAllowance(
+                _acceptedInputCountInWindow,
+                MaxInputPerMinute);
+            InputActivityRules.DiscreteInputBatch acceptedDiscreteBatch = InputActivityRules.ClampDiscreteInputBatch(
+                rawDiscreteBatch,
+                remainingAllowance);
+            int acceptedInputCount = acceptedDiscreteBatch.TotalCount;
+            double acceptedAp = InputActivityRules.CalculateRawAp(
+                acceptedDiscreteBatch,
+                moveBatch,
+                KeyDownWeight,
+                MouseClickWeight,
+                ScrollStepWeight,
+                MovePxDivider,
+                JoypadButtonWeight,
+                JoypadAxisWeight);
+            if (acceptedInputCount <= 0 && acceptedAp <= 0.0)
+            {
+                return;
+            }
+
+            KeyDownCount = acceptedDiscreteBatch.KeyDownCount;
+            MouseClickCount = acceptedDiscreteBatch.MouseClickCount;
+            MouseScrollSteps = acceptedDiscreteBatch.MouseScrollSteps;
             MouseMoveDistancePx = moveBatch;
-            JoypadButtonCount = joypadButtonBatch;
-            JoypadAxisInputCount = joypadAxisBatch;
-            InputEventsThisSecond = inputBatch;
-            SecondsSinceLastInputBeforeLatestBatch = inputBatch > 0 ? _pendingIdleSecondsBeforeBatch : SecondsSinceLastInput;
+            JoypadButtonCount = acceptedDiscreteBatch.JoypadButtonCount;
+            JoypadAxisInputCount = acceptedDiscreteBatch.JoypadAxisInputCount;
+            InputEventsThisSecond = acceptedInputCount;
+            SecondsSinceLastInputBeforeLatestBatch = rawDiscreteBatch.TotalCount > 0 || moveBatch > 0.0
+                ? _pendingIdleSecondsBeforeBatch
+                : SecondsSinceLastInput;
             TotalActiveSeconds += delta;
 
-            PushRollingWindow(apRawBatch);
-            PruneRollingWindow();
+            PushAcceptedInputWindow(acceptedInputCount);
 
-            double apPerSecondEquivalent = RollingWindowSeconds > 0.0 ? _rollingRawApSum / RollingWindowSeconds : _rollingRawApSum;
-            double decayMultiplier = InputActivityRules.CalculateDecayMultiplier(
-                apPerSecondEquivalent,
-                ApBaseline,
-                DecayThreshold,
-                DecayRate,
-                MinDecayMultiplier);
-            double capMultiplier = InputActivityRules.CalculateCapMultiplier(_apFinalThisMinute, SoftCapPerMinute, MinCapMultiplier);
-
-            ApThisSecond = apRawBatch;
-            ApFinal = apRawBatch * decayMultiplier * capMultiplier;
-            _apFinalThisMinute += ApFinal;
-
+            ApThisSecond = acceptedAp;
+            ApFinal = acceptedAp;
             ApAccumulator = InputActivityRules.CalculateAccumulator(ApAccumulator, ApFinal, AccumulatorDrainPerSecond, delta);
 
             EmitSignal(SignalName.ActivityTick, ApThisSecond, ApFinal);
@@ -141,8 +142,6 @@ namespace Xiuxian.Scripts.Services
             {
                 MarkInputActivity();
                 _pendingKeyDown++;
-                _pendingInputEvents++;
-                _pendingRawAp += KeyDownWeight;
                 TotalKeyDownCount++;
             }
         }
@@ -153,8 +152,6 @@ namespace Xiuxian.Scripts.Services
             {
                 MarkInputActivity();
                 _pendingMouseClick++;
-                _pendingInputEvents++;
-                _pendingRawAp += MouseClickWeight;
                 TotalMouseClickCount++;
             }
         }
@@ -170,8 +167,6 @@ namespace Xiuxian.Scripts.Services
             {
                 MarkInputActivity();
                 _pendingMouseScroll += steps;
-                _pendingInputEvents += steps;
-                _pendingRawAp += steps * ScrollStepWeight;
                 TotalMouseScrollSteps += steps;
             }
         }
@@ -187,7 +182,6 @@ namespace Xiuxian.Scripts.Services
             {
                 MarkInputActivity();
                 _pendingMouseMove += distancePx;
-                _pendingRawAp += distancePx / MovePxDivider;
                 TotalMouseMoveDistancePx += distancePx;
             }
         }
@@ -198,8 +192,6 @@ namespace Xiuxian.Scripts.Services
             {
                 MarkInputActivity();
                 _pendingJoypadButton++;
-                _pendingInputEvents++;
-                _pendingRawAp += JoypadButtonWeight;
                 TotalJoypadButtonCount++;
             }
         }
@@ -210,15 +202,11 @@ namespace Xiuxian.Scripts.Services
             {
                 MarkInputActivity();
                 _pendingJoypadAxis++;
-                _pendingInputEvents++;
-                _pendingRawAp += JoypadAxisWeight;
                 TotalJoypadAxisInputCount++;
             }
         }
 
         private void DrainPendingInput(
-            out double apRawBatch,
-            out int inputBatch,
             out int keyBatch,
             out int clickBatch,
             out int scrollBatch,
@@ -228,8 +216,6 @@ namespace Xiuxian.Scripts.Services
         {
             lock (_pendingLock)
             {
-                apRawBatch = _pendingRawAp;
-                inputBatch = _pendingInputEvents;
                 keyBatch = _pendingKeyDown;
                 clickBatch = _pendingMouseClick;
                 scrollBatch = _pendingMouseScroll;
@@ -237,8 +223,6 @@ namespace Xiuxian.Scripts.Services
                 joypadButtonBatch = _pendingJoypadButton;
                 joypadAxisBatch = _pendingJoypadAxis;
 
-                _pendingRawAp = 0.0;
-                _pendingInputEvents = 0;
                 _pendingKeyDown = 0;
                 _pendingMouseClick = 0;
                 _pendingMouseScroll = 0;
@@ -261,32 +245,35 @@ namespace Xiuxian.Scripts.Services
             SecondsSinceLastInput = 0.0;
         }
 
-        private void PushRollingWindow(double apRawBatch)
+        private void PushAcceptedInputWindow(int acceptedInputCount)
         {
-            _rollingEvents.Enqueue((_runtimeSeconds, apRawBatch));
-            _rollingRawApSum += apRawBatch;
+            if (acceptedInputCount <= 0)
+            {
+                return;
+            }
+
+            _acceptedInputWindow.Enqueue((_runtimeSeconds, acceptedInputCount));
+            _acceptedInputCountInWindow += acceptedInputCount;
         }
 
-        private const int MaxRollingQueueSize = 10000;
-
-        private void PruneRollingWindow()
+        private void PruneAcceptedInputWindow()
         {
-            double cutoff = _runtimeSeconds - Math.Max(1.0, RollingWindowSeconds);
-            while (_rollingEvents.Count > 0 && _rollingEvents.Peek().time < cutoff)
+            double cutoff = _runtimeSeconds - System.Math.Max(1.0, InputWindowSeconds);
+            while (_acceptedInputWindow.Count > 0 && _acceptedInputWindow.Peek().time < cutoff)
             {
-                var ev = _rollingEvents.Dequeue();
-                _rollingRawApSum -= ev.rawAp;
+                var ev = _acceptedInputWindow.Dequeue();
+                _acceptedInputCountInWindow -= ev.acceptedInputCount;
             }
 
-            if (_rollingEvents.Count > MaxRollingQueueSize)
+            if (_acceptedInputWindow.Count > MaxRollingQueueSize)
             {
-                _rollingEvents.Clear();
-                _rollingRawApSum = 0.0;
+                _acceptedInputWindow.Clear();
+                _acceptedInputCountInWindow = 0;
             }
 
-            if (_rollingRawApSum < 0.0)
+            if (_acceptedInputCountInWindow < 0)
             {
-                _rollingRawApSum = 0.0;
+                _acceptedInputCountInWindow = 0;
             }
         }
 
@@ -327,12 +314,12 @@ namespace Xiuxian.Scripts.Services
         {
             lock (_pendingLock)
             {
-                _pendingRawAp = 0.0;
-                _pendingInputEvents = 0;
                 _pendingKeyDown = 0;
                 _pendingMouseClick = 0;
                 _pendingMouseScroll = 0;
                 _pendingMouseMove = 0.0;
+                _pendingJoypadButton = 0;
+                _pendingJoypadAxis = 0;
             }
 
             KeyDownCount = 0;
@@ -346,8 +333,8 @@ namespace Xiuxian.Scripts.Services
             InputEventsThisSecond = 0;
             SecondsSinceLastInputBeforeLatestBatch = SecondsSinceLastInput;
 
-            _rollingEvents.Clear();
-            _rollingRawApSum = 0.0;
+            _acceptedInputWindow.Clear();
+            _acceptedInputCountInWindow = 0;
         }
     }
 }

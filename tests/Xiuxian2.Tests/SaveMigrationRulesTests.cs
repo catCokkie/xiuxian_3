@@ -95,7 +95,7 @@ public sealed class SaveMigrationRulesTests
 
         SaveMigrationRules.MigrateToLatest(cfg, 5);
 
-        Assert.Equal(9, System.Convert.ToInt32(cfg.GetValue("meta", "version", 0)));
+        Assert.Equal(SaveMigrationRules.LatestVersion, System.Convert.ToInt32(cfg.GetValue("meta", "version", 0)));
 
         var wallet = (System.Collections.Generic.Dictionary<string, object>)cfg.GetValue("resource", "wallet", new System.Collections.Generic.Dictionary<string, object>());
         Assert.Equal(0L, System.Convert.ToInt64(wallet["spirit_stones"]));
@@ -160,7 +160,7 @@ public sealed class SaveMigrationRulesTests
 
         SaveMigrationRules.MigrateToLatest(cfg, 6);
 
-        Assert.Equal(9, System.Convert.ToInt32(cfg.GetValue("meta", "version", 0)));
+        Assert.Equal(SaveMigrationRules.LatestVersion, System.Convert.ToInt32(cfg.GetValue("meta", "version", 0)));
         var mastery = (System.Collections.Generic.Dictionary<string, object>)cfg.GetValue("mastery", "levels", new System.Collections.Generic.Dictionary<string, object>());
         Assert.Equal(11, mastery.Count);
         Assert.Equal(1L, System.Convert.ToInt64(mastery[PlayerActionState.ModeDungeon]));
@@ -171,7 +171,8 @@ public sealed class SaveMigrationRulesTests
 
         var garden = (System.Collections.Generic.Dictionary<string, object>)cfg.GetValue("garden", "state", new System.Collections.Generic.Dictionary<string, object>());
         Assert.Equal(string.Empty, System.Convert.ToString(garden["selected_recipe"]));
-        Assert.Equal(200.0, System.Convert.ToDouble(garden["required_progress"]));
+        Assert.Equal(0L, System.Convert.ToInt64(garden["selected_plot_index"]));
+        Assert.IsType<System.Collections.Generic.List<object>>(garden["plots"]);
 
         var formation = (System.Collections.Generic.Dictionary<string, object>)cfg.GetValue("formation", "state", new System.Collections.Generic.Dictionary<string, object>());
         Assert.Equal(100.0, System.Convert.ToDouble(formation["required_progress"]));
@@ -209,7 +210,7 @@ public sealed class SaveMigrationRulesTests
 
         SaveMigrationRules.MigrateToLatest(cfg, 7);
 
-        Assert.Equal(9, System.Convert.ToInt32(cfg.GetValue("meta", "version", 0)));
+        Assert.Equal(SaveMigrationRules.LatestVersion, System.Convert.ToInt32(cfg.GetValue("meta", "version", 0)));
 
         var mining = (System.Collections.Generic.Dictionary<string, object>)cfg.GetValue("mining", "state", new System.Collections.Generic.Dictionary<string, object>());
         Assert.Equal(MiningRules.DefaultNodeDurability, System.Convert.ToInt32(mining["current_durability"]));
@@ -240,7 +241,7 @@ public sealed class SaveMigrationRulesTests
 
         SaveMigrationRules.MigrateToLatest(cfg, 8);
 
-        Assert.Equal(9, System.Convert.ToInt32(cfg.GetValue("meta", "version", 0)));
+        Assert.Equal(SaveMigrationRules.LatestVersion, System.Convert.ToInt32(cfg.GetValue("meta", "version", 0)));
         var formation = (System.Collections.Generic.Dictionary<string, object>)cfg.GetValue("formation", "state", new System.Collections.Generic.Dictionary<string, object>());
         Assert.Equal("formation_guard_flag", System.Convert.ToString(formation["selected_recipe"]));
         Assert.Equal("formation_guard_flag", System.Convert.ToString(formation["active_primary_id"]));
@@ -253,6 +254,84 @@ public sealed class SaveMigrationRulesTests
         var inventory = (System.Collections.Generic.Dictionary<string, object>)formation["inventory"];
         Assert.Equal(2L, System.Convert.ToInt64(inventory["formation_guard_flag"]));
         Assert.Equal(1L, System.Convert.ToInt64(inventory["formation_spirit_plate"]));
+    }
+
+    [Fact]
+    public void MigrateToLatest_PromotesV9SaveToV10WithRhythmAndZhouTianDefaults()
+    {
+        SaveMigrationRules.MigrationStore cfg = new();
+        cfg.SetValue("meta", "version", 9);
+        cfg.SetValue("progress", "player", new System.Collections.Generic.Dictionary<string, object>
+        {
+            ["realm_level"] = 3,
+            ["realm_exp"] = 25.0,
+        });
+
+        SaveMigrationRules.MigrateToLatest(cfg, 9);
+
+        Assert.Equal(SaveMigrationRules.LatestVersion, System.Convert.ToInt32(cfg.GetValue("meta", "version", 0)));
+
+        var progress = (System.Collections.Generic.Dictionary<string, object>)cfg.GetValue("progress", "player", new System.Collections.Generic.Dictionary<string, object>());
+        Assert.Equal(0.0, System.Convert.ToDouble(progress["zhoutian_max_hp_rate"]));
+        Assert.Equal(0.0, System.Convert.ToDouble(progress["zhoutian_attack_rate"]));
+        Assert.Equal(0.0, System.Convert.ToDouble(progress["zhoutian_defense_rate"]));
+
+        var rhythm = (System.Collections.Generic.Dictionary<string, object>)cfg.GetValue("rhythm", "state", new System.Collections.Generic.Dictionary<string, object>());
+        Assert.True(System.Convert.ToBoolean(rhythm["enabled"]));
+        Assert.Equal(CultivationRhythmRules.StrengthWeak, System.Convert.ToString(rhythm["strength"]));
+        Assert.Equal(CultivationRhythmRules.DefaultCycleMinutes, System.Convert.ToInt32(rhythm["cycle_minutes"]));
+        Assert.Equal(0.0, System.Convert.ToDouble(rhythm["current_cycle_active_seconds"]));
+        Assert.Equal(0L, System.Convert.ToInt64(rhythm["total_small_cycles"]));
+        Assert.Equal(0L, System.Convert.ToInt64(rhythm["total_grand_cycles"]));
+        Assert.Equal(0L, System.Convert.ToInt64(rhythm["total_meditation_insights"]));
+    }
+
+    [Fact]
+    public void MigrateToLatest_PromotesV10SaveToV11WithShopDefaults()
+    {
+        SaveMigrationRules.MigrationStore cfg = new();
+        cfg.SetValue("meta", "version", 10);
+        cfg.SetValue("progress", "player", new System.Collections.Generic.Dictionary<string, object>
+        {
+            ["realm_level"] = 4,
+        });
+
+        SaveMigrationRules.MigrateToLatest(cfg, 10);
+
+        Assert.Equal(SaveMigrationRules.LatestVersion, System.Convert.ToInt32(cfg.GetValue("meta", "version", 0)));
+        var shop = (System.Collections.Generic.Dictionary<string, object>)cfg.GetValue("shop", "state", new System.Collections.Generic.Dictionary<string, object>());
+        Assert.IsType<System.Collections.Generic.Dictionary<string, object>>(shop["lifetime_purchases"]);
+        Assert.IsType<System.Collections.Generic.Dictionary<string, object>>(shop["daily_purchases"]);
+        Assert.Equal(string.Empty, System.Convert.ToString(shop["daily_reset_date"]));
+        Assert.Equal(0.0, System.Convert.ToDouble(shop["active_double_yield_seconds"]));
+    }
+
+    [Fact]
+    public void MigrateToLatest_PromotesV11SaveToV12WithGardenPlots()
+    {
+        SaveMigrationRules.MigrationStore cfg = new();
+        cfg.SetValue("meta", "version", 11);
+        cfg.SetValue("garden", "state", new System.Collections.Generic.Dictionary<string, object>
+        {
+            ["selected_recipe"] = "garden_spirit_flower",
+            ["progress"] = 120.0,
+            ["required_progress"] = 7200.0,
+        });
+
+        SaveMigrationRules.MigrateToLatest(cfg, 11);
+
+        Assert.Equal(SaveMigrationRules.LatestVersion, System.Convert.ToInt32(cfg.GetValue("meta", "version", 0)));
+        var garden = (System.Collections.Generic.Dictionary<string, object>)cfg.GetValue("garden", "state", new System.Collections.Generic.Dictionary<string, object>());
+        Assert.Equal("garden_spirit_flower", System.Convert.ToString(garden["selected_recipe"]));
+        Assert.Equal(0L, System.Convert.ToInt64(garden["selected_plot_index"]));
+        Assert.True(garden.ContainsKey("plots"));
+
+        var plots = (System.Collections.Generic.List<object>)garden["plots"];
+        Assert.Equal(GardenRules.MaxPlotCount, plots.Count);
+        var firstPlot = (System.Collections.Generic.Dictionary<string, object>)plots[0];
+        Assert.Equal("garden_spirit_flower", System.Convert.ToString(firstPlot["crop_id"]));
+        Assert.False(System.Convert.ToBoolean(firstPlot["is_ready"]));
+        Assert.True(System.Convert.ToInt64(firstPlot["planted_at_unix"]) > 0);
     }
 
     [Fact]
@@ -293,7 +372,7 @@ public sealed class SaveMigrationRulesTests
 
         SaveMigrationRules.MigrateToLatest(cfg, 1);
 
-        // All critical sections must exist after full v1→v8 chain
+        // All critical sections must exist after full v1→v12 chain
         Assert.True(cfg.HasSectionKey("ui", "submenu_active_left_tab"));
         Assert.True(cfg.HasSectionKey("action", "mode"));
         Assert.True(cfg.HasSectionKey("settings", "system"));
@@ -302,5 +381,7 @@ public sealed class SaveMigrationRulesTests
         Assert.True(cfg.HasSectionKey("resource", "wallet"));
         Assert.True(cfg.HasSectionKey("mastery", "levels"));
         Assert.True(cfg.HasSectionKey("progress", "player"));
+        Assert.True(cfg.HasSectionKey("rhythm", "state"));
+        Assert.True(cfg.HasSectionKey("garden", "state"));
     }
 }

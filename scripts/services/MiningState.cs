@@ -47,6 +47,17 @@ namespace Xiuxian.Scripts.Services
             return decision.CompletedBatch;
         }
 
+        public void RefreshCurrentNode()
+        {
+            if (!HasSelectedNode)
+            {
+                return;
+            }
+
+            CurrentDurability = MiningRules.DefaultNodeDurability;
+            EmitSignal(SignalName.MiningChanged, SelectedRecipeId, CurrentProgress, RequiredProgress, CurrentDurability);
+        }
+
         public Godot.Collections.Dictionary<string, Variant> ToDictionary()
         {
             return MiningPersistenceRules.ToDictionary(new MiningPersistenceRules.MiningSnapshot(SelectedRecipeId, CurrentProgress, RequiredProgress, CurrentDurability));

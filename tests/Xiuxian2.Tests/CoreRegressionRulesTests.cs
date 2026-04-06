@@ -125,35 +125,21 @@ public sealed class CoreRegressionRulesTests
     }
 
     [Fact]
-    public void CalculateDecayMultiplier_StaysAtOneBelowThreshold()
+    public void CalculateRemainingWindowAllowance_StopsAtZeroWhenWindowIsFull()
     {
-        double multiplier = InputActivityRules.CalculateDecayMultiplier(5.0, 10.0, 1.0, 0.25, 0.45);
+        int allowance = InputActivityRules.CalculateRemainingWindowAllowance(600, 600);
 
-        Assert.Equal(1.0, multiplier);
+        Assert.Equal(0, allowance);
     }
 
     [Fact]
-    public void CalculateDecayMultiplier_ClampsToConfiguredMinimum()
+    public void ClampDiscreteInputBatch_NeverExceedsConfiguredAllowance()
     {
-        double multiplier = InputActivityRules.CalculateDecayMultiplier(100.0, 10.0, 1.0, 0.25, 0.45);
+        InputActivityRules.DiscreteInputBatch accepted = InputActivityRules.ClampDiscreteInputBatch(
+            new InputActivityRules.DiscreteInputBatch(20, 10, 5, 0, 0),
+            allowedCount: 12);
 
-        Assert.Equal(0.45, multiplier);
-    }
-
-    [Fact]
-    public void CalculateCapMultiplier_DropsAfterSoftCap()
-    {
-        double multiplier = InputActivityRules.CalculateCapMultiplier(600.0, 300.0, 0.20);
-
-        Assert.Equal(0.5, multiplier);
-    }
-
-    [Fact]
-    public void CalculateCapMultiplier_ClampsToConfiguredMinimum()
-    {
-        double multiplier = InputActivityRules.CalculateCapMultiplier(5000.0, 300.0, 0.20);
-
-        Assert.Equal(0.20, multiplier);
+        Assert.Equal(12, accepted.TotalCount);
     }
 
     [Fact]

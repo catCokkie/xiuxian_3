@@ -4,133 +4,132 @@ namespace Xiuxian.Tests;
 
 public sealed class InputActivityRulesTests
 {
-    // --- CalculateDecayMultiplier ---
-
     [Fact]
-    public void DecayMultiplier_BelowThreshold_ReturnsOne()
+    public void CalculateRemainingWindowAllowance_BelowCap_ReturnsRemaining()
     {
-        double result = InputActivityRules.CalculateDecayMultiplier(
-            apPerSecond: 1.0, apBaseline: 5.0, decayThreshold: 1.5, decayRate: 0.3, minDecayMultiplier: 0.1);
+        int result = InputActivityRules.CalculateRemainingWindowAllowance(
+            currentWindowCount: 420,
+            maxInputPerMinute: 600);
 
-        Assert.Equal(1.0, result);
+        Assert.Equal(180, result);
     }
 
     [Fact]
-    public void DecayMultiplier_AboveThreshold_DecaysLinearly()
+    public void CalculateRemainingWindowAllowance_AtCap_ReturnsZero()
     {
-        // ratio = 10/5 = 2.0, excess = 2.0 - 1.5 = 0.5, decay = 1.0 - 0.5*0.3 = 0.85
-        double result = InputActivityRules.CalculateDecayMultiplier(
-            apPerSecond: 10.0, apBaseline: 5.0, decayThreshold: 1.5, decayRate: 0.3, minDecayMultiplier: 0.1);
+        int result = InputActivityRules.CalculateRemainingWindowAllowance(
+            currentWindowCount: 600,
+            maxInputPerMinute: 600);
 
-        Assert.Equal(0.85, result, precision: 6);
+        Assert.Equal(0, result);
     }
 
     [Fact]
-    public void DecayMultiplier_ExtremeRatio_ClampsToMin()
+    public void CalculateRemainingWindowAllowance_ZeroCap_DisablesLimit()
     {
-        // ratio = 100/5 = 20, excess = 18.5, decay = 1.0 - 18.5*0.3 = -4.55 → clamped to min 0.1
-        double result = InputActivityRules.CalculateDecayMultiplier(
-            apPerSecond: 100.0, apBaseline: 5.0, decayThreshold: 1.5, decayRate: 0.3, minDecayMultiplier: 0.1);
+        int result = InputActivityRules.CalculateRemainingWindowAllowance(
+            currentWindowCount: 999,
+            maxInputPerMinute: 0);
 
-        Assert.Equal(0.1, result);
+        Assert.Equal(int.MaxValue, result);
     }
 
     [Fact]
-    public void DecayMultiplier_ZeroBaseline_UsesRawApAsRatio()
+    public void ClampDiscreteInputBatch_WithinAllowance_ReturnsOriginalBatch()
     {
-        double result = InputActivityRules.CalculateDecayMultiplier(
-            apPerSecond: 3.0, apBaseline: 0.0, decayThreshold: 1.5, decayRate: 0.3, minDecayMultiplier: 0.1);
+        InputActivityRules.DiscreteInputBatch batch = new(
+            KeyDownCount: 4,
+            MouseClickCount: 3,
+            MouseScrollSteps: 2,
+            JoypadButtonCount: 1,
+            JoypadAxisInputCount: 1);
 
-        // ratio = 3.0 (raw), excess = 1.5, decay = 1.0 - 1.5*0.3 = 0.55
-        Assert.Equal(0.55, result, precision: 6);
+        InputActivityRules.DiscreteInputBatch accepted = InputActivityRules.ClampDiscreteInputBatch(batch, allowedCount: 20);
+
+        Assert.Equal(batch, accepted);
     }
 
     [Fact]
-    public void DecayMultiplier_ZeroInput_ReturnsOne()
+    public void ClampDiscreteInputBatch_NoAllowance_ReturnsEmptyBatch()
     {
-        double result = InputActivityRules.CalculateDecayMultiplier(
-            apPerSecond: 0.0, apBaseline: 5.0, decayThreshold: 1.5, decayRate: 0.3, minDecayMultiplier: 0.1);
+        InputActivityRules.DiscreteInputBatch batch = new(
+            KeyDownCount: 4,
+            MouseClickCount: 3,
+            MouseScrollSteps: 2,
+            JoypadButtonCount: 1,
+            JoypadAxisInputCount: 1);
 
-        Assert.Equal(1.0, result);
-    }
+        InputActivityRules.DiscreteInputBatch accepted = InputActivityRules.ClampDiscreteInputBatch(batch, allowedCount: 0);
 
-    // --- CalculateCapMultiplier ---
-
-    [Fact]
-    public void CapMultiplier_BelowCap_ReturnsOne()
-    {
-        double result = InputActivityRules.CalculateCapMultiplier(
-            apFinalThisMinute: 100.0, softCapPerMinute: 420.0, minCapMultiplier: 0.2);
-
-        Assert.Equal(1.0, result);
+        Assert.Equal(0, accepted.TotalCount);
+        Assert.Equal(default, accepted);
     }
 
     [Fact]
-    public void CapMultiplier_AtCap_ReturnsOne()
+    public void ClampDiscreteInputBatch_OverAllowance_PreservesTotalAndRelativeShape()
     {
-        double result = InputActivityRules.CalculateCapMultiplier(
-            apFinalThisMinute: 420.0, softCapPerMinute: 420.0, minCapMultiplier: 0.2);
+        InputActivityRules.DiscreteInputBatch batch = new(
+            KeyDownCount: 6,
+            MouseClickCount: 3,
+            MouseScrollSteps: 1,
+            JoypadButtonCount: 0,
+            JoypadAxisInputCount: 0);
 
-        Assert.Equal(1.0, result);
+        InputActivityRules.DiscreteInputBatch accepted = InputActivityRules.ClampDiscreteInputBatch(batch, allowedCount: 5);
+
+        Assert.Equal(5, accepted.TotalCount);
+        Assert.True(accepted.KeyDownCount <= batch.KeyDownCount);
+        Assert.True(accepted.MouseClickCount <= batch.MouseClickCount);
+        Assert.True(accepted.MouseScrollSteps <= batch.MouseScrollSteps);
+        Assert.Equal(3, accepted.KeyDownCount);
+        Assert.Equal(2, accepted.MouseClickCount);
+        Assert.Equal(0, accepted.MouseScrollSteps);
     }
 
     [Fact]
-    public void CapMultiplier_OverCap_ReturnsInverseRatio()
+    public void CalculateRawAp_UsesAcceptedDiscreteInputsPlusMouseMove()
     {
-        // ratio = 840/420 = 2.0, multiplier = 1/2 = 0.5
-        double result = InputActivityRules.CalculateCapMultiplier(
-            apFinalThisMinute: 840.0, softCapPerMinute: 420.0, minCapMultiplier: 0.2);
+        InputActivityRules.DiscreteInputBatch batch = new(
+            KeyDownCount: 3,
+            MouseClickCount: 2,
+            MouseScrollSteps: 1,
+            JoypadButtonCount: 1,
+            JoypadAxisInputCount: 2);
 
-        Assert.Equal(0.5, result, precision: 6);
+        double result = InputActivityRules.CalculateRawAp(
+            batch,
+            mouseMoveDistancePx: 300.0,
+            keyDownWeight: 1.0,
+            mouseClickWeight: 1.2,
+            scrollStepWeight: 0.4,
+            movePxDivider: 600.0,
+            joypadButtonWeight: 1.0,
+            joypadAxisWeight: 0.8);
+
+        Assert.Equal(8.9, result, precision: 6);
     }
 
     [Fact]
-    public void CapMultiplier_FarOverCap_ClampsToMin()
+    public void CalculateAccumulator_AddsApAndDrains()
     {
-        // ratio = 4200/420 = 10, multiplier = 0.1 → clamped to min 0.2
-        double result = InputActivityRules.CalculateCapMultiplier(
-            apFinalThisMinute: 4200.0, softCapPerMinute: 420.0, minCapMultiplier: 0.2);
-
-        Assert.Equal(0.2, result);
-    }
-
-    [Fact]
-    public void CapMultiplier_ZeroCap_ReturnsOne()
-    {
-        double result = InputActivityRules.CalculateCapMultiplier(
-            apFinalThisMinute: 999.0, softCapPerMinute: 0.0, minCapMultiplier: 0.2);
-
-        Assert.Equal(1.0, result);
-    }
-
-    // --- CalculateAccumulator ---
-
-    [Fact]
-    public void Accumulator_AddsApAndDrains()
-    {
-        // current=10, +5 ap, -0.6*1.0 drain = 14.4
         double result = InputActivityRules.CalculateAccumulator(
-            currentAccumulator: 10.0, apFinal: 5.0, drainPerSecond: 0.6, delta: 1.0);
+            currentAccumulator: 10.0,
+            apFinal: 5.0,
+            drainPerSecond: 0.6,
+            delta: 1.0);
 
         Assert.Equal(14.4, result, precision: 6);
     }
 
     [Fact]
-    public void Accumulator_DrainExceedsBalance_ClampsToZero()
+    public void CalculateAccumulator_DrainExceedsBalance_ClampsToZero()
     {
-        // current=0.1, +0 ap, -0.6*1.0 drain = -0.5 → clamped to 0
         double result = InputActivityRules.CalculateAccumulator(
-            currentAccumulator: 0.1, apFinal: 0.0, drainPerSecond: 0.6, delta: 1.0);
+            currentAccumulator: 0.1,
+            apFinal: 0.0,
+            drainPerSecond: 0.6,
+            delta: 1.0);
 
         Assert.Equal(0.0, result);
-    }
-
-    [Fact]
-    public void Accumulator_ZeroDelta_NoDrain()
-    {
-        double result = InputActivityRules.CalculateAccumulator(
-            currentAccumulator: 10.0, apFinal: 2.0, drainPerSecond: 0.6, delta: 0.0);
-
-        Assert.Equal(12.0, result, precision: 6);
     }
 }

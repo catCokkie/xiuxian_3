@@ -12,31 +12,43 @@ public sealed class TalismanRulesTests
     }
 
     [Fact]
-    public void ShieldCharm_ProvidesDefenseRateBonus()
+    public void ShieldCharm_ProvidesSpeedAndAttackBonus()
     {
         CharacterStatModifier modifier = TalismanRules.GetModifier("talisman_shield_charm");
-        Assert.Equal(0.20, modifier.DefenseRate, 6);
+        Assert.Equal(0.10, modifier.AttackRate, 6);
+        Assert.Equal(0.25, modifier.SpeedRate, 6);
     }
 
     [Fact]
-    public void GetDoubleOutputChance_ZeroAtLevel1_TenPercentAtLevel2()
+    public void BurstCharm_ProvidesHighestAttackRateBonus()
     {
-        Assert.Equal(0.0, TalismanRules.GetDoubleOutputChance(1));
-        Assert.Equal(0.10, TalismanRules.GetDoubleOutputChance(2));
+        CharacterStatModifier modifier = TalismanRules.GetModifier("talisman_burst_charm");
+        Assert.Equal(0.35, modifier.AttackRate, 6);
     }
 
     [Fact]
-    public void GetMaterialDiscount_ZeroAtLevel1_TenPercentAtLevel3()
+    public void GetRecipes_ReturnsThreeRecipesWithMasteryThresholds()
     {
-        Assert.Equal(0.0, TalismanRules.GetMaterialDiscount(1));
+        IReadOnlyList<TalismanRules.RecipeSpec> recipes = TalismanRules.GetRecipes();
+
+        Assert.Equal(3, recipes.Count);
+        Assert.Equal(1, recipes[0].RequiredMasteryLevel);
+        Assert.Equal(2, recipes[1].RequiredMasteryLevel);
+        Assert.Equal(4, recipes[2].RequiredMasteryLevel);
+    }
+
+    [Fact]
+    public void GetMaterialDiscount_ZeroAtLevel2_TenPercentAtLevel3()
+    {
+        Assert.Equal(0.0, TalismanRules.GetMaterialDiscount(2));
         Assert.Equal(0.10, TalismanRules.GetMaterialDiscount(3));
     }
 
     [Fact]
-    public void GetEnchantChance_ZeroAtLevel3_TenPercentAtLevel4()
+    public void GetMaxTalismansPerBattle_OneBeforeLevel4_TwoAtLevel4()
     {
-        Assert.Equal(0.0, TalismanRules.GetEnchantChance(3));
-        Assert.Equal(0.10, TalismanRules.GetEnchantChance(4));
+        Assert.Equal(1, TalismanRules.GetMaxTalismansPerBattle(3));
+        Assert.Equal(2, TalismanRules.GetMaxTalismansPerBattle(4));
     }
 
     [Fact]

@@ -16,6 +16,7 @@ namespace Xiuxian.Scripts.Services
 
         public readonly record struct FishingProgressDecision(float NextProgress, bool CompletedBatch);
         public readonly record struct CatchResult(string ItemId, int ItemCount);
+        public readonly record struct RareCatchResult(string ItemId, int ItemCount);
 
         private static readonly PondSpec[] Ponds =
         {
@@ -69,6 +70,26 @@ namespace Xiuxian.Scripts.Services
         public static double GetDoubleOutputChance(int masteryLevel)
         {
             return SubsystemMasteryRules.GetEffectValue(PlayerActionState.ModeFishing, masteryLevel, SubsystemMasteryRules.FishingDoubleOutputEffectId);
+        }
+
+        public static bool TryRollRareCatch(string recipeId, int rollPercent, bool baitActive, out RareCatchResult rareCatch)
+        {
+            rareCatch = default;
+            int normalizedRoll = Math.Abs(rollPercent % 100);
+            int threshold = baitActive ? 10 : 5;
+            if (normalizedRoll >= threshold)
+            {
+                return false;
+            }
+
+            rareCatch = recipeId switch
+            {
+                "fishing_spirit_fish" => new RareCatchResult("spirit_pearl", 1),
+                "fishing_spirit_pearl" => new RareCatchResult("spirit_pearl", 2),
+                "fishing_deep_pond" => new RareCatchResult("dragon_saliva", 1),
+                _ => default,
+            };
+            return !string.IsNullOrEmpty(rareCatch.ItemId) && rareCatch.ItemCount > 0;
         }
     }
 }

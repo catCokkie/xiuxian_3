@@ -8,19 +8,30 @@ namespace Xiuxian.Scripts.Game
     {
         public static string GetActionModeOptionText(int selected)
         {
-            return selected switch
+            IReadOnlyList<string> allModes = ProgressiveUnlockRules.GetAllActionModesInUnlockOrder();
+            if (allModes.Count == 0)
             {
-                1 => "修炼｜灵气悟性",
-                2 => "炼丹｜战斗丹药",
-                3 => "炼器｜装备强化",
-                4 => "灵田｜草花果",
-                5 => "矿脉｜矿玉银",
-                6 => "灵渔｜鱼珠涎",
-                7 => "符箓｜战斗消耗",
-                8 => "烹饪｜战前增益",
-                9 => "阵法｜常驻阵盘",
-                10 => "悟道｜悟性增益",
-                11 => "体修｜永久属性",
+                return GetActionModeOptionText(PlayerActionState.ModeDungeon);
+            }
+
+            int index = System.Math.Clamp(selected, 0, allModes.Count - 1);
+            return GetActionModeOptionText(allModes[index]);
+        }
+
+        public static string GetActionModeOptionText(string modeId)
+        {
+            return modeId switch
+            {
+                PlayerActionState.ModeCultivation => "修炼｜灵气悟性",
+                PlayerActionState.ModeAlchemy => "炼丹｜战斗丹药",
+                PlayerActionState.ModeGarden => "灵田｜草花果",
+                PlayerActionState.ModeMining => "矿脉｜矿玉银",
+                PlayerActionState.ModeSmithing => "炼器｜装备强化",
+                PlayerActionState.ModeFishing => "灵渔｜鱼珠涎",
+                PlayerActionState.ModeCooking => "烹饪｜战前增益",
+                PlayerActionState.ModeTalisman => "符箓｜战斗消耗",
+                PlayerActionState.ModeFormation => "阵法｜常驻阵盘",
+                PlayerActionState.ModeBodyCultivation => "体修｜永久属性",
                 _ => "副本｜材料装备",
             };
         }
@@ -75,6 +86,11 @@ namespace Xiuxian.Scripts.Game
             if (string.IsNullOrEmpty(cropName))
             {
                 return "灵田待命（请先选择作物）";
+            }
+
+            if (requiredProgress > 0.0f && currentProgress >= requiredProgress)
+            {
+                return $"种植：{cropName} 已成熟，可收获";
             }
 
             float percent = requiredProgress > 0.0f ? currentProgress / requiredProgress * 100.0f : 0.0f;
@@ -134,7 +150,7 @@ namespace Xiuxian.Scripts.Game
                 return UiText.BattleLogEmpty;
             }
 
-            var sb = new StringBuilder();
+            StringBuilder sb = new();
             sb.Append("最近战斗日志");
             sb.Append($"\n共 {entries.Count} 条，最新在上\n");
 
@@ -145,13 +161,13 @@ namespace Xiuxian.Scripts.Game
                 {
                     "elite" => " [color=#c8a050](精英)[/color]",
                     "boss" => " [color=#c85050](Boss)[/color]",
-                    _ => ""
+                    _ => string.Empty
                 };
                 sb.Append($"\n[{entry.TimeLabel}] 遭遇 {entry.MonsterName}{typeBadge}");
 
                 bool isWin = entry.BattleResult == "胜利";
                 string resultColor = isWin ? "#6aaf6a" : "#c85050";
-                string roundText = entry.RoundCount > 0 ? $" — {entry.RoundCount} 回合" : "";
+                string roundText = entry.RoundCount > 0 ? $" - {entry.RoundCount} 回合" : string.Empty;
                 sb.Append($"\n[color={resultColor}]战斗{entry.BattleResult}{roundText}[/color]");
 
                 if (isWin && entry.RewardSummary != "无掉落")
@@ -159,7 +175,7 @@ namespace Xiuxian.Scripts.Game
                     sb.Append($"\n掉落：{entry.RewardSummary}");
                 }
 
-                sb.Append("\n[color=#b8a080]────────────────────[/color]");
+                sb.Append("\n[color=#b8a080]--------------------[/color]");
             }
 
             return sb.ToString();

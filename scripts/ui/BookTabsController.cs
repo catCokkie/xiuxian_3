@@ -7,6 +7,11 @@ using Xiuxian.Scripts.Services;
 
 public partial class BookTabsController : Control
 {
+    private const string UnlockedEquipmentTabSettingKey = "unlocked_equipment_tab";
+    private const string UnlockedBackpackTabSettingKey = "unlocked_backpack_tab";
+    private const string PrivacyInputCollectionSettingKey = "privacy_input_collection_enabled";
+    private const string PrivacyNoticeAcknowledgedSettingKey = "privacy_notice_acknowledged";
+
     [Signal]
     public delegate void ActiveTabsChangedEventHandler(string leftTabName, string rightTabName);
 
@@ -16,6 +21,7 @@ public partial class BookTabsController : Control
         { "BattleLogTab", UiText.BattleLogEmpty },
         { "EquipmentTab", UiText.EquipmentTemplate },
         { "BackpackTab", UiText.BackpackTemplate },
+        { "ShopTab", UiText.ShopTemplate },
         { "StatsTab", UiText.StatsTemplate },
         { "ValidationTab", UiText.LeftTabValidation },
     };
@@ -37,9 +43,11 @@ public partial class BookTabsController : Control
     private VBoxContainer _settingsSystemRoot = null!;
     private VBoxContainer _settingsDisplayRoot = null!;
     private VBoxContainer _settingsProgressRoot = null!;
+    private VBoxContainer _settingsPrivacyRoot = null!;
     private VBoxContainer _settingsActionRoot = null!;
     private VBoxContainer _cultivationRoot = null!;
     private VBoxContainer _backpackRoot = null!;
+    private VBoxContainer _shopRoot = null!;
     private VBoxContainer _bugFeedbackRoot = null!;
     private VBoxContainer _equipmentRoot = null!;
     private VBoxContainer _validationRoot = null!;
@@ -49,6 +57,7 @@ public partial class BookTabsController : Control
     private Button _settingsSystemBtn = null!;
     private Button _settingsDisplayBtn = null!;
     private Button _settingsProgressBtn = null!;
+    private Button _settingsPrivacyBtn = null!;
 
     private OptionButton _languageOption = null!;
     private CheckButton _keepOnTopCheck = null!;
@@ -66,6 +75,12 @@ public partial class BookTabsController : Control
     private CheckButton _cloudSyncCheck = null!;
     private CheckButton _milestoneTipsCheck = null!;
     private CheckButton _globalDebugOverlayCheck = null!;
+    private CheckButton _privacyInputCollectionCheck = null!;
+    private CheckButton _rhythmEnabledCheck = null!;
+    private OptionButton _rhythmStrengthOption = null!;
+    private OptionButton _rhythmCycleOption = null!;
+    private Label _privacyCollectionStatusLabel = null!;
+    private Label _privacyStatementLabel = null!;
     private Label _cultivationStatusLabel = null!;
     private Button _cultivationBreakthroughButton = null!;
     private Button _cultivationBossInsightButton = null!;
@@ -73,16 +88,23 @@ public partial class BookTabsController : Control
     private readonly Dictionary<string, Button> _cultivationMasteryButtons = new();
     private OptionButton _cultivationAlchemyRecipeOption = null!;
     private Button _cultivationAlchemyStartButton = null!;
+    private OptionButton _cultivationTalismanOption = null!;
+    private Button _cultivationTalismanStartButton = null!;
     private OptionButton _cultivationGardenOption = null!;
+    private OptionButton _cultivationGardenPlotOption = null!;
     private Button _cultivationGardenStartButton = null!;
+    private Button _cultivationGardenBoostButton = null!;
     private OptionButton _cultivationMiningOption = null!;
     private Button _cultivationMiningStartButton = null!;
+    private Button _cultivationMiningRefreshButton = null!;
     private OptionButton _cultivationFishingOption = null!;
     private Button _cultivationFishingStartButton = null!;
     private OptionButton _cultivationFormationOption = null!;
     private Button _cultivationFormationActivateButton = null!;
     private OptionButton _cultivationFormationSecondaryOption = null!;
     private Button _cultivationFormationSecondaryActivateButton = null!;
+    private OptionButton _cultivationBodyCultivationOption = null!;
+    private Button _cultivationBodyCultivationStartButton = null!;
     private RichTextLabel _cultivationContentLabel = null!;
     private BackpackGridController _backpackGrid = null!;
     private TextEdit _bugFeedbackInput = null!;
@@ -99,6 +121,13 @@ public partial class BookTabsController : Control
     private Button _simulationMonsterButton = null!;
     private Label _simulationStatusLabel = null!;
     private RichTextLabel _simulationContentLabel = null!;
+    private VBoxContainer _shopCategoryRoot = null!;
+    private VBoxContainer _shopItemListRoot = null!;
+    private Label _shopBalanceLabel = null!;
+    private Label _shopSummaryLabel = null!;
+    private Label _shopStatusLabel = null!;
+    private Button _shopExchangeButton = null!;
+    private readonly Dictionary<string, Button> _shopCategoryButtons = new();
 
     private Tween? _leftTween;
     private InputActivityState? _activityState;
@@ -109,9 +138,13 @@ public partial class BookTabsController : Control
     private GardenState? _gardenState;
     private MiningState? _miningState;
     private FishingState? _fishingState;
+    private RecipeProgressState? _talismanState;
     private FormationState? _formationState;
+    private RecipeProgressState? _bodyCultivationState;
     private ResourceWalletState? _resourceWalletState;
     private PlayerProgressState? _playerProgressState;
+    private CultivationRhythmState? _cultivationRhythmState;
+    private ShopState? _shopState;
     private PlayerActionState? _playerActionState;
     private EquippedItemsState? _equippedItemsState;
     private SubsystemMasteryState? _subsystemMasteryState;
@@ -129,8 +162,11 @@ public partial class BookTabsController : Control
     private string _simulationLevelFilterId = "";
     private string _simulationMonsterFilterId = "";
     private string _lastSimulationSummary = "";
+    private string _activeShopCategory = ShopRules.CategoryConsumables;
+    private double _livePanelRefreshAccumulator;
 
     private static readonly string[] ValidationScopeFilters = { "all", "config", "level", "monster", "drop_table" };
+    private static readonly int[] RhythmCycleOptions = { 25, 45, 60, 90 };
 
     private readonly Godot.Collections.Dictionary<string, Variant> _settings = new()
     {
@@ -151,6 +187,10 @@ public partial class BookTabsController : Control
         ["cloud_sync"] = false,
         ["milestone_tips"] = true,
         ["global_debug_overlay"] = false,
+        [PrivacyInputCollectionSettingKey] = true,
+        [PrivacyNoticeAcknowledgedSettingKey] = false,
+        [UnlockedEquipmentTabSettingKey] = false,
+        [UnlockedBackpackTabSettingKey] = false,
     };
 
     public override void _Ready()
@@ -171,11 +211,15 @@ public partial class BookTabsController : Control
         _potionInventoryState = services?.PotionInventoryState;
         _smithingState = services?.SmithingState;
         _gardenState = services?.GardenState;
+        _talismanState = services?.TalismanState;
         _formationState = services?.FormationState;
+        _bodyCultivationState = services?.BodyCultivationState;
         _miningState = services?.MiningState;
         _fishingState = services?.FishingState;
         _resourceWalletState = services?.ResourceWalletState;
         _playerProgressState = services?.PlayerProgressState;
+        _cultivationRhythmState = services?.CultivationRhythmState;
+        _shopState = services?.ShopState;
         _playerActionState = services?.PlayerActionState;
         _equippedItemsState = services?.EquippedItemsState;
         _subsystemMasteryState = services?.SubsystemMasteryState;
@@ -216,9 +260,17 @@ public partial class BookTabsController : Control
         {
             _fishingState.FishingChanged += OnFishingChanged;
         }
+        if (_talismanState != null)
+        {
+            _talismanState.RecipeProgressChanged += OnGenericRecipeChanged;
+        }
         if (_formationState != null)
         {
             _formationState.RecipeProgressChanged += OnFormationChanged;
+        }
+        if (_bodyCultivationState != null)
+        {
+            _bodyCultivationState.RecipeProgressChanged += OnGenericRecipeChanged;
         }
         if (_resourceWalletState != null)
         {
@@ -227,6 +279,10 @@ public partial class BookTabsController : Control
         if (_playerProgressState != null)
         {
             _playerProgressState.RealmProgressChanged += OnRealmProgressChanged;
+        }
+        if (_shopState != null)
+        {
+            _shopState.ShopChanged += OnShopChanged;
         }
         if (_equippedItemsState != null)
         {
@@ -250,6 +306,37 @@ public partial class BookTabsController : Control
         RestoreActiveTabs(ActiveLeftTabName, ActiveRightTabName);
         RefreshCoinLabel();
         RefreshDynamicTabContent();
+    }
+
+    public override void _Process(double delta)
+    {
+        if (!IsVisibleInTree())
+        {
+            return;
+        }
+
+        _livePanelRefreshAccumulator += delta;
+        if (_livePanelRefreshAccumulator < 1.0)
+        {
+            return;
+        }
+
+        _livePanelRefreshAccumulator = 0.0;
+        if (_isShowingRightTab)
+        {
+            return;
+        }
+
+        if (ActiveRightTabName == "SettingsTab" && _activeSettingsSection == "privacy")
+        {
+            UpdatePrivacySectionState();
+            return;
+        }
+
+        if (ActiveLeftTabName == "CultivationTab" || ActiveLeftTabName == "ShopTab")
+        {
+            RefreshDynamicTabContent();
+        }
     }
 
     public override void _ExitTree()
@@ -287,9 +374,17 @@ public partial class BookTabsController : Control
         {
             _fishingState.FishingChanged -= OnFishingChanged;
         }
+        if (_talismanState != null)
+        {
+            _talismanState.RecipeProgressChanged -= OnGenericRecipeChanged;
+        }
         if (_formationState != null)
         {
             _formationState.RecipeProgressChanged -= OnFormationChanged;
+        }
+        if (_bodyCultivationState != null)
+        {
+            _bodyCultivationState.RecipeProgressChanged -= OnGenericRecipeChanged;
         }
         if (_resourceWalletState != null)
         {
@@ -298,6 +393,10 @@ public partial class BookTabsController : Control
         if (_playerProgressState != null)
         {
             _playerProgressState.RealmProgressChanged -= OnRealmProgressChanged;
+        }
+        if (_shopState != null)
+        {
+            _shopState.ShopChanged -= OnShopChanged;
         }
         if (_equippedItemsState != null)
         {
@@ -330,8 +429,7 @@ public partial class BookTabsController : Control
         ActiveRightTabName = rightTabName;
         _isShowingRightTab = false;
 
-        SyncButtons("TopStrip/LeftTabs", _leftTabContentMap.Keys, ActiveLeftTabName);
-        SyncButtons("TopStrip/RightTabs", _rightTabContentMap.Keys, ActiveRightTabName);
+        RefreshUnlockedTabs(emitIfActiveTabChanged: false);
         RefreshCurrentPageContent();
     }
 
@@ -352,11 +450,28 @@ public partial class BookTabsController : Control
 
         ApplySettingsRuntime();
         UpdateSettingsControlsFromState();
+        RefreshUnlockedTabs(emitIfActiveTabChanged: false);
+        RefreshCurrentPageContent();
+    }
+
+    public bool IsPrivacyInputCollectionEnabled()
+    {
+        return !_settings.ContainsKey(PrivacyInputCollectionSettingKey) || _settings[PrivacyInputCollectionSettingKey].AsBool();
+    }
+
+    public bool ShouldShowPrivacyNotice()
+    {
+        return !_settings.ContainsKey(PrivacyNoticeAcknowledgedSettingKey) || !_settings[PrivacyNoticeAcknowledgedSettingKey].AsBool();
+    }
+
+    public void AcknowledgePrivacyNotice()
+    {
+        _settings[PrivacyNoticeAcknowledgedSettingKey] = true;
     }
 
     private void SetActiveLeftTab(string tabName)
     {
-        if (!_leftTabContentMap.ContainsKey(tabName))
+        if (!_leftTabContentMap.ContainsKey(tabName) || !IsLeftTabUnlocked(tabName))
         {
             return;
         }
@@ -369,8 +484,7 @@ public partial class BookTabsController : Control
 
         ActiveLeftTabName = tabName;
         _isShowingRightTab = false;
-        SyncButtons("TopStrip/LeftTabs", _leftTabContentMap.Keys, ActiveLeftTabName);
-        SyncButtons("TopStrip/RightTabs", _rightTabContentMap.Keys, ActiveRightTabName);
+        RefreshUnlockedTabs(emitIfActiveTabChanged: false);
         RefreshCurrentPageContent();
         EmitSignal(SignalName.ActiveTabsChanged, ActiveLeftTabName, ActiveRightTabName);
     }
@@ -378,6 +492,7 @@ public partial class BookTabsController : Control
     private void OnActivityTick(double apThisSecond, double apFinal)
     {
         RefreshDynamicTabContent();
+        UpdatePrivacySectionState();
     }
 
     private void OnInventoryChanged(string itemId, int amount, int newTotal)
@@ -431,7 +546,17 @@ public partial class BookTabsController : Control
         RefreshDynamicTabContent();
     }
 
+    private void OnGenericRecipeChanged(string selectedRecipeId, float currentProgress, float requiredProgress)
+    {
+        RefreshDynamicTabContent();
+    }
+
     private void OnRealmProgressChanged(int realmLevel, double realmExp, double realmExpRequired)
+    {
+        RefreshDynamicTabContent();
+    }
+
+    private void OnShopChanged()
     {
         RefreshDynamicTabContent();
     }
@@ -448,12 +573,14 @@ public partial class BookTabsController : Control
 
     private void RefreshDynamicTabContent()
     {
+        RefreshUnlockedTabs();
+
         if (ActiveRightTabName == "SettingsTab")
         {
             return;
         }
 
-        if (!_isShowingRightTab && (ActiveLeftTabName == "CultivationTab" || ActiveLeftTabName == "StatsTab" || ActiveLeftTabName == "BattleLogTab" || ActiveLeftTabName == "EquipmentTab" || ActiveLeftTabName == "BackpackTab" || ActiveLeftTabName == "ValidationTab"))
+        if (!_isShowingRightTab && (ActiveLeftTabName == "CultivationTab" || ActiveLeftTabName == "StatsTab" || ActiveLeftTabName == "BattleLogTab" || ActiveLeftTabName == "EquipmentTab" || ActiveLeftTabName == "BackpackTab" || ActiveLeftTabName == "ShopTab" || ActiveLeftTabName == "ValidationTab"))
         {
             string content = GetLeftTabContent(ActiveLeftTabName);
             if (ActiveLeftTabName == "CultivationTab")
@@ -468,6 +595,10 @@ public partial class BookTabsController : Control
             else if (ActiveLeftTabName == "BackpackTab")
             {
                 RefreshBackpackGrid();
+            }
+            else if (ActiveLeftTabName == "ShopTab")
+            {
+                RefreshShopPanelContent();
             }
             else if (ActiveLeftTabName == "ValidationTab")
             {
@@ -488,6 +619,7 @@ public partial class BookTabsController : Control
             "BattleLogTab" => BuildBattleLogText(),
             "EquipmentTab" => BuildEquipmentOverviewText(),
             "BackpackTab" => UiText.BackpackTemplate,
+            "ShopTab" => UiText.ShopTemplate,
             "StatsTab" => BuildStatsOverviewText(),
             "ValidationTab" => BuildValidationOverviewText(),
             _ => _leftTabContentMap[tabName]
@@ -527,7 +659,12 @@ public partial class BookTabsController : Control
                 _playerProgressState.BodyCultivationAttackFlat,
                 _playerProgressState.BodyCultivationDefenseFlat,
                 _playerProgressState.TemperCount,
-                _playerProgressState.BoneforgeCount))
+                _playerProgressState.BoneforgeCount,
+                _playerProgressState.BloodflowCount,
+                _playerProgressState.BodyCultivationPostBattleHealRate,
+                _playerProgressState.ZhouTianMaxHpRate,
+                _playerProgressState.ZhouTianAttackRate,
+                _playerProgressState.ZhouTianDefenseRate))
         };
         CharacterStatBlock finalStats = CharacterStatRules.BuildFinalStats(CharacterStatRules.BuildFinalStats(baseStats, bonusModifiers), equippedProfiles);
         EquipmentInstanceData[] backpackInstances = _backpackState.GetEquipmentInstances();
@@ -551,6 +688,11 @@ public partial class BookTabsController : Control
         }
 
         text += $"\n\n体修加成\n- 气血 +{_playerProgressState.BodyCultivationMaxHpFlat}\n- 攻击 +{_playerProgressState.BodyCultivationAttackFlat}\n- 防御 +{_playerProgressState.BodyCultivationDefenseFlat}";
+        if (_playerProgressState.ZhouTianMaxHpRate > 0.0 || _playerProgressState.ZhouTianAttackRate > 0.0 || _playerProgressState.ZhouTianDefenseRate > 0.0)
+        {
+            text +=
+                $"\n\n周天感悟\n- 气血 +{_playerProgressState.ZhouTianMaxHpRate * 100:0.0}%\n- 攻击 +{_playerProgressState.ZhouTianAttackRate * 100:0.0}%\n- 防御 +{_playerProgressState.ZhouTianDefenseRate * 100:0.0}%";
+        }
 
         return text;
     }
@@ -636,6 +778,10 @@ public partial class BookTabsController : Control
         sb.AppendLine("资源判断");
         sb.AppendLine($"- 灵气: {_resourceWalletState.Lingqi:0.0}（{BuildLingqiStatusSummary()}）");
         sb.AppendLine($"- 灵石: {_resourceWalletState.SpiritStones}（{BuildSpiritStoneStatusSummary()}）");
+        if (_gardenState != null)
+        {
+            sb.AppendLine($"- 灵田状态: {_gardenState.BuildOverviewSummary()} | {_gardenState.BuildSelectedPlotSummary()}");
+        }
 
         if (_alchemyState != null && _alchemyState.HasSelectedRecipe && AlchemyRules.TryGetRecipe(_alchemyState.SelectedRecipeId, out AlchemyRules.RecipeSpec recipe))
         {
@@ -722,6 +868,7 @@ public partial class BookTabsController : Control
             PlayerActionState.ActionCultivation => "稳定积累灵气、悟性与境界经验",
             PlayerActionState.ActionAlchemy => BuildAlchemyFocusSummary(),
             PlayerActionState.ActionSmithing => BuildSmithingFocusSummary(),
+            PlayerActionState.ActionGarden => _gardenState?.BuildSelectedPlotSummary() ?? "灵田待命（请选择田位与作物）",
             _ => $"刷取 {BuildActiveZoneName()} 的材料、装备与过区进度",
         };
     }
@@ -931,16 +1078,23 @@ public partial class BookTabsController : Control
             _cultivationBossInsightButton.Disabled = true;
             _cultivationAlchemyRecipeOption.Disabled = true;
             _cultivationAlchemyStartButton.Disabled = true;
+            _cultivationTalismanOption.Disabled = true;
+            _cultivationTalismanStartButton.Disabled = true;
             _cultivationGardenOption.Disabled = true;
+            _cultivationGardenPlotOption.Disabled = true;
             _cultivationGardenStartButton.Disabled = true;
+            _cultivationGardenBoostButton.Disabled = true;
             _cultivationMiningOption.Disabled = true;
             _cultivationMiningStartButton.Disabled = true;
+            _cultivationMiningRefreshButton.Disabled = true;
             _cultivationFishingOption.Disabled = true;
             _cultivationFishingStartButton.Disabled = true;
             _cultivationFormationOption.Disabled = true;
             _cultivationFormationActivateButton.Disabled = true;
             _cultivationFormationSecondaryOption.Disabled = true;
             _cultivationFormationSecondaryActivateButton.Disabled = true;
+            _cultivationBodyCultivationOption.Disabled = true;
+            _cultivationBodyCultivationStartButton.Disabled = true;
             if (_cultivationMasteryLabel != null)
             {
                 _cultivationMasteryLabel.Text = UiText.CultivationUnavailable;
@@ -978,8 +1132,10 @@ public partial class BookTabsController : Control
         RefreshMasteryControls();
 
         RefreshAlchemyControls();
+        RefreshTalismanControls();
         RefreshGatheringControls();
         RefreshFormationControls();
+        RefreshBodyCultivationControls();
     }
 
     private void RefreshMasteryControls()
@@ -1181,6 +1337,31 @@ public partial class BookTabsController : Control
         _cultivationStatusLabel.Text = "炼丹已开始，切到炼丹模式后输入会推进进度。";
     }
 
+    private void OnTalismanRecipeSelected(long index)
+    {
+        if (_talismanState == null || index < 0 || index >= _cultivationTalismanOption.ItemCount)
+        {
+            return;
+        }
+
+        string recipeId = _cultivationTalismanOption.GetItemMetadata((int)index).AsString();
+        _talismanState.SelectRecipe(recipeId);
+        RefreshDynamicTabContent();
+    }
+
+    private void OnTalismanStartPressed()
+    {
+        if (!CanStartGenericCultivationRecipe(_talismanState, PlayerActionState.ModeTalisman))
+        {
+            RefreshCultivationPanelContent();
+            _cultivationStatusLabel.Text = "符箓材料或灵气不足，无法开始当前符式";
+            return;
+        }
+
+        RefreshCultivationPanelContent();
+        _cultivationStatusLabel.Text = "制符准备完成，切到符箓模式后输入会推进当前批次";
+    }
+
     private void OnGardenRecipeSelected(long index)
     {
         if (_gardenState == null || index < 0 || index >= _cultivationGardenOption.ItemCount)
@@ -1189,6 +1370,17 @@ public partial class BookTabsController : Control
         }
 
         _gardenState.SelectCrop(_cultivationGardenOption.GetItemMetadata((int)index).AsString());
+        RefreshDynamicTabContent();
+    }
+
+    private void OnGardenPlotSelected(long index)
+    {
+        if (_gardenState == null || _cultivationGardenPlotOption == null || index < 0 || index >= _cultivationGardenPlotOption.ItemCount)
+        {
+            return;
+        }
+
+        _gardenState.SelectPlot(_cultivationGardenPlotOption.GetItemMetadata((int)index).AsInt32());
         RefreshDynamicTabContent();
     }
 
@@ -1216,13 +1408,59 @@ public partial class BookTabsController : Control
 
     private void OnGardenStartPressed()
     {
-        if (_gardenState == null || !_gardenState.HasSelectedCrop)
+        if (_gardenState == null)
         {
             RefreshCultivationPanelContent();
             return;
         }
 
-        _cultivationStatusLabel.Text = "灵田已就绪，切到灵田模式后输入会推进种植。";
+        GardenState.PlotStatus plot = _gardenState.GetSelectedPlotStatus();
+        if (!plot.IsUnlocked)
+        {
+            _cultivationStatusLabel.Text = "当前田位尚未解锁，可前往坊市购买扩容。";
+        }
+        else if (plot.IsReady)
+        {
+            if (_gardenState.TryHarvestSelectedPlot(out string harvestSummary))
+            {
+                _cultivationStatusLabel.Text = harvestSummary;
+            }
+            else if (!_gardenState.CanHarvestSelectedPlot(out string harvestReason))
+            {
+                _cultivationStatusLabel.Text = harvestReason;
+            }
+        }
+        else if (plot.IsEmpty)
+        {
+            if (_gardenState.TryPlantSelectedCrop(out string plantSummary))
+            {
+                _cultivationStatusLabel.Text = plantSummary;
+            }
+            else if (!_gardenState.CanPlantSelectedCrop(out string plantReason))
+            {
+                _cultivationStatusLabel.Text = plantReason;
+            }
+        }
+        else
+        {
+            _cultivationStatusLabel.Text = _gardenState.BuildSelectedPlotSummary();
+        }
+
+        RefreshCultivationPanelContent();
+        RefreshDynamicTabContent();
+    }
+
+    private void OnUseRipeningElixirPressed()
+    {
+        if (_shopState != null && _shopState.TryUseRipeningElixir(out string summary))
+        {
+            _cultivationStatusLabel.Text = summary;
+        }
+        else
+        {
+            _cultivationStatusLabel.Text = "当前没有可用的催熟灵液，或灵田尚未选中作物。";
+        }
+
         RefreshCultivationPanelContent();
     }
 
@@ -1235,6 +1473,20 @@ public partial class BookTabsController : Control
         }
 
         _cultivationStatusLabel.Text = "矿脉已就绪，切到矿脉模式后输入会推进开采。";
+        RefreshCultivationPanelContent();
+    }
+
+    private void OnUseMiningRefreshPressed()
+    {
+        if (_shopState != null && _shopState.TryUseMiningRefreshToken(out string summary))
+        {
+            _cultivationStatusLabel.Text = summary;
+        }
+        else
+        {
+            _cultivationStatusLabel.Text = "当前没有可用的矿脉刷新令，或尚未选中矿点。";
+        }
+
         RefreshCultivationPanelContent();
     }
 
@@ -1322,6 +1574,45 @@ public partial class BookTabsController : Control
         RefreshDynamicTabContent();
     }
 
+    private void OnBodyCultivationRecipeSelected(long index)
+    {
+        if (_bodyCultivationState == null || index < 0 || index >= _cultivationBodyCultivationOption.ItemCount)
+        {
+            return;
+        }
+
+        string recipeId = _cultivationBodyCultivationOption.GetItemMetadata((int)index).AsString();
+        _bodyCultivationState.SelectRecipe(recipeId);
+        RefreshDynamicTabContent();
+    }
+
+    private void OnBodyCultivationStartPressed()
+    {
+        if (_bodyCultivationState == null || _playerProgressState == null || !_bodyCultivationState.HasSelectedRecipe)
+        {
+            RefreshCultivationPanelContent();
+            return;
+        }
+
+        int masteryLevel = GetMasteryLevel(PlayerActionState.ModeBodyCultivation);
+        if (!_playerProgressState.CanApplyBodyCultivationReward(_bodyCultivationState.SelectedRecipeId, masteryLevel))
+        {
+            RefreshCultivationPanelContent();
+            _cultivationStatusLabel.Text = "当前体修功法已达上限，需提升精通后才能继续";
+            return;
+        }
+
+        if (!CanStartGenericCultivationRecipe(_bodyCultivationState, PlayerActionState.ModeBodyCultivation))
+        {
+            RefreshCultivationPanelContent();
+            _cultivationStatusLabel.Text = "体修材料或灵气不足，无法开始当前功法";
+            return;
+        }
+
+        RefreshCultivationPanelContent();
+        _cultivationStatusLabel.Text = "体修准备完成，切到体修模式后输入会推进当前批次";
+    }
+
     private void RefreshAlchemyControls()
     {
         if (_cultivationAlchemyRecipeOption == null || _cultivationAlchemyStartButton == null)
@@ -1368,6 +1659,16 @@ public partial class BookTabsController : Control
             : "请选择可用丹方，并准备足够灵草与灵气。";
     }
 
+    private void RefreshTalismanControls()
+    {
+        RefreshGenericCultivationControls(
+            _cultivationTalismanOption,
+            _cultivationTalismanStartButton,
+            _talismanState,
+            PlayerActionState.ModeTalisman,
+            "切到符箓模式后，输入会推进当前符式");
+    }
+
     private void RefreshGatheringControls()
     {
         RefreshGardenControls();
@@ -1377,26 +1678,108 @@ public partial class BookTabsController : Control
 
     private void RefreshGardenControls()
     {
-        bool enabled = _cultivationGardenOption != null && _cultivationGardenStartButton != null && _gardenState != null;
+        bool enabled = _cultivationGardenOption != null
+            && _cultivationGardenPlotOption != null
+            && _cultivationGardenStartButton != null
+            && _cultivationGardenBoostButton != null
+            && _gardenState != null;
         if (!enabled)
         {
             return;
         }
 
-        if (_cultivationGardenOption.ItemCount == 0)
+        int gardenMasteryLevel = GetMasteryLevel(PlayerActionState.ModeGarden);
+        IReadOnlyList<GardenRules.CropSpec> crops = GardenRules.GetCrops();
+        _cultivationGardenOption.Clear();
+        for (int i = 0; i < crops.Count; i++)
         {
-            IReadOnlyList<GardenRules.CropSpec> crops = GardenRules.GetCrops();
-            for (int i = 0; i < crops.Count; i++)
+            if (!GardenRules.CanPlantCrop(crops[i].RecipeId, gardenMasteryLevel))
             {
-                _cultivationGardenOption.AddItem(crops[i].DisplayName, i);
-                _cultivationGardenOption.SetItemMetadata(i, crops[i].RecipeId);
+                continue;
             }
+
+            _cultivationGardenOption.AddItem(crops[i].DisplayName, _cultivationGardenOption.ItemCount);
+            _cultivationGardenOption.SetItemMetadata(_cultivationGardenOption.ItemCount - 1, crops[i].RecipeId);
         }
 
         SelectCurrentOption(_cultivationGardenOption, _gardenState.SelectedRecipeId);
-        bool canStart = _gardenState.HasSelectedCrop;
+        bool hasSelectedCrop = false;
+        for (int i = 0; i < _cultivationGardenOption.ItemCount; i++)
+        {
+            if (_cultivationGardenOption.GetItemMetadata(i).AsString() == _gardenState.SelectedRecipeId)
+            {
+                hasSelectedCrop = true;
+                break;
+            }
+        }
+
+        if (!hasSelectedCrop)
+        {
+            if (_cultivationGardenOption.ItemCount > 0)
+            {
+                string recipeId = _cultivationGardenOption.GetItemMetadata(0).AsString();
+                _gardenState.SelectCrop(recipeId);
+                _cultivationGardenOption.Select(0);
+            }
+            else if (_gardenState.HasSelectedCropChoice)
+            {
+                _gardenState.SelectCrop(string.Empty);
+            }
+        }
+
+        _cultivationGardenPlotOption.Clear();
+        for (int plotIndex = 0; plotIndex < GardenRules.MaxPlotCount; plotIndex++)
+        {
+            GardenState.PlotStatus plot = _gardenState.GetPlotStatus(plotIndex);
+            _cultivationGardenPlotOption.AddItem(BuildGardenPlotOptionText(plot), _cultivationGardenPlotOption.ItemCount);
+            _cultivationGardenPlotOption.SetItemMetadata(_cultivationGardenPlotOption.ItemCount - 1, plotIndex);
+        }
+
+        if (_gardenState.SelectedPlotIndex >= 0 && _gardenState.SelectedPlotIndex < _cultivationGardenPlotOption.ItemCount)
+        {
+            _cultivationGardenPlotOption.Select(_gardenState.SelectedPlotIndex);
+        }
+
+        GardenState.PlotStatus selectedPlot = _gardenState.GetSelectedPlotStatus();
         _cultivationGardenOption.Disabled = false;
-        _cultivationGardenStartButton.Disabled = !canStart;
+        _cultivationGardenPlotOption.Disabled = false;
+
+        if (!selectedPlot.IsUnlocked)
+        {
+            _cultivationGardenStartButton.Text = "田位未解锁";
+            _cultivationGardenStartButton.Disabled = true;
+            _cultivationGardenStartButton.TooltipText = "可在坊市购买额外田位。";
+        }
+        else if (selectedPlot.IsReady)
+        {
+            _cultivationGardenStartButton.Text = "收获";
+            _cultivationGardenStartButton.Disabled = false;
+            _cultivationGardenStartButton.TooltipText = _gardenState.BuildSelectedPlotSummary();
+        }
+        else if (selectedPlot.IsEmpty)
+        {
+            bool canPlant = _gardenState.CanPlantSelectedCrop(out string plantReason);
+            _cultivationGardenStartButton.Text = "播种";
+            _cultivationGardenStartButton.Disabled = !canPlant;
+            _cultivationGardenStartButton.TooltipText = canPlant
+                ? "消耗 1 粒种子开始真实时间生长。"
+                : plantReason;
+        }
+        else
+        {
+            _cultivationGardenStartButton.Text = "生长中";
+            _cultivationGardenStartButton.Disabled = true;
+            _cultivationGardenStartButton.TooltipText = _gardenState.BuildSelectedPlotSummary();
+        }
+
+        bool canBoost = (_backpackState?.GetItemCount("ripening_elixir") ?? 0) > 0
+            && selectedPlot.IsUnlocked
+            && !selectedPlot.IsEmpty
+            && !selectedPlot.IsReady;
+        _cultivationGardenBoostButton.Disabled = !canBoost;
+        _cultivationGardenBoostButton.TooltipText = canBoost
+            ? "减少当前田位 50% 剩余生长时间。"
+            : "请选择仍在生长中的作物，并准备至少 1 瓶催熟灵液。";
     }
 
     private void RefreshMiningControls()
@@ -1421,6 +1804,7 @@ public partial class BookTabsController : Control
         bool canStart = _miningState.HasSelectedNode;
         _cultivationMiningOption.Disabled = false;
         _cultivationMiningStartButton.Disabled = !canStart;
+        _cultivationMiningRefreshButton.Disabled = (_backpackState?.GetItemCount("mining_refresh_token") ?? 0) <= 0 || !_miningState.HasSelectedNode;
     }
 
     private void RefreshFishingControls()
@@ -1501,6 +1885,120 @@ public partial class BookTabsController : Control
             : "阵法精通 Lv3 后解锁副阵槽。";
     }
 
+    private void RefreshBodyCultivationControls()
+    {
+        RefreshGenericCultivationControls(
+            _cultivationBodyCultivationOption,
+            _cultivationBodyCultivationStartButton,
+            _bodyCultivationState,
+            PlayerActionState.ModeBodyCultivation,
+            "切到体修模式后，输入会推进当前功法");
+    }
+
+    private void RefreshGenericCultivationControls(
+        OptionButton? option,
+        Button? startButton,
+        IRecipeProgressState? state,
+        string systemId,
+        string readyTooltip)
+    {
+        if (option == null || startButton == null)
+        {
+            return;
+        }
+
+        bool enabled = state != null && _backpackState != null && _resourceWalletState != null;
+        option.Disabled = !enabled;
+        startButton.Disabled = !enabled;
+        if (!enabled)
+        {
+            return;
+        }
+
+        List<IRecipeDefinition> availableRecipes = GetAvailableRecipes(systemId);
+        option.Clear();
+        for (int i = 0; i < availableRecipes.Count; i++)
+        {
+            option.AddItem(availableRecipes[i].DisplayName, i);
+            option.SetItemMetadata(i, availableRecipes[i].RecipeId);
+        }
+
+        string selectedRecipeId = state!.SelectedRecipeId;
+        bool selectionVisible = false;
+        for (int i = 0; i < option.ItemCount; i++)
+        {
+            if (option.GetItemMetadata(i).AsString() == selectedRecipeId)
+            {
+                option.Select(i);
+                selectionVisible = true;
+                break;
+            }
+        }
+
+        if (!selectionVisible)
+        {
+            if (availableRecipes.Count > 0)
+            {
+                state.SelectRecipe(availableRecipes[0].RecipeId);
+                option.Select(0);
+            }
+            else if (state.HasSelectedRecipe)
+            {
+                state.SelectRecipe(string.Empty);
+            }
+        }
+
+        bool canStart = CanStartGenericCultivationRecipe(state, systemId);
+        if (systemId == PlayerActionState.ModeBodyCultivation
+            && _playerProgressState != null
+            && state.HasSelectedRecipe
+            && !_playerProgressState.CanApplyBodyCultivationReward(state.SelectedRecipeId, GetMasteryLevel(systemId)))
+        {
+            canStart = false;
+        }
+
+        option.Disabled = availableRecipes.Count == 0;
+        startButton.Disabled = !canStart;
+        startButton.TooltipText = canStart
+            ? readyTooltip
+            : "请先准备足够材料、灵气并满足当前精通要求";
+    }
+
+    private bool CanStartGenericCultivationRecipe(IRecipeProgressState? state, string systemId)
+    {
+        return state != null
+            && state.HasSelectedRecipe
+            && _backpackState != null
+            && _resourceWalletState != null
+            && CraftingProgressionService.CanAffordGenericRecipe(
+                state.SelectedRecipeId,
+                _backpackState,
+                _resourceWalletState,
+                GetMasteryLevel(systemId));
+    }
+
+    private List<IRecipeDefinition> GetAvailableRecipes(string systemId)
+    {
+        List<IRecipeDefinition> result = new();
+        IActivityDefinition? activity = ActivityRegistry.GetBySystem(systemId);
+        if (activity == null)
+        {
+            return result;
+        }
+
+        int masteryLevel = GetMasteryLevel(systemId);
+        IReadOnlyList<IRecipeDefinition> recipes = activity.GetRecipes();
+        for (int i = 0; i < recipes.Count; i++)
+        {
+            if (recipes[i].RequiredMasteryLevel <= masteryLevel)
+            {
+                result.Add(recipes[i]);
+            }
+        }
+
+        return result;
+    }
+
     private static void SelectCurrentOption(OptionButton option, string selectedId)
     {
         if (string.IsNullOrEmpty(selectedId))
@@ -1516,6 +2014,27 @@ public partial class BookTabsController : Control
                 break;
             }
         }
+    }
+
+    private static string BuildGardenPlotOptionText(GardenState.PlotStatus plot)
+    {
+        string plotName = $"{plot.PlotIndex + 1}号田";
+        if (!plot.IsUnlocked)
+        {
+            return $"{plotName}｜未解锁";
+        }
+
+        if (plot.IsEmpty)
+        {
+            return $"{plotName}｜空闲";
+        }
+
+        string cropName = GardenRules.TryGetCrop(plot.CropId, out GardenRules.CropSpec crop)
+            ? crop.DisplayName.Replace("种植", string.Empty)
+            : UiText.BackpackItemName(plot.CropId);
+        return plot.IsReady
+            ? $"{plotName}｜{cropName}已成熟"
+            : $"{plotName}｜{cropName} {GardenState.FormatDuration(plot.RemainingSeconds)}";
     }
 
     private int GetAlchemyMasteryLevel()
@@ -1551,6 +2070,8 @@ public partial class BookTabsController : Control
             PlayerActionState.ModeCultivation,
             PlayerActionState.ModeAlchemy,
             PlayerActionState.ModeSmithing,
+            PlayerActionState.ModeTalisman,
+            PlayerActionState.ModeBodyCultivation,
         };
     }
 
@@ -1565,6 +2086,10 @@ public partial class BookTabsController : Control
         int battleWins = _exploreProgressController?.TotalBattleWinCount ?? 0;
         double winRate = battleCount > 0 ? (double)battleWins / battleCount : 0.0;
         double currentRealmDays = _playerProgressState.CurrentRealmActiveSeconds / 86400.0;
+        int totalSmallCycles = _cultivationRhythmState?.TotalSmallCycles ?? 0;
+        int totalGrandCycles = _cultivationRhythmState?.TotalGrandCycles ?? 0;
+        int totalRestCount = _cultivationRhythmState?.TotalRestCount ?? 0;
+        int totalMeditationInsights = _cultivationRhythmState?.TotalMeditationInsights ?? 0;
 
         return
             UiText.StatsOverview(
@@ -1579,7 +2104,11 @@ public partial class BookTabsController : Control
                 winRate,
                 _resourceWalletState.TotalEarnedLingqi,
                 _resourceWalletState.TotalEarnedInsight,
-                _resourceWalletState.TotalEarnedSpiritStones);
+                _resourceWalletState.TotalEarnedSpiritStones,
+                totalSmallCycles,
+                totalGrandCycles,
+                totalRestCount,
+                totalMeditationInsights);
     }
 
     private string BuildValidationOverviewText()
@@ -1846,7 +2375,7 @@ public partial class BookTabsController : Control
 
         ActiveRightTabName = tabName;
         _isShowingRightTab = tabName != "SettingsTab";
-        SyncButtons("TopStrip/RightTabs", _rightTabContentMap.Keys, ActiveRightTabName);
+        RefreshUnlockedTabs(emitIfActiveTabChanged: false);
         RefreshCurrentPageContent();
         EmitSignal(SignalName.ActiveTabsChanged, ActiveLeftTabName, ActiveRightTabName);
     }
@@ -1856,6 +2385,7 @@ public partial class BookTabsController : Control
         BuildCultivationUi();
         BuildEquipmentUi();
         BuildBackpackUi();
+        BuildShopUi();
         BuildValidationUi();
         BuildBugFeedbackUi();
 
@@ -1872,6 +2402,7 @@ public partial class BookTabsController : Control
         _settingsSystemBtn = CreateSettingsSectionButton(UiText.SystemSection, "system");
         _settingsDisplayBtn = CreateSettingsSectionButton(UiText.DisplaySection, "display");
         _settingsProgressBtn = CreateSettingsSectionButton(UiText.ProgressSection, "progress");
+        _settingsPrivacyBtn = CreateSettingsSectionButton(UiText.PrivacySection, "privacy");
 
         _settingsActionRoot = new VBoxContainer();
         _settingsActionRoot.Name = "SettingsActionRoot";
@@ -1897,10 +2428,12 @@ public partial class BookTabsController : Control
         _settingsSystemRoot = CreateSettingsSectionRoot("SettingsSystemRoot");
         _settingsDisplayRoot = CreateSettingsSectionRoot("SettingsDisplayRoot");
         _settingsProgressRoot = CreateSettingsSectionRoot("SettingsProgressRoot");
+        _settingsPrivacyRoot = CreateSettingsSectionRoot("SettingsPrivacyRoot");
 
         BuildSystemSection(_settingsSystemRoot);
         BuildDisplaySection(_settingsDisplayRoot);
         BuildProgressSection(_settingsProgressRoot);
+        BuildPrivacySection(_settingsPrivacyRoot);
     }
 
     private void BuildCultivationUi()
@@ -1943,6 +2476,15 @@ public partial class BookTabsController : Control
         _cultivationAlchemyStartButton.Pressed += OnAlchemyStartPressed;
         actionRow.AddChild(_cultivationAlchemyStartButton);
 
+        _cultivationTalismanOption = new OptionButton();
+        _cultivationTalismanOption.ItemSelected += OnTalismanRecipeSelected;
+        actionRow.AddChild(_cultivationTalismanOption);
+
+        _cultivationTalismanStartButton = new Button();
+        _cultivationTalismanStartButton.Text = "寮€濮嬪埗绗?";
+        _cultivationTalismanStartButton.Pressed += OnTalismanStartPressed;
+        actionRow.AddChild(_cultivationTalismanStartButton);
+
         HBoxContainer gatheringRow = new();
         gatheringRow.AddThemeConstantOverride("separation", 8);
         _cultivationRoot.AddChild(gatheringRow);
@@ -1951,10 +2493,19 @@ public partial class BookTabsController : Control
         _cultivationGardenOption.ItemSelected += OnGardenRecipeSelected;
         gatheringRow.AddChild(_cultivationGardenOption);
 
+        _cultivationGardenPlotOption = new OptionButton();
+        _cultivationGardenPlotOption.ItemSelected += OnGardenPlotSelected;
+        gatheringRow.AddChild(_cultivationGardenPlotOption);
+
         _cultivationGardenStartButton = new Button();
-        _cultivationGardenStartButton.Text = "开始灵田";
+        _cultivationGardenStartButton.Text = "灵田操作";
         _cultivationGardenStartButton.Pressed += OnGardenStartPressed;
         gatheringRow.AddChild(_cultivationGardenStartButton);
+
+        _cultivationGardenBoostButton = new Button();
+        _cultivationGardenBoostButton.Text = "用催熟";
+        _cultivationGardenBoostButton.Pressed += OnUseRipeningElixirPressed;
+        gatheringRow.AddChild(_cultivationGardenBoostButton);
 
         _cultivationMiningOption = new OptionButton();
         _cultivationMiningOption.ItemSelected += OnMiningRecipeSelected;
@@ -1964,6 +2515,11 @@ public partial class BookTabsController : Control
         _cultivationMiningStartButton.Text = "开始矿脉";
         _cultivationMiningStartButton.Pressed += OnMiningStartPressed;
         gatheringRow.AddChild(_cultivationMiningStartButton);
+
+        _cultivationMiningRefreshButton = new Button();
+        _cultivationMiningRefreshButton.Text = "刷新矿脉";
+        _cultivationMiningRefreshButton.Pressed += OnUseMiningRefreshPressed;
+        gatheringRow.AddChild(_cultivationMiningRefreshButton);
 
         _cultivationFishingOption = new OptionButton();
         _cultivationFishingOption.ItemSelected += OnFishingRecipeSelected;
@@ -1995,6 +2551,19 @@ public partial class BookTabsController : Control
         _cultivationFormationSecondaryActivateButton.Text = "激活副阵";
         _cultivationFormationSecondaryActivateButton.Pressed += OnFormationSecondaryActivatePressed;
         formationRow.AddChild(_cultivationFormationSecondaryActivateButton);
+
+        HBoxContainer bodyRow = new();
+        bodyRow.AddThemeConstantOverride("separation", 8);
+        _cultivationRoot.AddChild(bodyRow);
+
+        _cultivationBodyCultivationOption = new OptionButton();
+        _cultivationBodyCultivationOption.ItemSelected += OnBodyCultivationRecipeSelected;
+        bodyRow.AddChild(_cultivationBodyCultivationOption);
+
+        _cultivationBodyCultivationStartButton = new Button();
+        _cultivationBodyCultivationStartButton.Text = "寮€濮嬩綋淇?";
+        _cultivationBodyCultivationStartButton.Pressed += OnBodyCultivationStartPressed;
+        bodyRow.AddChild(_cultivationBodyCultivationStartButton);
 
         _cultivationMasteryLabel = new RichTextLabel();
         _cultivationMasteryLabel.FitContent = true;
@@ -2093,6 +2662,263 @@ public partial class BookTabsController : Control
         _backpackGrid.Initialize(_backpackState, _potionInventoryState);
         _backpackGrid.EquipmentCellClicked += OnBackpackGridCellClicked;
         _backpackRoot.AddChild(_backpackGrid);
+    }
+
+    private void BuildShopUi()
+    {
+        _shopRoot = new VBoxContainer();
+        _shopRoot.Name = "ShopRoot";
+        _shopRoot.Visible = false;
+        _shopRoot.SetAnchorsPreset(LayoutPreset.FullRect);
+        _shopRoot.OffsetLeft = 20.0f;
+        _shopRoot.OffsetTop = 42.0f;
+        _shopRoot.OffsetRight = -20.0f;
+        _shopRoot.OffsetBottom = -18.0f;
+        _shopRoot.AddThemeConstantOverride("separation", 10);
+        _leftPage.AddChild(_shopRoot);
+
+        HBoxContainer headerRow = new();
+        headerRow.AddThemeConstantOverride("separation", 8);
+        _shopRoot.AddChild(headerRow);
+
+        _shopBalanceLabel = new Label();
+        _shopBalanceLabel.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
+        headerRow.AddChild(_shopBalanceLabel);
+
+        _shopExchangeButton = new Button();
+        _shopExchangeButton.Text = "兑换残页奖励";
+        _shopExchangeButton.Pressed += OnShopExchangePressed;
+        headerRow.AddChild(_shopExchangeButton);
+
+        _shopSummaryLabel = new Label();
+        _shopSummaryLabel.AutowrapMode = TextServer.AutowrapMode.WordSmart;
+        _shopRoot.AddChild(_shopSummaryLabel);
+
+        _shopStatusLabel = new Label();
+        _shopStatusLabel.AutowrapMode = TextServer.AutowrapMode.WordSmart;
+        _shopRoot.AddChild(_shopStatusLabel);
+
+        HBoxContainer bodyRow = new();
+        bodyRow.SizeFlagsVertical = Control.SizeFlags.ExpandFill;
+        bodyRow.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
+        bodyRow.AddThemeConstantOverride("separation", 10);
+        _shopRoot.AddChild(bodyRow);
+
+        _shopCategoryRoot = new VBoxContainer();
+        _shopCategoryRoot.CustomMinimumSize = new Vector2(92.0f, 0.0f);
+        _shopCategoryRoot.AddThemeConstantOverride("separation", 6);
+        bodyRow.AddChild(_shopCategoryRoot);
+
+        CreateShopCategoryButton(UiText.ShopCategoryConsumables, ShopRules.CategoryConsumables);
+        CreateShopCategoryButton(UiText.ShopCategoryExpansion, ShopRules.CategoryExpansion);
+        CreateShopCategoryButton(UiText.ShopCategoryUtility, ShopRules.CategoryUtility);
+        CreateShopCategoryButton(UiText.ShopCategoryRare, ShopRules.CategoryRare);
+
+        ScrollContainer scroll = new();
+        scroll.SizeFlagsVertical = Control.SizeFlags.ExpandFill;
+        scroll.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
+        scroll.HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled;
+        bodyRow.AddChild(scroll);
+
+        _shopItemListRoot = new VBoxContainer();
+        _shopItemListRoot.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
+        _shopItemListRoot.AddThemeConstantOverride("separation", 8);
+        scroll.AddChild(_shopItemListRoot);
+    }
+
+    private void CreateShopCategoryButton(string title, string category)
+    {
+        Button button = new();
+        button.Text = title;
+        button.ToggleMode = true;
+        button.Pressed += () => OnShopCategorySelected(category);
+        _shopCategoryRoot.AddChild(button);
+        _shopCategoryButtons[category] = button;
+    }
+
+    private void OnShopCategorySelected(string category)
+    {
+        _activeShopCategory = ShopRules.NormalizeCategory(category);
+        RefreshShopPanelContent();
+    }
+
+    private void OnShopPurchasePressed(string itemId)
+    {
+        if (_shopState != null && _shopState.TryPurchase(itemId, out string summary))
+        {
+            _shopStatusLabel.Text = summary;
+        }
+        else if (_shopState != null && !_shopState.CanPurchase(itemId, out string reason))
+        {
+            _shopStatusLabel.Text = reason;
+        }
+        else
+        {
+            _shopStatusLabel.Text = "坊市未加载，暂时无法购买。";
+        }
+
+        RefreshShopPanelContent();
+        RefreshDynamicTabContent();
+        EmitSignal(SignalName.ActiveTabsChanged, ActiveLeftTabName, ActiveRightTabName);
+    }
+
+    private void OnShopExchangePressed()
+    {
+        if (_shopState != null && _shopState.TryExchangePageFragments(out string summary))
+        {
+            _shopStatusLabel.Text = summary;
+        }
+        else
+        {
+            int fragments = _backpackState?.GetItemCount("page_fragment") ?? 0;
+            _shopStatusLabel.Text = $"残页不足，当前 {fragments}/10";
+        }
+
+        RefreshShopPanelContent();
+        RefreshDynamicTabContent();
+        EmitSignal(SignalName.ActiveTabsChanged, ActiveLeftTabName, ActiveRightTabName);
+    }
+
+    private void RefreshShopPanelContent()
+    {
+        if (_shopRoot == null || _shopItemListRoot == null || _shopBalanceLabel == null || _shopSummaryLabel == null || _shopExchangeButton == null)
+        {
+            return;
+        }
+
+        foreach ((string category, Button button) in _shopCategoryButtons)
+        {
+            button.ButtonPressed = category == _activeShopCategory;
+        }
+
+        _shopBalanceLabel.Text = $"灵石：{_resourceWalletState?.SpiritStones ?? 0}";
+        _shopSummaryLabel.Text = _shopState?.BuildStatusSummary() ?? "坊市未加载";
+        int fragments = _backpackState?.GetItemCount("page_fragment") ?? 0;
+        _shopExchangeButton.Disabled = fragments < 10;
+        _shopExchangeButton.TooltipText = fragments >= 10
+            ? "集齐 10 页残页后兑换随机装备"
+            : $"残页 {fragments}/10";
+
+        foreach (Node child in _shopItemListRoot.GetChildren())
+        {
+            child.QueueFree();
+        }
+
+        IReadOnlyList<ShopRules.ShopItemDefinition> items = ShopRules.GetItemsByCategory(_activeShopCategory);
+        for (int i = 0; i < items.Count; i++)
+        {
+            ShopRules.ShopItemDefinition item = items[i];
+            PanelContainer panel = new();
+            panel.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
+            StyleBoxFlat style = new();
+            style.BgColor = new Color("F8EED8");
+            style.BorderColor = new Color("C8A050");
+            style.SetBorderWidthAll(1);
+            style.SetCornerRadiusAll(6);
+            style.ContentMarginLeft = 10;
+            style.ContentMarginRight = 10;
+            style.ContentMarginTop = 8;
+            style.ContentMarginBottom = 8;
+            panel.AddThemeStyleboxOverride("panel", style);
+            _shopItemListRoot.AddChild(panel);
+
+            VBoxContainer outer = new();
+            outer.AddThemeConstantOverride("separation", 4);
+            panel.AddChild(outer);
+
+            HBoxContainer row = new();
+            row.AddThemeConstantOverride("separation", 10);
+            outer.AddChild(row);
+
+            VBoxContainer textColumn = new();
+            textColumn.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
+            row.AddChild(textColumn);
+
+            Label title = new();
+            title.Text = item.DisplayName;
+            title.AddThemeFontSizeOverride("font_size", 14);
+            textColumn.AddChild(title);
+
+            Label detail = new();
+            detail.AutowrapMode = TextServer.AutowrapMode.WordSmart;
+            detail.AddThemeColorOverride("font_color", new Color("8B7355"));
+            detail.AddThemeFontSizeOverride("font_size", 12);
+            detail.Text = BuildShopItemDetail(item);
+            textColumn.AddChild(detail);
+
+            Button buyButton = new();
+            string reason = string.Empty;
+            bool canPurchase = _shopState != null && _shopState.CanPurchase(item.ItemId, out reason);
+            buyButton.Text = canPurchase ? $"{item.Price} 灵石" : BuildShopButtonText(item, reason);
+            buyButton.Disabled = !canPurchase;
+            if (!canPurchase && reason == "灵石不足")
+            {
+                buyButton.AddThemeColorOverride("font_color", new Color("B24A3A"));
+            }
+            buyButton.Pressed += () => OnShopPurchasePressed(item.ItemId);
+            row.AddChild(buyButton);
+        }
+    }
+
+    private string BuildShopItemDetail(ShopRules.ShopItemDefinition item)
+    {
+        StringBuilder sb = new();
+        sb.Append(item.Description);
+
+        if (item.LifetimeLimit > 0)
+        {
+            sb.Append($" | 已购 {_shopState?.GetLifetimePurchaseCount(item.ItemId) ?? 0}/{item.LifetimeLimit}");
+        }
+
+        if (item.DailyLimit > 0)
+        {
+            sb.Append($" | 今日已购 {_shopState?.GetDailyPurchaseCount(item.ItemId) ?? 0}/{item.DailyLimit}");
+        }
+
+        if (!string.IsNullOrEmpty(item.RequiredMasterySystemId))
+        {
+            sb.Append($" | 需{UiText.MasterySystemName(item.RequiredMasterySystemId)}精通 Lv{item.RequiredMasteryLevel}");
+        }
+
+        if (item.ItemId == ShopRules.ItemPageFragment)
+        {
+            sb.Append($" | 残页 {_backpackState?.GetItemCount("page_fragment") ?? 0}/10");
+        }
+
+        if (item.ItemId == ShopRules.ItemDoubleYield && (_shopState?.ActiveDoubleYieldSeconds ?? 0.0) > 0.0)
+        {
+            sb.Append($" | 当前剩余 {FormatShopDuration(_shopState!.ActiveDoubleYieldSeconds)}");
+        }
+
+        return sb.ToString();
+    }
+
+    private string BuildShopButtonText(ShopRules.ShopItemDefinition item, string reason)
+    {
+        if (item.LifetimeLimit > 0 && (_shopState?.GetLifetimePurchaseCount(item.ItemId) ?? 0) >= item.LifetimeLimit)
+        {
+            return "已购";
+        }
+
+        if (item.DailyLimit > 0 && (_shopState?.GetDailyPurchaseCount(item.ItemId) ?? 0) >= item.DailyLimit)
+        {
+            return $"今日已购 {item.DailyLimit}/{item.DailyLimit}";
+        }
+
+        if (!string.IsNullOrEmpty(reason))
+        {
+            return reason;
+        }
+
+        return $"{item.Price} 灵石";
+    }
+
+    private static string FormatShopDuration(double seconds)
+    {
+        int total = Mathf.Max(0, Mathf.CeilToInt((float)seconds));
+        int minutes = total / 60;
+        int remainSeconds = total % 60;
+        return $"{minutes:00}:{remainSeconds:00}";
     }
 
     private void BuildValidationUi()
@@ -2315,12 +3141,29 @@ public partial class BookTabsController : Control
         HideSettingRow(_taskbarIconCheck);
         _vsyncCheck = AddCheckRow(root, UiText.Vsync);
         _fpsOption = AddOptionRow(root, UiText.MaxFps, new[] { "30", "60", "120", "不限" });
+        _rhythmEnabledCheck = AddCheckRow(root, UiText.CultivationRhythmEnabled);
+        _rhythmStrengthOption = AddOptionRow(root, UiText.CultivationRhythmStrength, new[]
+        {
+            UiText.CultivationRhythmStrengthNone,
+            UiText.CultivationRhythmStrengthWeak,
+            UiText.CultivationRhythmStrengthStrong,
+        });
+        _rhythmCycleOption = AddOptionRow(root, UiText.CultivationRhythmCycle, new[]
+        {
+            UiText.CultivationRhythmCycleOption(25),
+            UiText.CultivationRhythmCycleOption(45),
+            UiText.CultivationRhythmCycleOption(60),
+            UiText.CultivationRhythmCycleOption(90),
+        });
 
         _languageOption.ItemSelected += _ => OnLanguageChanged();
         _keepOnTopCheck.Toggled += value => OnSettingChanged("keep_on_top", value, applyNow: true);
         _taskbarIconCheck.Toggled += value => OnSettingChanged("taskbar_icon", value);
         _vsyncCheck.Toggled += value => OnSettingChanged("vsync", value, applyNow: true);
         _fpsOption.ItemSelected += _ => OnFpsChanged();
+        _rhythmEnabledCheck.Toggled += value => OnRhythmEnabledChanged(value);
+        _rhythmStrengthOption.ItemSelected += _ => OnRhythmStrengthChanged();
+        _rhythmCycleOption.ItemSelected += _ => OnRhythmCycleChanged();
     }
 
     private void BuildDisplaySection(VBoxContainer root)
@@ -2370,6 +3213,49 @@ public partial class BookTabsController : Control
         _cloudSyncCheck.Toggled += value => OnSettingChanged("cloud_sync", value);
         _milestoneTipsCheck.Toggled += value => OnSettingChanged("milestone_tips", value);
         _globalDebugOverlayCheck.Toggled += value => OnSettingChanged("global_debug_overlay", value);
+    }
+
+    private void BuildPrivacySection(VBoxContainer root)
+    {
+        root.AddThemeConstantOverride("separation", 10);
+
+        _privacyInputCollectionCheck = AddCheckRow(root, UiText.PrivacyInputCollection);
+        _privacyInputCollectionCheck.Toggled += OnPrivacyInputCollectionChanged;
+
+        Label hint = new();
+        hint.AutowrapMode = TextServer.AutowrapMode.WordSmart;
+        hint.AddThemeFontSizeOverride("font_size", 12);
+        hint.AddThemeColorOverride("font_color", new Color(0.55f, 0.45f, 0.33f, 1.0f));
+        hint.Text = UiText.PrivacyInputCollectionHint;
+        root.AddChild(hint);
+
+        HBoxContainer statusRow = new();
+        statusRow.AddThemeConstantOverride("separation", 8);
+        root.AddChild(statusRow);
+
+        Label statusTitle = new();
+        statusTitle.Text = UiText.PrivacyCollectionStatus;
+        statusTitle.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
+        statusRow.AddChild(statusTitle);
+
+        _privacyCollectionStatusLabel = new Label();
+        _privacyCollectionStatusLabel.AutowrapMode = TextServer.AutowrapMode.WordSmart;
+        _privacyCollectionStatusLabel.HorizontalAlignment = HorizontalAlignment.Right;
+        _privacyCollectionStatusLabel.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
+        statusRow.AddChild(_privacyCollectionStatusLabel);
+
+        Label statementTitle = new();
+        statementTitle.Text = UiText.PrivacyStatement;
+        root.AddChild(statementTitle);
+
+        _privacyStatementLabel = new Label();
+        _privacyStatementLabel.AutowrapMode = TextServer.AutowrapMode.WordSmart;
+        _privacyStatementLabel.AddThemeFontSizeOverride("font_size", 12);
+        _privacyStatementLabel.AddThemeColorOverride("font_color", new Color(0.55f, 0.45f, 0.33f, 1.0f));
+        _privacyStatementLabel.Text = UiText.PrivacyStatementBody;
+        root.AddChild(_privacyStatementLabel);
+
+        UpdatePrivacySectionState();
     }
 
     private CheckButton AddCheckRow(VBoxContainer parent, string title)
@@ -2424,10 +3310,12 @@ public partial class BookTabsController : Control
         _settingsSystemRoot.Visible = sectionId == "system";
         _settingsDisplayRoot.Visible = sectionId == "display";
         _settingsProgressRoot.Visible = sectionId == "progress";
+        _settingsPrivacyRoot.Visible = sectionId == "privacy";
 
         _settingsSystemBtn.ButtonPressed = sectionId == "system";
         _settingsDisplayBtn.ButtonPressed = sectionId == "display";
         _settingsProgressBtn.ButtonPressed = sectionId == "progress";
+        _settingsPrivacyBtn.ButtonPressed = sectionId == "privacy";
     }
 
     private void UpdateSettingsUiVisibility()
@@ -2437,18 +3325,21 @@ public partial class BookTabsController : Control
         bool isCultivation = !_isShowingRightTab && ActiveLeftTabName == "CultivationTab";
         bool isEquipment = !_isShowingRightTab && ActiveLeftTabName == "EquipmentTab";
         bool isBackpack = !_isShowingRightTab && ActiveLeftTabName == "BackpackTab";
+        bool isShop = !_isShowingRightTab && ActiveLeftTabName == "ShopTab";
         bool isValidation = !_isShowingRightTab && ActiveLeftTabName == "ValidationTab";
         _settingsNavRoot.Visible = isSettings;
         _settingsActionRoot.Visible = isSettings;
         _settingsSystemRoot.Visible = isSettings && _activeSettingsSection == "system";
         _settingsDisplayRoot.Visible = isSettings && _activeSettingsSection == "display";
         _settingsProgressRoot.Visible = isSettings && _activeSettingsSection == "progress";
+        _settingsPrivacyRoot.Visible = isSettings && _activeSettingsSection == "privacy";
         _bugFeedbackRoot.Visible = isBug;
         _cultivationRoot.Visible = isCultivation;
         _equipmentRoot.Visible = isEquipment;
         _backpackRoot.Visible = isBackpack;
+        _shopRoot.Visible = isShop;
         _validationRoot.Visible = isValidation;
-        _leftContentLabel.Visible = !isSettings && !isBug && !isCultivation && !isEquipment && !isBackpack && !isValidation;
+        _leftContentLabel.Visible = !isSettings && !isBug && !isCultivation && !isEquipment && !isBackpack && !isShop && !isValidation;
         _rightPage.Visible = false;
     }
 
@@ -2465,6 +3356,14 @@ public partial class BookTabsController : Control
         _cloudSyncCheck.ButtonPressed = _settings["cloud_sync"].AsBool();
         _milestoneTipsCheck.ButtonPressed = _settings["milestone_tips"].AsBool();
         _globalDebugOverlayCheck.ButtonPressed = _settings["global_debug_overlay"].AsBool();
+        _privacyInputCollectionCheck.ButtonPressed = IsPrivacyInputCollectionEnabled();
+        _rhythmEnabledCheck.ButtonPressed = _cultivationRhythmState?.Enabled ?? true;
+        _rhythmStrengthOption.Selected = GetRhythmStrengthSelectedIndex(_cultivationRhythmState?.Strength ?? CultivationRhythmRules.StrengthWeak);
+        _rhythmCycleOption.Selected = GetRhythmCycleSelectedIndex(_cultivationRhythmState?.CycleMinutes ?? CultivationRhythmRules.DefaultCycleMinutes);
+        bool hasRhythmState = _cultivationRhythmState != null;
+        _rhythmEnabledCheck.Disabled = !hasRhythmState;
+        _rhythmStrengthOption.Disabled = !hasRhythmState;
+        _rhythmCycleOption.Disabled = !hasRhythmState;
 
         _fpsOption.Selected = _settings["max_fps"].AsInt32() switch
         {
@@ -2484,6 +3383,9 @@ public partial class BookTabsController : Control
             30 => 2,
             _ => 3
         };
+
+        _privacyStatementLabel.Text = UiText.PrivacyStatementBody;
+        UpdatePrivacySectionState();
 
         _isApplyingSettingsUi = false;
     }
@@ -2519,9 +3421,15 @@ public partial class BookTabsController : Control
         _settings["cloud_sync"] = false;
         _settings["milestone_tips"] = true;
         _settings["global_debug_overlay"] = false;
+        _settings[PrivacyInputCollectionSettingKey] = true;
+        _cultivationRhythmState?.SetEnabled(true);
+        _cultivationRhythmState?.SetStrength(CultivationRhythmRules.StrengthWeak);
+        _cultivationRhythmState?.SetCycleMinutes(CultivationRhythmRules.DefaultCycleMinutes);
 
         ApplySettingsRuntime();
         UpdateSettingsControlsFromState();
+        RefreshUnlockedTabs(emitIfActiveTabChanged: false);
+        RefreshCurrentPageContent();
         EmitSignal(SignalName.ActiveTabsChanged, ActiveLeftTabName, ActiveRightTabName);
     }
 
@@ -2584,6 +3492,50 @@ public partial class BookTabsController : Control
         EmitSignal(SignalName.ActiveTabsChanged, ActiveLeftTabName, ActiveRightTabName);
     }
 
+    private void OnRhythmEnabledChanged(bool value)
+    {
+        if (_isApplyingSettingsUi || _cultivationRhythmState == null)
+        {
+            return;
+        }
+
+        _cultivationRhythmState.SetEnabled(value);
+        RefreshAfterRhythmSettingChanged();
+    }
+
+    private void OnRhythmStrengthChanged()
+    {
+        if (_isApplyingSettingsUi || _cultivationRhythmState == null)
+        {
+            return;
+        }
+
+        _cultivationRhythmState.SetStrength(_rhythmStrengthOption.Selected switch
+        {
+            0 => CultivationRhythmRules.StrengthNone,
+            2 => CultivationRhythmRules.StrengthStrong,
+            _ => CultivationRhythmRules.StrengthWeak,
+        });
+        RefreshAfterRhythmSettingChanged();
+    }
+
+    private void OnRhythmCycleChanged()
+    {
+        if (_isApplyingSettingsUi || _cultivationRhythmState == null)
+        {
+            return;
+        }
+
+        int selectedIndex = _rhythmCycleOption.Selected;
+        if (selectedIndex < 0 || selectedIndex >= RhythmCycleOptions.Length)
+        {
+            selectedIndex = 0;
+        }
+
+        _cultivationRhythmState.SetCycleMinutes(RhythmCycleOptions[selectedIndex]);
+        RefreshAfterRhythmSettingChanged();
+    }
+
     private double ParseOptionFloat(OptionButton option)
     {
         string text = option.GetItemText(option.Selected);
@@ -2594,15 +3546,88 @@ public partial class BookTabsController : Control
         return 1.0;
     }
 
+    private static int GetRhythmStrengthSelectedIndex(string strength)
+    {
+        return strength switch
+        {
+            CultivationRhythmRules.StrengthNone => 0,
+            CultivationRhythmRules.StrengthStrong => 2,
+            _ => 1,
+        };
+    }
+
+    private static int GetRhythmCycleSelectedIndex(int cycleMinutes)
+    {
+        for (int i = 0; i < RhythmCycleOptions.Length; i++)
+        {
+            if (RhythmCycleOptions[i] == cycleMinutes)
+            {
+                return i;
+            }
+        }
+
+        return 0;
+    }
+
+    private void RefreshAfterRhythmSettingChanged()
+    {
+        UpdateSettingsControlsFromState();
+        RefreshDynamicTabContent();
+        RefreshCurrentPageContent();
+        EmitSignal(SignalName.ActiveTabsChanged, ActiveLeftTabName, ActiveRightTabName);
+    }
+
     private void OnSettingChanged(string key, bool value, bool applyNow = false)
     {
         if (_isApplyingSettingsUi) return;
         _settings[key] = value;
+        if (key == PrivacyInputCollectionSettingKey)
+        {
+            UpdatePrivacySectionState();
+        }
         if (applyNow)
         {
             ApplySettingsRuntime();
         }
+        if (key == "show_validation_panel")
+        {
+            RefreshUnlockedTabs(emitIfActiveTabChanged: false);
+            RefreshCurrentPageContent();
+        }
         EmitSignal(SignalName.ActiveTabsChanged, ActiveLeftTabName, ActiveRightTabName);
+    }
+
+    private void OnPrivacyInputCollectionChanged(bool value)
+    {
+        OnSettingChanged(PrivacyInputCollectionSettingKey, value);
+        UpdatePrivacySectionState();
+    }
+
+    private void UpdatePrivacySectionState()
+    {
+        if (_privacyCollectionStatusLabel == null)
+        {
+            return;
+        }
+
+        bool enabled = IsPrivacyInputCollectionEnabled();
+        _privacyCollectionStatusLabel.Text = enabled
+            ? UiText.PrivacyCollectionRunning(GetPrivacySessionOperationCount())
+            : UiText.PrivacyCollectionPaused;
+    }
+
+    private long GetPrivacySessionOperationCount()
+    {
+        if (_activityState == null)
+        {
+            return 0L;
+        }
+
+        return _activityState.TotalKeyDownCount
+            + _activityState.TotalMouseClickCount
+            + _activityState.TotalMouseScrollSteps
+            + _activityState.TotalJoypadButtonCount
+            + _activityState.TotalJoypadAxisInputCount;
     }
 
     private void OpenLogFolder()
@@ -2693,6 +3718,7 @@ public partial class BookTabsController : Control
         if (ActiveRightTabName == "SettingsTab")
         {
             _leftTitleLabel.Text = UiText.SettingsTitle;
+            UpdateSettingsControlsFromState();
             UpdateSettingsUiVisibility();
             ShowSettingsSection(_activeSettingsSection);
             return;
@@ -2732,6 +3758,12 @@ public partial class BookTabsController : Control
             UpdateSettingsUiVisibility();
             return;
         }
+        if (ActiveLeftTabName == "ShopTab")
+        {
+            RefreshShopPanelContent();
+            UpdateSettingsUiVisibility();
+            return;
+        }
         if (ActiveLeftTabName == "ValidationTab")
         {
             RefreshValidationPanelContent();
@@ -2739,6 +3771,82 @@ public partial class BookTabsController : Control
             return;
         }
         AnimateContentSwap(_leftContentLabel, _leftTween, GetLeftTabContent(ActiveLeftTabName), tween => _leftTween = tween, true);
+    }
+
+    private bool RefreshUnlockedTabs(bool emitIfActiveTabChanged = true)
+    {
+        RefreshStickyTabUnlocks();
+
+        IReadOnlyList<string> unlockedTabs = GetUnlockedLeftTabs();
+        HashSet<string> unlockedSet = new(unlockedTabs);
+        foreach (string key in _leftTabContentMap.Keys)
+        {
+            if (!HasNode($"TopStrip/LeftTabs/{key}"))
+            {
+                continue;
+            }
+
+            GetNode<Button>($"TopStrip/LeftTabs/{key}").Visible = unlockedSet.Contains(key);
+        }
+
+        bool activeTabChanged = false;
+        if (!unlockedSet.Contains(ActiveLeftTabName))
+        {
+            ActiveLeftTabName = unlockedTabs.Count > 0 ? unlockedTabs[0] : "CultivationTab";
+            activeTabChanged = true;
+        }
+
+        SyncButtons("TopStrip/LeftTabs", _leftTabContentMap.Keys, ActiveLeftTabName);
+        SyncButtons("TopStrip/RightTabs", _rightTabContentMap.Keys, ActiveRightTabName);
+
+        if (activeTabChanged && emitIfActiveTabChanged)
+        {
+            EmitSignal(SignalName.ActiveTabsChanged, ActiveLeftTabName, ActiveRightTabName);
+        }
+
+        return activeTabChanged;
+    }
+
+    private IReadOnlyList<string> GetUnlockedLeftTabs()
+    {
+        int realmLevel = _playerProgressState?.RealmLevel ?? 1;
+        bool equipmentTabUnlocked = _settings.ContainsKey(UnlockedEquipmentTabSettingKey) && _settings[UnlockedEquipmentTabSettingKey].AsBool();
+        bool backpackTabUnlocked = _settings.ContainsKey(UnlockedBackpackTabSettingKey) && _settings[UnlockedBackpackTabSettingKey].AsBool();
+        bool showValidationPanel = _settings["show_validation_panel"].AsBool();
+        return ProgressiveUnlockRules.GetUnlockedLeftTabs(
+            realmLevel,
+            equipmentTabUnlocked,
+            backpackTabUnlocked,
+            showValidationPanel);
+    }
+
+    private bool IsLeftTabUnlocked(string tabName)
+    {
+        IReadOnlyList<string> unlockedTabs = GetUnlockedLeftTabs();
+        for (int i = 0; i < unlockedTabs.Count; i++)
+        {
+            if (unlockedTabs[i] == tabName)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private void RefreshStickyTabUnlocks()
+    {
+        bool equipmentUnlocked = ProgressiveUnlockRules.HasUnlockedEquipmentTab(_backpackState, _equippedItemsState);
+        if (equipmentUnlocked)
+        {
+            _settings[UnlockedEquipmentTabSettingKey] = true;
+        }
+
+        bool backpackUnlocked = equipmentUnlocked || ProgressiveUnlockRules.HasUnlockedBackpackTab(_backpackState, _potionInventoryState);
+        if (backpackUnlocked)
+        {
+            _settings[UnlockedBackpackTabSettingKey] = true;
+        }
     }
 
     private void CloseWindow()
@@ -2755,6 +3863,7 @@ public partial class BookTabsController : Control
         SetButtonText("TopStrip/LeftTabs/BattleLogTab", UiText.LeftTabBattleLog);
         SetButtonText("TopStrip/LeftTabs/EquipmentTab", UiText.LeftTabEquipment);
         SetButtonText("TopStrip/LeftTabs/BackpackTab", UiText.LeftTabBackpack);
+        SetButtonText("TopStrip/LeftTabs/ShopTab", UiText.LeftTabShop);
         SetButtonText("TopStrip/LeftTabs/StatsTab", UiText.LeftTabStats);
         SetButtonText("TopStrip/LeftTabs/ValidationTab", UiText.LeftTabValidation);
         SetButtonText("TopStrip/RightTabs/BugTab", UiText.RightTabBug);

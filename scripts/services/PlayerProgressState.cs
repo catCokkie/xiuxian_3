@@ -23,9 +23,14 @@ namespace Xiuxian.Scripts.Services
         public int BodyCultivationDefenseFlat { get; private set; }
         public int TemperCount { get; private set; }
         public int BoneforgeCount { get; private set; }
+        public int BloodflowCount { get; private set; }
+        public double BodyCultivationPostBattleHealRate { get; private set; }
+        public double ZhouTianMaxHpRate { get; private set; }
+        public double ZhouTianAttackRate { get; private set; }
+        public double ZhouTianDefenseRate { get; private set; }
         [Export] public bool AutoBreakthrough = false;
 
-        public double RealmExpRequired => GetExpRequired(RealmLevel);
+        public double RealmExpRequired => GetExpRequired(RealmLevel, GetRealmExpReductionRate());
         public bool CanBreakthrough => RealmExp >= RealmExpRequired;
 
         public void AddRealmExp(double amount)
@@ -97,26 +102,91 @@ namespace Xiuxian.Scripts.Services
             CurrentRealmActiveSeconds += seconds;
         }
 
-        public void ApplyBodyCultivationReward(string recipeId)
+        public bool CanApplyBodyCultivationReward(string recipeId, int masteryLevel = 1)
         {
-            if (recipeId == "body_cultivation_temper" && BodyCultivationRules.CanApply(recipeId, TemperCount))
+            return BodyCultivationRules.CanApply(recipeId, GetBodyCultivationCount(recipeId), masteryLevel);
+        }
+
+        public bool TryApplyBodyCultivationReward(string recipeId, int masteryLevel, out string rewardText)
+        {
+            rewardText = string.Empty;
+            if (!BodyCultivationRules.TryGetTechnique(recipeId, out BodyCultivationRules.TechniqueSpec technique)
+                || !CanApplyBodyCultivationReward(recipeId, masteryLevel))
             {
-                BodyCultivationMaxHpFlat += 6;
-                TemperCount++;
+                return false;
             }
-            else if (recipeId == "body_cultivation_boneforge" && BodyCultivationRules.CanApply(recipeId, BoneforgeCount))
+
+            CharacterStatModifier modifier = BodyCultivationRules.GetRateModifier(recipeId, masteryLevel);
+            BodyCultivationMaxHpFlat += modifier.MaxHpFlat;
+            BodyCultivationAttackFlat += modifier.AttackFlat;
+            BodyCultivationDefenseFlat += modifier.DefenseFlat;
+            BodyCultivationPostBattleHealRate += BodyCultivationRules.GetPostBattleHealRate(recipeId);
+
+            switch (recipeId)
             {
-                BodyCultivationDefenseFlat += 2;
-                BoneforgeCount++;
+                case "body_cultivation_temper":
+                    TemperCount++;
+                    break;
+                case "body_cultivation_boneforge":
+                    BoneforgeCount++;
+                    break;
+                case "body_cultivation_bloodflow":
+                    BloodflowCount++;
+                    break;
+            }
+
+            rewardText = BuildBodyCultivationRewardText(technique.DisplayName, modifier, BodyCultivationRules.GetPostBattleHealRate(recipeId));
+            EmitSignal(SignalName.RealmProgressChanged, RealmLevel, RealmExp, RealmExpRequired);
+            return true;
+        }
+
+        public int GetBodyCultivationCount(string recipeId)
+        {
+            return recipeId switch
+            {
+                "body_cultivation_temper" => TemperCount,
+                "body_cultivation_boneforge" => BoneforgeCount,
+                "body_cultivation_bloodflow" => BloodflowCount,
+                _ => 0,
+            };
+        }
+
+        public bool TryApplyZhouTianMeditationBonus(string bonusType, double rate, out string rewardText)
+        {
+            rewardText = string.Empty;
+            if (rate <= 0.0)
+            {
+                return false;
+            }
+
+            switch (bonusType)
+            {
+                case CultivationRhythmRules.MeditationBonusMaxHp:
+                    ZhouTianMaxHpRate += rate;
+                    rewardText = $"入定领悟：气血 +{rate * 100:0.0}%";
+                    break;
+                case CultivationRhythmRules.MeditationBonusAttack:
+                    ZhouTianAttackRate += rate;
+                    rewardText = $"入定领悟：攻击 +{rate * 100:0.0}%";
+                    break;
+                case CultivationRhythmRules.MeditationBonusDefense:
+                    ZhouTianDefenseRate += rate;
+                    rewardText = $"入定领悟：防御 +{rate * 100:0.0}%";
+                    break;
+                default:
+                    return false;
             }
 
             EmitSignal(SignalName.RealmProgressChanged, RealmLevel, RealmExp, RealmExpRequired);
+            return true;
         }
 
-        public static double GetExpRequired(int realmLevel)
+        public static double GetExpRequired(int realmLevel, double reductionRate = 0.0)
         {
             int r = Math.Max(1, realmLevel);
-            return 120.0 * Math.Pow(r, 1.32) + 180.0;
+            double baseRequired = 120.0 * Math.Pow(r, 1.32) + 180.0;
+            double clampedReduction = Math.Clamp(reductionRate, 0.0, 0.50);
+            return Math.Max(1.0, baseRequired * (1.0 - clampedReduction));
         }
 
         public Godot.Collections.Dictionary<string, Variant> ToDictionary()
@@ -130,7 +200,12 @@ namespace Xiuxian.Scripts.Services
                 BodyCultivationAttackFlat,
                 BodyCultivationDefenseFlat,
                 TemperCount,
-                BoneforgeCount);
+                BoneforgeCount,
+                BloodflowCount,
+                BodyCultivationPostBattleHealRate,
+                ZhouTianMaxHpRate,
+                ZhouTianAttackRate,
+                ZhouTianDefenseRate);
             return SaveValueConversionRules.ToVariantDictionary(PlayerProgressPersistenceRules.ToPlainDictionary(snapshot));
         }
 
@@ -147,7 +222,55 @@ namespace Xiuxian.Scripts.Services
             BodyCultivationDefenseFlat = snapshot.BodyCultivationDefenseFlat;
             TemperCount = snapshot.TemperCount;
             BoneforgeCount = snapshot.BoneforgeCount;
+            BloodflowCount = snapshot.BloodflowCount;
+            BodyCultivationPostBattleHealRate = snapshot.BodyCultivationPostBattleHealRate;
+            ZhouTianMaxHpRate = snapshot.ZhouTianMaxHpRate;
+            ZhouTianAttackRate = snapshot.ZhouTianAttackRate;
+            ZhouTianDefenseRate = snapshot.ZhouTianDefenseRate;
             EmitSignal(SignalName.RealmProgressChanged, RealmLevel, RealmExp, RealmExpRequired);
+        }
+
+        private static string BuildBodyCultivationRewardText(string displayName, CharacterStatModifier modifier, double postBattleHealRate)
+        {
+            string reward = displayName;
+            if (modifier.MaxHpFlat > 0)
+            {
+                reward += $" 完成，永久气血 +{modifier.MaxHpFlat}";
+            }
+            else if (modifier.AttackFlat > 0)
+            {
+                reward += $" 完成，永久攻击 +{modifier.AttackFlat}";
+            }
+            else if (modifier.DefenseFlat > 0)
+            {
+                reward += $" 完成，永久防御 +{modifier.DefenseFlat}";
+            }
+            else
+            {
+                reward += " 完成";
+            }
+
+            if (postBattleHealRate > 0.0)
+            {
+                reward += $"，战后恢复 +{postBattleHealRate * 100:0}%";
+            }
+
+            return reward;
+        }
+
+        private static double GetRealmExpReductionRate()
+        {
+            double masteryReduction = 0.0;
+            if (ServiceLocator.Instance?.SubsystemMasteryState is SubsystemMasteryState masteryState)
+            {
+                masteryReduction = SubsystemMasteryRules.GetEffectValue(
+                    PlayerActionState.ModeCultivation,
+                    masteryState.GetLevel(PlayerActionState.ModeCultivation),
+                    "cultivation_breakthrough_exp_reduction");
+            }
+
+            double shopReduction = ServiceLocator.Instance?.ShopState?.BreakthroughExpReductionRate ?? 0.0;
+            return Math.Clamp(masteryReduction + shopReduction, 0.0, 0.50);
         }
     }
 }

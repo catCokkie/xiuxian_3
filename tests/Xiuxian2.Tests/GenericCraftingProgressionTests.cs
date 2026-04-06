@@ -3,6 +3,7 @@ using Xiuxian.Scripts.Services;
 
 namespace Xiuxian.Tests;
 
+[Collection("ActivityRegistry")]
 public sealed class GenericCraftingProgressionTests
 {
     [Fact]

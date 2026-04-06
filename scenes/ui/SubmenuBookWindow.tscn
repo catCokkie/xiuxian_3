@@ -111,6 +111,11 @@ layout_mode = 2
 toggle_mode = true
 text = "背包"
 
+[node name="ShopTab" type="Button" parent="BookFrame/TopStrip/LeftTabs"]
+layout_mode = 2
+toggle_mode = true
+text = "坊市"
+
 [node name="StatsTab" type="Button" parent="BookFrame/TopStrip/LeftTabs"]
 layout_mode = 2
 toggle_mode = true

@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using Xiuxian.Scripts.Services;
 
 namespace Xiuxian.Tests;
@@ -15,22 +16,25 @@ public sealed class GardenRulesTests
     }
 
     [Fact]
-    public void AdvanceProgress_CompletesBatchWhenThresholdReached()
+    public void GetUnlockedPlotCount_UsesBasePlusShopExpansion()
     {
-        GardenRules.GardenProgressDecision partial = GardenRules.AdvanceProgress(60.0f, 80, 200);
-        GardenRules.GardenProgressDecision completed = GardenRules.AdvanceProgress(150.0f, 60, 200);
-
-        Assert.False(partial.CompletedBatch);
-        Assert.Equal(140.0f, partial.NextProgress);
-        Assert.True(completed.CompletedBatch);
-        Assert.Equal(0.0f, completed.NextProgress);
+        Assert.Equal(2, GardenRules.GetUnlockedPlotCount());
+        Assert.Equal(4, GardenRules.GetUnlockedPlotCount(2));
+        Assert.Equal(6, GardenRules.GetUnlockedPlotCount(10));
     }
 
     [Fact]
-    public void HarvestCrop_GardenMasteryLevel3AddsBonusYield()
+    public void GetEffectiveGrowthSeconds_Level2ShortensGrowth()
     {
-        GardenRules.GatherResult normal = GardenRules.HarvestCrop("garden_spirit_herb", masteryLevel: 1);
-        GardenRules.GatherResult boosted = GardenRules.HarvestCrop("garden_spirit_herb", masteryLevel: 3);
+        Assert.Equal(1800, GardenRules.GetEffectiveGrowthSeconds("garden_spirit_herb", masteryLevel: 1));
+        Assert.Equal(1530, GardenRules.GetEffectiveGrowthSeconds("garden_spirit_herb", masteryLevel: 2));
+    }
+
+    [Fact]
+    public void ResolveHarvest_Level3AddsBonusYield()
+    {
+        GardenRules.HarvestResult normal = GardenRules.ResolveHarvest("garden_spirit_herb", masteryLevel: 1, yieldRollPercent: 0, seedRollPercent: 99);
+        GardenRules.HarvestResult boosted = GardenRules.ResolveHarvest("garden_spirit_herb", masteryLevel: 3, yieldRollPercent: 0, seedRollPercent: 99);
 
         Assert.Equal("spirit_herb", normal.ItemId);
         Assert.Equal(2, normal.ItemCount);
@@ -38,20 +42,19 @@ public sealed class GardenRulesTests
     }
 
     [Fact]
-    public void AdvanceProgress_MasteryLevel2ReducesThreshold()
+    public void ResolveHarvest_CanGrantBonusSeed()
     {
-        GardenRules.GardenProgressDecision atLv1 = GardenRules.AdvanceProgress(150.0f, 20, 200, masteryLevel: 1);
-        GardenRules.GardenProgressDecision atLv2 = GardenRules.AdvanceProgress(150.0f, 20, 200, masteryLevel: 2);
+        GardenRules.HarvestResult harvest = GardenRules.ResolveHarvest("garden_spirit_flower", masteryLevel: 3, yieldRollPercent: 0, seedRollPercent: 0);
 
-        Assert.False(atLv1.CompletedBatch);
-        Assert.True(atLv2.CompletedBatch);
+        Assert.Equal("spirit_flower", harvest.ItemId);
+        Assert.Equal("seed_spirit_flower", harvest.BonusSeedItemId);
+        Assert.Equal(1, harvest.BonusSeedCount);
     }
 
     [Fact]
-    public void IsOfflineFullySupported_OnlyAtMasteryLevel4()
+    public void IsOfflineFullySupported_AlwaysTrue()
     {
-        Assert.False(GardenRules.IsOfflineFullySupported(1));
-        Assert.False(GardenRules.IsOfflineFullySupported(3));
+        Assert.True(GardenRules.IsOfflineFullySupported(1));
         Assert.True(GardenRules.IsOfflineFullySupported(4));
     }
 
@@ -73,12 +76,39 @@ public sealed class GardenRulesTests
     [Fact]
     public void GardenPersistence_RoundTripsSnapshotViaPlainDictionary()
     {
-        var original = new GardenPersistenceRules.GardenSnapshot("garden_spirit_herb", 85.5f, 200.0f);
-        var dict = GardenPersistenceRules.ToPlainDictionary(original);
-        var restored = GardenPersistenceRules.FromPlainDictionary(dict);
+        GardenPersistenceRules.GardenPlotSnapshot[] plots = GardenPersistenceRules.CreateEmptyPlots();
+        plots[1] = new GardenPersistenceRules.GardenPlotSnapshot("garden_spirit_flower", 123456L, true);
+        var original = new GardenPersistenceRules.GardenSnapshot("garden_spirit_flower", 1, plots);
+
+        Dictionary<string, object> dict = GardenPersistenceRules.ToPlainDictionary(original);
+        GardenPersistenceRules.GardenSnapshot restored = GardenPersistenceRules.FromPlainDictionary(dict);
 
         Assert.Equal(original.SelectedRecipeId, restored.SelectedRecipeId);
-        Assert.Equal(original.Progress, restored.Progress, 2);
-        Assert.Equal(original.RequiredProgress, restored.RequiredProgress, 2);
+        Assert.Equal(original.SelectedPlotIndex, restored.SelectedPlotIndex);
+        Assert.Equal(GardenRules.MaxPlotCount, restored.Plots.Length);
+        Assert.Equal("garden_spirit_flower", restored.Plots[1].CropId);
+        Assert.Equal(123456L, restored.Plots[1].PlantedAtUnix);
+        Assert.True(restored.Plots[1].IsReady);
+        Assert.Equal(string.Empty, restored.Plots[0].CropId);
+    }
+
+    [Fact]
+    public void GardenPersistence_LegacySinglePlotSnapshotUpgradesToPlots()
+    {
+        Dictionary<string, object> legacy = new()
+        {
+            ["selected_recipe"] = "garden_spirit_herb",
+            ["progress"] = 100.0,
+            ["required_progress"] = 200.0,
+        };
+
+        GardenPersistenceRules.GardenSnapshot restored = GardenPersistenceRules.FromPlainDictionary(legacy);
+
+        Assert.Equal("garden_spirit_herb", restored.SelectedRecipeId);
+        Assert.Equal(0, restored.SelectedPlotIndex);
+        Assert.Equal(GardenRules.MaxPlotCount, restored.Plots.Length);
+        Assert.Equal("garden_spirit_herb", restored.Plots[0].CropId);
+        Assert.False(restored.Plots[0].IsReady);
+        Assert.True(restored.Plots[0].PlantedAtUnix > 0);
     }
 }

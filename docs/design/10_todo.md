@@ -8,30 +8,22 @@
 > 约定：修改后必须通过 `dotnet test tests/Xiuxian2.Tests/Xiuxian2.Tests.csproj` 零失败。
 > 维护规则：`docs/design/10_todo.md` 是任务状态唯一真源；`AGENTS.md` 仅保留流程规则，不重复维护任务进度。
 
-## 当前进度记录（更新：2026-04-02）
+## 当前进度记录（更新：2026-04-07）
 
 ### 总览
-- 代码任务：Phase 1–8 主功能实现项除 `TASK-06` 外已全部落地
-- 测试现状：`dotnet test tests/Xiuxian2.Tests/Xiuxian2.Tests.csproj` 当前存在 1~2 项不稳定失败；2026-04-02 两次复跑分别为 `315/316` 与 `314/316`，集中在 `ActivityRegistryTests` / `GenericCraftingProgressionTests`
-- 存档版本：v9（v5→v6→v7→v8→v9 迁移链完整）
+- 代码任务：Phase 1–8 主功能实现项已全部落地，当前仅剩 `TASK-06` 人工验收项
+- 测试现状：`dotnet test tests/Xiuxian2.Tests/Xiuxian2.Tests.csproj` 已稳定通过 `330/330`；`ActivityRegistryTests` / `GenericCraftingProgressionTests` 的共享静态注册器并发污染已修复
+- 存档版本：v12（v5→v6→v7→v8→v9→v10→v11→v12 迁移链完整）
 - 子系统：11 个活动模式（原 12 个，悟道已移除），11 × 4 = 44 条精通定义总计 1900 悟性
 - 待人工验收：`TASK-06 场景文件 UTF-8 编码修复`
 - 已删除系统：AFK 检测、灵宠数值（pet_affinity/pet_mood）、悟道（EnlightenmentRules/State）
-- 深化迭代：`16_subsystem_deepening.md` 追踪 25 项深化意见（D-01~D-25），D-01 已完成
+- 深化迭代：`16_subsystem_deepening.md` 追踪 25 项深化意见（D-01~D-25），D-01 / D-25 已完成
 - 维护规则：新增任务或状态变更时，只更新本文件，不在 agent 指令文件重复记录
 
 ### 待办事项
 
 | 优先级 | 编号 | 内容 | 对应文档 |
 |--------|------|------|---------|
-| P0 | N-04 | 符箓/体修代码↔文档对齐：代码中符箓只有 2 个英文名、体修只有 2 个功法，需补齐至文档定义的 3 个 | D-02/D-03 |
-| P0 | N-05 | ActivityRegistry / 通用配方测试稳定性修复：当前 `dotnet test` 复跑存在 1~2 项不稳定失败，集中在 `ActivityRegistryTests` / `GenericCraftingProgressionTests` | — |
-| P1 | — | 周天系统代码实现（§6.1 "运功周天"机制） | `02_systems.md` §6.1 |
-| P1 | — | 渐进解锁代码实现（§21 按 realm_level 解锁模式/Tab） | `02_systems.md` §21 |
-| P1 | — | 坊市系统代码实现（§22 四货架商店） | `02_systems.md` §22 |
-| P1 | — | 灵田重构为真实时间驱动（当前代码仍为输入驱动） | `02_systems.md` §13 |
-| P1 | — | 输入防刷：衰减→滑动窗口硬封顶 600/min | `INPUT_SYSTEM.md` |
-| P1 | — | 隐私首启卡片 + 设置页 | `15_ui_prompts.md` §13/§14 |
 | P2 | — | 统计概览 Tab 扩充（5 区 30+ 指标，需新增 `PlayerStatsState`） | `15_ui_prompts.md` §7 |
 | P2 | — | 区域 3-5 新怪物代码接入（阴潮蛇崽/孢子幼体/骨仆从） | `09_level_monster_drop_sample.json` |
 | V2 | — | 成就/里程碑系统 | — |
@@ -41,6 +33,60 @@
 ---
 
 ### 变更日志
+
+#### 2026-04-07：N-11 隐私首启卡片与设置页
+
+- **设置页补齐**：`BookTabsController.cs` 已新增第 4 个 `隐私` 子页，接入 `输入采集` 开关、动态 `采集状态` 文案和完整隐私声明；系统设置字典新增 `privacy_input_collection_enabled` / `privacy_notice_acknowledged`，并复用既有 `settings/system` 持久化链保存
+- **运行时与首启闭环**：`PrototypeRootController.cs` 现在会根据隐私设置实时暂停/恢复 `InputHookService` 采集；首次启动若尚未确认隐私说明，会弹出一次性遮罩卡片，点击“了解，开始修行”后写入本地确认标记
+- **验证结果**：`dotnet test tests/Xiuxian2.Tests/Xiuxian2.Tests.csproj` 通过 `330/330`
+
+#### 2026-04-07：N-10 输入防刷硬封顶实现
+
+- **规则层切换完成**：`InputActivityRules` / `InputActivityState` 已从旧的“滚动衰减 + 每分钟软上限”切换为 60 秒滑动窗口硬封顶，默认上限 `600/min`；窗口内超出的离散输入会被直接丢弃，不再继续转化为 AP、修炼经验或探索推进
+- **输入口径统一**：当前硬封顶统计口径覆盖所有离散输入批次（键盘、鼠标点击、滚轮、手柄按钮/轴），鼠标移动仍只按距离折算 AP 且不占用 600/min 配额；`ApThisSecond` 与 `ApFinal` 在新模型下保持一致
+- **文档与测试同步**：`INPUT_SYSTEM.md` 已去除旧衰减参数口径，手动验证项改为检查“超过 600/min 后不再提升 AP/进度”；`InputActivityRulesTests` / `CoreRegressionRulesTests` 已更新到新硬封顶规则
+- **验证结果**：`dotnet test tests/Xiuxian2.Tests/Xiuxian2.Tests.csproj` 通过 `330/330`
+
+#### 2026-04-07：N-09 灵田系统代码实现
+
+- **真实时间灵田落地**：`GardenRules` / `GardenPersistenceRules` / `GardenState` 已完成重构，灵田改为多田位真实时间生长，支持播种、成熟、手动收获、离线继续生长与坊市田位扩容接管；催熟灵液、自动收获与双倍产出也已按新模型接线
+- **修炼页交互补齐**：`BookTabsController.cs` 已新增田位选择与情境按钮，当前可直接在书卷中选择田位、播种、收获和催熟；灵田倒计时与坊市双倍产出剩余时间会按秒刷新
+- **离线与旧档迁移**：`PrototypeRootController.cs` 已把灵田从旧 AP 离线结算中剥离，改为独立真实时间离线推进；`SaveMigrationRules` 升级到 v12，并补齐 v11→v12 旧单进度灵田存档迁移到多田位结构
+- **验证结果**：`dotnet test tests/Xiuxian2.Tests/Xiuxian2.Tests.csproj` 通过 `336/336`
+
+#### 2026-04-06：N-08 坊市系统代码实现
+
+- **坊市主链路落地**：新增 `ShopRules` / `ShopState` / `ShopPersistenceRules` / `ShopRewardRules`，四货架商品、灵石支付、日限购/永久限购、残页兑换、双倍产出活跃时长与每日重置均已闭环；`SaveMigrationRules` 升级到 v11 并补齐 v10→v11 默认迁移
+- **UI 与提醒接入**：书卷左侧新增 `ShopTab`，`BookTabsController.cs` 已实现分类货架、余额/状态摘要、限购按钮态、残页兑换按钮与购买反馈；`ToastController.cs` 已接通坊市购买/兑换/使用道具提醒
+- **即时效果接线**：双倍产出已接入灵田/矿脉/灵渔/炼丹/通用制作，突破丹会降低突破经验需求，催熟灵液/矿脉刷新令可在修炼页直接消耗；灵田扩容/背包扩容/鱼塘许可/自动收获当前先记录为持久化购买状态，等待对应子系统重构后接管实际容量与自动化效果
+- **验证结果**：`dotnet test tests/Xiuxian2.Tests/Xiuxian2.Tests.csproj` 通过 `333/333`
+
+#### 2026-04-06：N-07 周天系统代码实现
+
+- **运行时与存档闭环**：新增 `CultivationRhythmState` / `CultivationRhythmRules` / `CultivationRhythmPersistenceRules`，小周天/大周天/调息/入定领悟、离线调息倒计时与持久化已全部落地；`SaveMigrationRules` 升级到 v10 并补齐 v9→v10 默认迁移
+- **UI 与提醒接入**：`BookTabsController.cs` 设置页新增周天提醒开关/提醒强度/小周天周期，统计页新增周天统计，装备页新增周天永久感悟展示；`ToastController.cs` 已接通周天完成提醒
+- **数值生效链路**：调息 buff 已通过 `ActivityConversionService` 放大灵气收益，入定领悟永久属性通过 `PlayerProgressState` + `ActivityEffectRules` 实际计入角色面板
+- **验证结果**：`dotnet test tests/Xiuxian2.Tests/Xiuxian2.Tests.csproj` 通过 `327/327`
+
+#### 2026-04-06：N-06 渐进解锁代码实现
+
+- **活动模式解锁**：新增 `ProgressiveUnlockRules`，按 `realm_level` 分 5 波解锁主行为；`ExploreProgressController.Runtime.cs` 的 ActionMode 下拉已改为动态过滤，`F4` 只循环当前已解锁模式
+- **旧存档兼容**：若旧存档当前主行为已超出本境界可用范围，运行时会自动回退到首个已解锁模式；副本模式仍会保持与当前激活关卡同步
+- **书卷 Tab 解锁**：`BookTabsController.cs` 已按规则控制左侧 Tab 显隐；`统计概览` 需 `realm_level >= 3`，`配置校验` 需设置项开启，`装备/背包` 会在首次满足条件后持久记住解锁状态
+- **验证结果**：`dotnet test tests/Xiuxian2.Tests/Xiuxian2.Tests.csproj` 通过 `320/320`
+
+#### 2026-04-06：N-05 测试稳定性修复
+
+- **根因定位**：`ActivityRegistry` 为共享静态注册器，`ActivityRegistryTests` 与 `GenericCraftingProgressionTests` 并行运行时会交叉调用 `ResetForTesting()`，导致 `GetRecipe()` 偶发读到被清空/重建中的状态
+- **修复方案**：新增 xUnit collection，将依赖 `ActivityRegistry` 全局状态的两组测试串行化，避免共享静态状态互相污染
+- **验证结果**：相关 20 项测试连续 3 次复跑全绿；全量 `dotnet test tests/Xiuxian2.Tests/Xiuxian2.Tests.csproj` 通过 `316/316`
+
+#### 2026-04-06：N-04 符箓/体修代码↔文档对齐
+
+- **符箓对齐**：`TalismanRules` / `ActivityRegistry` / 通用制作流程已补齐第 3 张符箓 `炸裂符`，并按精通等级控制 `破甲符 → 疾风符 → 炸裂符` 的解锁顺序；战斗自动消耗逻辑已接入“默认单战 1 张、Lv4 可用 2 张”
+- **体修对齐**：`BodyCultivationRules` / `PlayerProgressState` / 存档迁移已补齐第 3 门体修 `活血诀`，新增 `bloodflow_count` 与战后回血持久字段；运行时完成体修后会正确发放永久加成并在胜利后结算回血
+- **UI/运行时闭环**：`ExploreProgressController.Runtime.cs` 与 `BookTabsController.cs` 已接通精通感知的配方选择、材料折扣、体修上限校验与培养页入口，避免新增配方“只有规则、无法操作”
+- **验证结果**：`dotnet test tests/Xiuxian2.Tests/Xiuxian2.Tests.csproj` 通过 `317/317`
 
 #### 2026-04-02：文档瘦身（4 项压缩操作）
 

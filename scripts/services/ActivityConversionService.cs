@@ -17,6 +17,7 @@ namespace Xiuxian.Scripts.Services
         [Export] public NodePath ActivityStatePath = "/root/InputActivityState";
         [Export] public NodePath WalletStatePath = "/root/ResourceWalletState";
         [Export] public NodePath ProgressStatePath = "/root/PlayerProgressState";
+        [Export] public NodePath RhythmStatePath = "/root/CultivationRhythmState";
         [Export] public NodePath ActionStatePath = "/root/PlayerActionState";
 
         [Export] public double SettlementIntervalSeconds = 10.0;
@@ -29,6 +30,7 @@ namespace Xiuxian.Scripts.Services
         private InputActivityState _activityState = null!;
         private ResourceWalletState _walletState = null!;
         private PlayerProgressState _progressState = null!;
+        private CultivationRhythmState? _rhythmState;
         private PlayerActionState _actionState = null!;
 
         private double _timer;
@@ -39,6 +41,7 @@ namespace Xiuxian.Scripts.Services
             _activityState = GetNodeOrNull<InputActivityState>(ActivityStatePath);
             _walletState = GetNodeOrNull<ResourceWalletState>(WalletStatePath);
             _progressState = GetNodeOrNull<PlayerProgressState>(ProgressStatePath);
+            _rhythmState = GetNodeOrNull<CultivationRhythmState>(RhythmStatePath);
             _actionState = GetNodeOrNull<PlayerActionState>(ActionStatePath);
 
             if (_activityState == null || _walletState == null || _progressState == null)
@@ -121,7 +124,8 @@ namespace Xiuxian.Scripts.Services
             double moodMul = 1.0;
             double realmMul = _progressState.GetRealmMultiplier();
 
-            double lingqiGain = apFinal10s * LingqiFactor * moodMul * realmMul;
+            double lingqiMultiplier = _rhythmState?.RestLingqiMultiplier ?? 1.0;
+            double lingqiGain = apFinal10s * LingqiFactor * moodMul * realmMul * lingqiMultiplier;
             double insightGain = apFinal10s * InsightFactor;
             bool inputExpActive = CultivationInputExpEnabled
                 && PlayerActionCapabilityRules.HasCapability(_actionState, PlayerActionCapability.GrantsCultivationInputExp);

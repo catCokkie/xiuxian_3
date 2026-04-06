@@ -6,25 +6,23 @@ namespace Xiuxian.Scripts.Services
 
     public static class ActivityEffectRules
     {
-        public static List<BackpackConsumableUsage> DetermineAutoUseBackpackConsumables(BattleConsumableState state, IReadOnlyDictionary<string, int> items)
+        public static List<BackpackConsumableUsage> DetermineAutoUseBackpackConsumables(
+            BattleConsumableState state,
+            IReadOnlyDictionary<string, int> items,
+            int maxTalismansPerBattle = 1)
         {
             var result = new List<BackpackConsumableUsage>();
-            int fireCharm = items != null && items.TryGetValue("talisman_fire_charm", out int fireCount) ? fireCount : 0;
-            int shieldCharm = items != null && items.TryGetValue("talisman_shield_charm", out int shieldCount) ? shieldCount : 0;
             int porridge = items != null && items.TryGetValue("food_spirit_porridge", out int porridgeCount) ? porridgeCount : 0;
             int jelly = items != null && items.TryGetValue("food_fruit_jelly", out int jellyCount) ? jellyCount : 0;
             int soup = items != null && items.TryGetValue("food_dragon_soup", out int soupCount) ? soupCount : 0;
 
             if (state.IsBattleStart)
             {
-                if (fireCharm > 0)
+                foreach (string talismanId in GetAutoUseTalismans(items, maxTalismansPerBattle))
                 {
-                    result.Add(new BackpackConsumableUsage("talisman_fire_charm", "battle_start"));
+                    result.Add(new BackpackConsumableUsage(talismanId, "battle_start"));
                 }
-                if (shieldCharm > 0)
-                {
-                    result.Add(new BackpackConsumableUsage("talisman_shield_charm", "battle_start"));
-                }
+
                 if (porridge > 0)
                 {
                     result.Add(new BackpackConsumableUsage("food_spirit_porridge", "battle_start"));
@@ -48,6 +46,7 @@ namespace Xiuxian.Scripts.Services
             {
                 "talisman_fire_charm" => TalismanRules.GetModifier(itemId),
                 "talisman_shield_charm" => TalismanRules.GetModifier(itemId),
+                "talisman_burst_charm" => TalismanRules.GetModifier(itemId),
                 "food_spirit_porridge" => CookingRules.GetModifier(itemId),
                 "food_fruit_jelly" => CookingRules.GetModifier(itemId),
                 "food_dragon_soup" => CookingRules.GetModifier(itemId),
@@ -76,6 +75,17 @@ namespace Xiuxian.Scripts.Services
             return GetActiveFormationProfile(activePrimaryId, activeSecondaryId, items, masteryLevel).CraftSpeedRate;
         }
 
+        public static CharacterStatModifier CollectPermanentProgressModifier(PlayerProgressPersistenceRules.PlayerProgressSnapshot snapshot)
+        {
+            return new CharacterStatModifier(
+                MaxHpFlat: snapshot.BodyCultivationMaxHpFlat,
+                AttackFlat: snapshot.BodyCultivationAttackFlat,
+                DefenseFlat: snapshot.BodyCultivationDefenseFlat,
+                MaxHpRate: snapshot.ZhouTianMaxHpRate,
+                AttackRate: snapshot.ZhouTianAttackRate,
+                DefenseRate: snapshot.ZhouTianDefenseRate);
+        }
+
         private static FormationEffectProfile GetActiveFormationProfile(string activePrimaryId, string activeSecondaryId, IReadOnlyDictionary<string, int> items, int masteryLevel)
         {
             FormationEffectProfile primary = GetOwnedFormationProfile(activePrimaryId, items, masteryLevel);
@@ -100,12 +110,30 @@ namespace Xiuxian.Scripts.Services
             return FormationRules.GetEffectProfile(formationId, masteryLevel);
         }
 
-        public static CharacterStatModifier CollectPermanentProgressModifier(PlayerProgressPersistenceRules.PlayerProgressSnapshot snapshot)
+        private static IEnumerable<string> GetAutoUseTalismans(IReadOnlyDictionary<string, int> items, int maxTalismansPerBattle)
         {
-            return new CharacterStatModifier(
-                MaxHpFlat: snapshot.BodyCultivationMaxHpFlat,
-                AttackFlat: snapshot.BodyCultivationAttackFlat,
-                DefenseFlat: snapshot.BodyCultivationDefenseFlat);
+            if (items == null || maxTalismansPerBattle <= 0)
+            {
+                yield break;
+            }
+
+            string[] priority =
+            {
+                "talisman_burst_charm",
+                "talisman_shield_charm",
+                "talisman_fire_charm",
+            };
+
+            int used = 0;
+            for (int i = 0; i < priority.Length && used < maxTalismansPerBattle; i++)
+            {
+                string talismanId = priority[i];
+                if (items.TryGetValue(talismanId, out int count) && count > 0)
+                {
+                    yield return talismanId;
+                    used++;
+                }
+            }
         }
     }
 }

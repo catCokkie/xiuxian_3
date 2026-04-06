@@ -19,7 +19,11 @@ public sealed class UiTextStatsTests
             winRate: 0.75,
             totalLingqi: 888.0,
             totalInsight: 66.0,
-            totalSpiritStones: 40);
+            totalSpiritStones: 40,
+            totalSmallCycles: 7,
+            totalGrandCycles: 1,
+            totalRestCount: 7,
+            totalMeditationInsights: 2);
 
         Assert.Contains("累计在线时长", text);
         Assert.Contains("历史最高境界：炼气 3 层", text);
@@ -29,6 +33,11 @@ public sealed class UiTextStatsTests
         Assert.Contains("成长统计", text);
         Assert.Contains("战斗统计", text);
         Assert.Contains("资源统计", text);
+        Assert.Contains("周天统计", text);
+        Assert.Contains("小周天完成数：7", text);
+        Assert.Contains("大周天完成数：1", text);
+        Assert.Contains("调息次数：7", text);
+        Assert.Contains("入定领悟次数：2", text);
     }
 
     [Fact]

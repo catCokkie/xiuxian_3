@@ -16,29 +16,25 @@ namespace Xiuxian.Scripts.Services
 
         private static readonly MaterialDef[] Materials =
         {
-            // --- 采集类: 灵田 ---
-            new("spirit_herb",    "灵草", new[] { "dungeon", "garden" }, new[] { "alchemy" }),
-            new("spirit_flower",  "灵花", new[] { "garden" },           new[] { "alchemy", "cooking" }),
-            new("spirit_fruit",   "灵果", new[] { "garden" },           new[] { "cooking" }),
-            new("seed",           "种子", new[] { "garden" },           new[] { "garden" }),
+            new("spirit_herb", "灵草", new[] { "dungeon", "garden" }, new[] { "alchemy", "body_cultivation" }),
+            new("spirit_flower", "灵花", new[] { "garden" }, new[] { "alchemy", "cooking" }),
+            new("spirit_fruit", "灵果", new[] { "garden" }, new[] { "cooking", "body_cultivation" }),
+            new("seed", "种子", new[] { "garden" }, new[] { "garden" }),
 
-            // --- 采集类: 矿脉 ---
-            new("cold_iron_ore",  "寒铁矿", new[] { "mining" },         new[] { "smithing" }),
-            new("spirit_jade",    "灵玉",   new[] { "mining" },         new[] { "smithing", "formation" }),
-            new("mithril",        "秘银",   new[] { "mining" },         new[] { "smithing" }),
-            new("fossil",         "化石",   new[] { "mining" },         new[] { "alchemy" }),
+            new("cold_iron_ore", "寒铁矿", new[] { "mining" }, new[] { "smithing", "formation" }),
+            new("spirit_jade", "灵玉", new[] { "mining" }, new[] { "smithing", "formation" }),
+            new("mithril", "秘银", new[] { "mining" }, new[] { "smithing", "formation" }),
+            new("fossil", "化石", new[] { "mining" }, new[] { "alchemy" }),
 
-            // --- 采集类: 灵渔 ---
-            new("spirit_fish",    "灵鱼",   new[] { "fishing" },        new[] { "cooking" }),
-            new("spirit_pearl",   "灵珠",   new[] { "fishing" },        new[] { "formation", "alchemy" }),
-            new("dragon_saliva",  "龙涎",   new[] { "fishing" },        new[] { "alchemy" }),
+            new("spirit_fish", "灵鱼", new[] { "fishing" }, new[] { "cooking" }),
+            new("spirit_pearl", "灵珠", new[] { "fishing" }, new[] { "formation", "alchemy" }),
+            new("dragon_saliva", "龙涎", new[] { "fishing" }, new[] { "alchemy", "formation" }),
 
-            // --- 战斗掉落 ---
-            new("lingqi_shard",      "碎片",   new[] { "dungeon" }, new[] { "smithing" }),
-            new("broken_talisman",   "碎符",   new[] { "dungeon" }, new[] { "smithing", "talisman" }),
-            new("spirit_ink",        "灵墨",   new[] { "dungeon" }, new[] { "talisman" }),
-            new("beast_bone",        "兽骨",   new[] { "dungeon" }, new[] { "alchemy", "cooking" }),
-            new("toxic_gland",       "毒腺",   new[] { "dungeon" }, new[] { "alchemy" }),
+            new("lingqi_shard", "碎片", new[] { "dungeon" }, new[] { "smithing" }),
+            new("broken_talisman", "碎符", new[] { "dungeon" }, new[] { "smithing", "talisman" }),
+            new("spirit_ink", "灵墨", new[] { "dungeon" }, new[] { "talisman", "formation" }),
+            new("beast_bone", "兽骨", new[] { "dungeon" }, new[] { "alchemy", "cooking", "body_cultivation" }),
+            new("toxic_gland", "毒腺", new[] { "dungeon" }, new[] { "alchemy" }),
         };
 
         private static readonly Dictionary<string, MaterialDef> Index;

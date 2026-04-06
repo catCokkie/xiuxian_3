@@ -18,18 +18,18 @@ namespace Xiuxian.Scripts.Services
         public const string FishingSpeedBonusEffectId = "fishing_speed_bonus";
         public const string FishingRarePondUnlockEffectId = "fishing_rare_pond_unlock";
         public const string FishingDoubleOutputEffectId = "fishing_double_output_chance";
-        public const string TalismanDoubleOutputEffectId = "talisman_double_output_chance";
         public const string TalismanMaterialDiscountEffectId = "talisman_material_discount";
-        public const string TalismanEnchantChanceEffectId = "talisman_enchant_chance";
+        public const string TalismanSecondRecipeUnlockEffectId = "talisman_second_recipe_unlock";
+        public const string TalismanExtraBattleUseEffectId = "talisman_extra_battle_use";
         public const string CookingDurationBonusEffectId = "cooking_duration_bonus";
         public const string CookingDoubleOutputEffectId = "cooking_double_output_chance";
         public const string CookingExtraEffectId = "cooking_extra_effect";
         public const string FormationEffectBonusEffectId = "formation_effect_bonus";
         public const string FormationDualSlotEffectId = "formation_dual_slot";
         public const string FormationSelfRepairEffectId = "formation_self_repair";
-        public const string BodyCultivationEfficiencyBonusEffectId = "body_cultivation_efficiency_bonus";
-        public const string BodyCultivationTemperCapBonusEffectId = "body_cultivation_temper_cap_bonus";
-        public const string BodyCultivationBoneforgeCapBonusEffectId = "body_cultivation_boneforge_cap_bonus";
+        public const string BodyCultivationSecondTechniqueUnlockEffectId = "body_cultivation_second_technique_unlock";
+        public const string BodyCultivationMaterialDiscountEffectId = "body_cultivation_material_discount";
+        public const string BodyCultivationExtraCapEffectId = "body_cultivation_extra_cap";
 
         public readonly record struct MasteryDefinition(
             string SystemId,
@@ -198,39 +198,39 @@ namespace Xiuxian.Scripts.Services
                 Def(PlayerActionState.ModeSmithing, 4, 80, 3, "smithing_max_enhance_level", "炼器精通 Lv4", 9.0),
 
                 Def(PlayerActionState.ModeGarden, 1, 0, 1, "garden_base", "灵田精通 Lv1", 0.0),
-                Def(PlayerActionState.ModeGarden, 2, 25, 1, GardenGrowthSpeedBonusEffectId, "灵田精通 Lv2 — 生长+15%", 0.15),
-                Def(PlayerActionState.ModeGarden, 3, 55, 2, GardenRareSpawnBonusEffectId, "灵田精通 Lv3 — 稀有+10%", 0.10),
-                Def(PlayerActionState.ModeGarden, 4, 95, 3, GardenOfflineFullEffectId, "灵田精通 Lv4 — 离线100%", 1.0),
+                Def(PlayerActionState.ModeGarden, 2, 25, 1, GardenGrowthSpeedBonusEffectId, "灵田精通 Lv2", 0.15),
+                Def(PlayerActionState.ModeGarden, 3, 55, 2, GardenRareSpawnBonusEffectId, "灵田精通 Lv3", 0.10),
+                Def(PlayerActionState.ModeGarden, 4, 95, 3, GardenOfflineFullEffectId, "灵田精通 Lv4", 1.0),
 
                 Def(PlayerActionState.ModeMining, 1, 0, 1, "mining_base", "矿脉精通 Lv1", 0.0),
-                Def(PlayerActionState.ModeMining, 2, 30, 1, MiningDurabilityBonusEffectId, "矿脉精通 Lv2 — 耐久+20%", 0.20),
-                Def(PlayerActionState.ModeMining, 3, 60, 2, MiningRareSpawnBonusEffectId, "矿脉精通 Lv3 — 稀有+10%", 0.10),
-                Def(PlayerActionState.ModeMining, 4, 95, 3, MiningDoubleOutputEffectId, "矿脉精通 Lv4 — 双倍10%", 0.10),
+                Def(PlayerActionState.ModeMining, 2, 30, 1, MiningDurabilityBonusEffectId, "矿脉精通 Lv2", 0.20),
+                Def(PlayerActionState.ModeMining, 3, 60, 2, MiningRareSpawnBonusEffectId, "矿脉精通 Lv3", 0.10),
+                Def(PlayerActionState.ModeMining, 4, 95, 3, MiningDoubleOutputEffectId, "矿脉精通 Lv4", 0.10),
 
                 Def(PlayerActionState.ModeFishing, 1, 0, 1, "fishing_base", "灵渔精通 Lv1", 0.0),
-                Def(PlayerActionState.ModeFishing, 2, 25, 1, FishingSpeedBonusEffectId, "灵渔精通 Lv2 — 速度+15%", 0.15),
-                Def(PlayerActionState.ModeFishing, 3, 55, 2, FishingRarePondUnlockEffectId, "灵渔精通 Lv3 — 稀有鱼塘", 1.0),
-                Def(PlayerActionState.ModeFishing, 4, 90, 3, FishingDoubleOutputEffectId, "灵渔精通 Lv4 — 双倍8%", 0.08),
+                Def(PlayerActionState.ModeFishing, 2, 25, 1, FishingSpeedBonusEffectId, "灵渔精通 Lv2", 0.15),
+                Def(PlayerActionState.ModeFishing, 3, 55, 2, FishingRarePondUnlockEffectId, "灵渔精通 Lv3", 1.0),
+                Def(PlayerActionState.ModeFishing, 4, 90, 3, FishingDoubleOutputEffectId, "灵渔精通 Lv4", 0.08),
 
                 Def(PlayerActionState.ModeTalisman, 1, 0, 1, "talisman_base", "符箓精通 Lv1", 0.0),
-                Def(PlayerActionState.ModeTalisman, 2, 30, 1, TalismanDoubleOutputEffectId, "符箓精通 Lv2 — 双出10%", 0.10),
-                Def(PlayerActionState.ModeTalisman, 3, 60, 2, TalismanMaterialDiscountEffectId, "符箓精通 Lv3 — 材料-10%", 0.10),
-                Def(PlayerActionState.ModeTalisman, 4, 95, 3, TalismanEnchantChanceEffectId, "符箓精通 Lv4 — 附魔概率", 0.10),
+                Def(PlayerActionState.ModeTalisman, 2, 30, 1, TalismanSecondRecipeUnlockEffectId, "符箓精通 Lv2", 1.0),
+                Def(PlayerActionState.ModeTalisman, 3, 60, 2, TalismanMaterialDiscountEffectId, "符箓精通 Lv3", 0.10),
+                Def(PlayerActionState.ModeTalisman, 4, 95, 3, TalismanExtraBattleUseEffectId, "符箓精通 Lv4", 2.0),
 
                 Def(PlayerActionState.ModeCooking, 1, 0, 1, "cooking_base", "烹饪精通 Lv1", 0.0),
-                Def(PlayerActionState.ModeCooking, 2, 25, 1, CookingDurationBonusEffectId, "烹饪精通 Lv2 — 持续+1场", 1.0),
-                Def(PlayerActionState.ModeCooking, 3, 55, 2, CookingDoubleOutputEffectId, "烹饪精通 Lv3 — 双出15%", 0.15),
-                Def(PlayerActionState.ModeCooking, 4, 90, 3, CookingExtraEffectId, "烹饪精通 Lv4 — 额外效果", 1.0),
+                Def(PlayerActionState.ModeCooking, 2, 25, 1, CookingDurationBonusEffectId, "烹饪精通 Lv2", 1.0),
+                Def(PlayerActionState.ModeCooking, 3, 55, 2, CookingDoubleOutputEffectId, "烹饪精通 Lv3", 0.15),
+                Def(PlayerActionState.ModeCooking, 4, 90, 3, CookingExtraEffectId, "烹饪精通 Lv4", 1.0),
 
                 Def(PlayerActionState.ModeFormation, 1, 0, 1, "formation_base", "阵法精通 Lv1", 0.0),
-                Def(PlayerActionState.ModeFormation, 2, 30, 1, FormationEffectBonusEffectId, "阵法精通 Lv2 — 效果+10%", 0.10),
-                Def(PlayerActionState.ModeFormation, 3, 60, 2, FormationDualSlotEffectId, "阵法精通 Lv3 — 双槽", 2.0),
-                Def(PlayerActionState.ModeFormation, 4, 100, 3, FormationSelfRepairEffectId, "阵法精通 Lv4 — 自修复", 1.0),
+                Def(PlayerActionState.ModeFormation, 2, 30, 1, FormationEffectBonusEffectId, "阵法精通 Lv2", 0.10),
+                Def(PlayerActionState.ModeFormation, 3, 60, 2, FormationDualSlotEffectId, "阵法精通 Lv3", 2.0),
+                Def(PlayerActionState.ModeFormation, 4, 100, 3, FormationSelfRepairEffectId, "阵法精通 Lv4", 1.0),
 
                 Def(PlayerActionState.ModeBodyCultivation, 1, 0, 1, "body_cultivation_base", "体修精通 Lv1", 0.0),
-                Def(PlayerActionState.ModeBodyCultivation, 2, 30, 1, BodyCultivationEfficiencyBonusEffectId, "体修精通 Lv2 — 效率+10%", 0.10),
-                Def(PlayerActionState.ModeBodyCultivation, 3, 65, 2, BodyCultivationTemperCapBonusEffectId, "体修精通 Lv3 — 淬体上限+10", 10.0),
-                Def(PlayerActionState.ModeBodyCultivation, 4, 90, 3, BodyCultivationBoneforgeCapBonusEffectId, "体修精通 Lv4 — 炼骨上限+5", 5.0),
+                Def(PlayerActionState.ModeBodyCultivation, 2, 30, 1, BodyCultivationSecondTechniqueUnlockEffectId, "体修精通 Lv2", 1.0),
+                Def(PlayerActionState.ModeBodyCultivation, 3, 65, 2, BodyCultivationMaterialDiscountEffectId, "体修精通 Lv3", 0.15),
+                Def(PlayerActionState.ModeBodyCultivation, 4, 90, 3, BodyCultivationExtraCapEffectId, "体修精通 Lv4", 5.0),
             };
         }
 

@@ -16,6 +16,7 @@ public static class UiText
     public const string LeftTabBattleLog = "战斗日志";
     public const string LeftTabEquipment = "装备情况";
     public const string LeftTabBackpack = "背包";
+    public const string LeftTabShop = "坊市";
     public const string LeftTabStats = "统计概览";
     public const string LeftTabValidation = "配置校验";
     public const string RightTabOnline = "联机";
@@ -25,6 +26,7 @@ public static class UiText
     public const string SystemSection = "系统";
     public const string DisplaySection = "画面";
     public const string ProgressSection = "进度";
+    public const string PrivacySection = "隐私";
     public const string ResetAndApply = "重置并应用";
     public const string Quit = "退出";
     public const string Open = "打开";
@@ -47,6 +49,25 @@ public static class UiText
     public const string CloudSync = "云端同步";
     public const string MilestoneTips = "里程碑提示";
     public const string GlobalDebugOverlay = "全局调试信息";
+    public const string PrivacyInputCollection = "输入采集";
+    public const string PrivacyInputCollectionHint = "关闭后游戏将暂停所有键鼠统计，修炼进度停止。";
+    public const string PrivacyCollectionStatus = "采集状态";
+    public const string PrivacyCollectionPaused = "已暂停";
+    public const string PrivacyStatement = "隐私声明";
+    public const string PrivacyStatementBody = "本应用仅统计键盘/鼠标操作次数，不记录按键内容或屏幕信息。\n所有数据仅存储在本地，不上传至任何服务器。\n您可随时通过上方开关暂停采集。";
+    public const string PrivacyNoticeTitle = "隐私说明";
+    public const string PrivacyNoticeBody = "本应用通过统计键盘与鼠标的操作次数来驱动游戏进度。\n我们不记录任何按键内容或屏幕信息。\n所有数据仅保存在您的电脑上。";
+    public const string PrivacyNoticeConfirm = "了解，开始修行";
+    public const string CultivationRhythmEnabled = "周天提醒";
+    public const string CultivationRhythmStrength = "提醒强度";
+    public const string CultivationRhythmCycle = "小周天周期";
+    public const string CultivationRhythmStrengthNone = "无提醒";
+    public const string CultivationRhythmStrengthWeak = "弱提醒";
+    public const string CultivationRhythmStrengthStrong = "强提醒";
+    public const string ShopCategoryConsumables = "消耗品";
+    public const string ShopCategoryExpansion = "扩容";
+    public const string ShopCategoryUtility = "便利";
+    public const string ShopCategoryRare = "稀有";
     public const string ReservedSuffix = "（预留）";
     public const string ExperimentalSuffix = "（实验）";
     public const string BugFeedbackTitle = "Bug反馈";
@@ -96,10 +117,16 @@ public static class UiText
         PlayerActionState.ModeCultivation => "修炼",
         PlayerActionState.ModeAlchemy => "炼丹",
         PlayerActionState.ModeSmithing => "炼器",
+        PlayerActionState.ModeTalisman => "符箓",
+        PlayerActionState.ModeBodyCultivation => "体修",
         _ => systemId,
     };
 
     public static string MasteryUnlockButton(string systemId, int nextLevel) => $"{MasterySystemName(systemId)} Lv{nextLevel}";
+
+    public static string CultivationRhythmCycleOption(int minutes) => $"{minutes} 分钟";
+
+    public static string PrivacyCollectionRunning(long count) => $"采集中 · 本次会话已记录 {count:N0} 次操作";
 
     public static string MasteryUnlockTooltip(string systemId, int currentLevel, int nextLevel, double cost, int requiredRealmLevel)
         => $"{MasterySystemName(systemId)} Lv{currentLevel} -> Lv{nextLevel}，消耗{cost:0}悟性，需要炼气{requiredRealmLevel}层。";
@@ -120,6 +147,12 @@ public static class UiText
         "alchemy_high_tier_formula" => "预留高阶丹方入口",
         "smithing_max_enhance_level" => $"强化上限提升至 +{effectValue:0}",
         "smithing_material_discount" => $"强化材料消耗 -{effectValue * 100:0}%",
+        SubsystemMasteryRules.TalismanSecondRecipeUnlockEffectId => "解锁疾风符",
+        SubsystemMasteryRules.TalismanMaterialDiscountEffectId => $"制符材料 -{effectValue * 100:0}%",
+        SubsystemMasteryRules.TalismanExtraBattleUseEffectId => $"单战可用 {effectValue:0} 张",
+        SubsystemMasteryRules.BodyCultivationSecondTechniqueUnlockEffectId => "解锁灵肤术",
+        SubsystemMasteryRules.BodyCultivationMaterialDiscountEffectId => $"体修材料 -{effectValue * 100:0}%",
+        SubsystemMasteryRules.BodyCultivationExtraCapEffectId => $"体修上限 +{effectValue:0}",
         _ => effectId,
     };
     public static string ExploreFrame(int frame) => $"探索中 | 帧 {frame}";
@@ -177,7 +210,11 @@ public static class UiText
         double winRate,
         double totalLingqi,
         double totalInsight,
-        int totalSpiritStones)
+        int totalSpiritStones,
+        int totalSmallCycles,
+        int totalGrandCycles,
+        int totalRestCount,
+        int totalMeditationInsights)
     {
         return
             $"{LeftTabStats}\n\n" +
@@ -196,7 +233,12 @@ public static class UiText
             $"资源统计\n" +
             $"● 累计获得灵气：{totalLingqi:N0}\n" +
             $"● 累计获得悟性：{totalInsight:0.0}\n" +
-            $"● 累计获得灵石：{totalSpiritStones}";
+            $"● 累计获得灵石：{totalSpiritStones}\n\n" +
+            $"周天统计\n" +
+            $"● 小周天完成数：{totalSmallCycles}\n" +
+            $"● 大周天完成数：{totalGrandCycles}\n" +
+            $"● 调息次数：{totalRestCount}\n" +
+            $"● 入定领悟次数：{totalMeditationInsights}";
     }
 
     private static string FormatDuration(double totalSeconds)
@@ -215,6 +257,9 @@ public static class UiText
 
     public static string BackpackTemplate =>
         $"{LeftTabBackpack}\n- 材料与掉落\n- 未装备物品\n- 快速整理";
+
+    public static string ShopTemplate =>
+        $"{LeftTabShop}\n- 消耗品货架\n- 扩容许可\n- 便利增益\n- 稀有收藏";
 
     public static string EquipmentEmpty =>
         $"{LeftTabEquipment}\n当前未装备任何物品。\n默认测试装会在空存档时自动注入。";
@@ -235,12 +280,19 @@ public static class UiText
             "spirit_herb" => "灵草",
             "spirit_flower" => "灵花",
             "spirit_fruit" => "灵果",
+            "seed_spirit_herb" => "灵草种子",
+            "seed_spirit_flower" => "灵花种子",
+            "seed_spirit_fruit" => "灵果种子",
             "cold_iron_ore" => "寒铁矿",
             "spirit_jade" => "灵玉",
             "mithril" => "秘银",
             "spirit_fish" => "灵鱼",
             "spirit_pearl" => "灵珠",
             "dragon_saliva" => "龙涎",
+            "ripening_elixir" => "催熟灵液",
+            "mining_refresh_token" => "矿脉刷新令",
+            "fishing_bait" => "灵鱼饵",
+            "page_fragment" => "异闻录残页",
             "lingqi_shard" => "灵气碎片",
             "broken_talisman" => "碎符",
             "spirit_ink" => "灵墨",
@@ -256,6 +308,7 @@ public static class UiText
             "formation_craft_array" => "工巧阵盘",
             "potion_huiqi_dan" => "回气丹",
             "potion_juling_san" => "聚灵散",
+            "talisman_burst_charm" => "炸裂符",
             _ => itemId
         };
     }

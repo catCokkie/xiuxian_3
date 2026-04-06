@@ -152,6 +152,16 @@ namespace Xiuxian.Scripts.Ui
             {
                 services.SmithingState.SmithingChanged += OnSmithingChanged;
             }
+
+            if (services.CultivationRhythmState != null)
+            {
+                services.CultivationRhythmState.RhythmSummaryReady += OnRhythmSummaryReady;
+            }
+
+            if (services.ShopState != null)
+            {
+                services.ShopState.ShopNoticeReady += OnShopNoticeReady;
+            }
         }
 
         private void UnsubscribeEvents()
@@ -195,6 +205,16 @@ namespace Xiuxian.Scripts.Ui
             {
                 services.SmithingState.SmithingChanged -= OnSmithingChanged;
             }
+
+            if (services.CultivationRhythmState != null)
+            {
+                services.CultivationRhythmState.RhythmSummaryReady -= OnRhythmSummaryReady;
+            }
+
+            if (services.ShopState != null)
+            {
+                services.ShopState.ShopNoticeReady -= OnShopNoticeReady;
+            }
         }
 
         // ---------- Event handlers ----------
@@ -234,6 +254,26 @@ namespace Xiuxian.Scripts.Ui
             }
 
             _lastSmithingProgress = currentProgress;
+        }
+
+        private void OnRhythmSummaryReady(string title, string rewardSummary, string suggestion, bool requestAttention)
+        {
+            string message = string.IsNullOrEmpty(rewardSummary) ? title : $"{title}｜{rewardSummary}";
+            Enqueue(message, new Color("C8A050"));
+            if (!string.IsNullOrEmpty(suggestion))
+            {
+                Enqueue(suggestion, new Color("D8CBA6"));
+            }
+
+            if (requestAttention)
+            {
+                DisplayServer.WindowRequestAttention();
+            }
+        }
+
+        private void OnShopNoticeReady(string title, string detail)
+        {
+            Enqueue(string.IsNullOrEmpty(detail) ? title : $"{title}｜{detail}", new Color("C8A050"));
         }
     }
 }

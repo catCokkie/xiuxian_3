@@ -38,6 +38,8 @@ namespace Xiuxian.Scripts.Game
         private RecipeProgressState? _bodyCultivationState;
         private ResourceWalletState? _resourceWalletState;
         private PlayerProgressState? _playerProgressState;
+        private CultivationRhythmState? _cultivationRhythmState;
+        private ShopState? _shopState;
         private PlayerActionState? _playerActionState;
         private EquippedItemsState? _equippedItemsState;
         private SubsystemMasteryState? _subsystemMasteryState;
@@ -48,6 +50,7 @@ namespace Xiuxian.Scripts.Game
         private StatePersistenceManager _persistenceManager = new();
         private bool _cloudSyncEnabled;
         private long _lastLoadedSavedUnix;
+        private Control? _privacyNoticeOverlay;
 
         private bool _saveDirty;
         private double _saveCooldown;
@@ -78,6 +81,8 @@ namespace Xiuxian.Scripts.Game
             _bodyCultivationState = services?.BodyCultivationState;
             _resourceWalletState = services?.ResourceWalletState;
             _playerProgressState = services?.PlayerProgressState;
+            _cultivationRhythmState = services?.CultivationRhythmState;
+            _shopState = services?.ShopState;
             _playerActionState = services?.PlayerActionState;
             _equippedItemsState = services?.EquippedItemsState;
             _subsystemMasteryState = services?.SubsystemMasteryState;
@@ -101,6 +106,8 @@ namespace Xiuxian.Scripts.Game
             _persistenceManager.Register("body_cultivation", "state", _bodyCultivationState);
             _persistenceManager.Register("resource", "wallet", _resourceWalletState);
             _persistenceManager.Register("progress", "player", _playerProgressState);
+            _persistenceManager.Register("rhythm", "state", _cultivationRhythmState);
+            _persistenceManager.Register("shop", "state", _shopState);
             _persistenceManager.Register("mastery", "levels", _subsystemMasteryState);
             _persistenceManager.Register("action", "mode", _playerActionState);
             _persistenceManager.Register("equipment", "equipped", _equippedItemsState);
@@ -134,6 +141,14 @@ namespace Xiuxian.Scripts.Game
             if (_playerProgressState != null)
             {
                 _playerProgressState.RealmProgressChanged += OnRealmProgressChanged;
+            }
+            if (_cultivationRhythmState != null)
+            {
+                _cultivationRhythmState.RhythmChanged += OnCultivationRhythmChanged;
+            }
+            if (_shopState != null)
+            {
+                _shopState.ShopChanged += OnShopChanged;
             }
             if (_gardenState != null)
             {
@@ -179,6 +194,14 @@ namespace Xiuxian.Scripts.Game
             if (_playerProgressState == null)
             {
                 GD.PushWarning("PrototypeRootController: PlayerProgressState not found at /root/PlayerProgressState");
+            }
+            if (_cultivationRhythmState == null)
+            {
+                GD.PushWarning("PrototypeRootController: CultivationRhythmState not found at /root/CultivationRhythmState");
+            }
+            if (_shopState == null)
+            {
+                GD.PushWarning("PrototypeRootController: ShopState not found at /root/ShopState");
             }
             if (_gardenState == null)
             {
@@ -243,6 +266,14 @@ namespace Xiuxian.Scripts.Game
             if (_playerProgressState != null)
             {
                 _playerProgressState.RealmProgressChanged -= OnRealmProgressChanged;
+            }
+            if (_cultivationRhythmState != null)
+            {
+                _cultivationRhythmState.RhythmChanged -= OnCultivationRhythmChanged;
+            }
+            if (_shopState != null)
+            {
+                _shopState.ShopChanged -= OnShopChanged;
             }
             if (_gardenState != null)
             {
@@ -337,6 +368,16 @@ namespace Xiuxian.Scripts.Game
             MarkDirty();
         }
 
+        private void OnCultivationRhythmChanged()
+        {
+            MarkDirty();
+        }
+
+        private void OnShopChanged()
+        {
+            MarkDirty();
+        }
+
         private void OnAlchemyChanged(string selectedRecipeId, float currentProgress, float requiredProgress)
         {
             MarkDirty();
@@ -384,8 +425,10 @@ namespace Xiuxian.Scripts.Game
             EnsureStarterEquipmentLoadout();
 
             bool appliedOfflineSettlement = loaded && ApplyOfflineSettlementIfNeeded();
+            bool appliedOfflineGarden = loaded && ApplyOfflineGardenIfNeeded();
+            bool appliedOfflineRhythm = loaded && ApplyOfflineRhythmIfNeeded();
 
-            if (!loaded || migrated || appliedOfflineSettlement)
+            if (!loaded || migrated || appliedOfflineSettlement || appliedOfflineGarden || appliedOfflineRhythm)
             {
                 SaveAllState();
             }
@@ -394,6 +437,10 @@ namespace Xiuxian.Scripts.Game
             _saveCooldown = SaveIntervalSeconds;
             _activitySaveMarkTimer = 0.0;
             RefreshRuntimeSettingsFromBookTabs();
+            if (_bookTabs.ShouldShowPrivacyNotice())
+            {
+                ShowFirstLaunchPrivacyCard();
+            }
         }
 
         private void EnsureStarterEquipmentLoadout()
@@ -546,6 +593,11 @@ namespace Xiuxian.Scripts.Game
                 return false;
             }
 
+            if (_playerActionState.ActionId == PlayerActionState.ActionGarden)
+            {
+                return false;
+            }
+
             bool isCultivation = PlayerActionCapabilityRules.HasCapability(_playerActionState, PlayerActionCapability.ConsumesApSettlement);
             bool isDungeon = PlayerActionCapabilityRules.HasCapability(_playerActionState, PlayerActionCapability.AdvancesDungeon);
             if (!isCultivation && !isDungeon)
@@ -609,6 +661,41 @@ namespace Xiuxian.Scripts.Game
             return true;
         }
 
+        private bool ApplyOfflineGardenIfNeeded()
+        {
+            if (_gardenState == null || _lastLoadedSavedUnix <= 0)
+            {
+                return false;
+            }
+
+            bool changed = _gardenState.ApplyOfflineRealTime();
+            if (changed)
+            {
+                MarkDirty();
+            }
+
+            return changed;
+        }
+
+        private bool ApplyOfflineRhythmIfNeeded()
+        {
+            if (_cultivationRhythmState == null || _lastLoadedSavedUnix <= 0)
+            {
+                return false;
+            }
+
+            long nowUnix = (long)Time.GetUnixTimeFromSystem();
+            double offlineSeconds = Math.Max(0.0, nowUnix - _lastLoadedSavedUnix);
+            if (offlineSeconds <= 0.0)
+            {
+                return false;
+            }
+
+            bool hadRest = _cultivationRhythmState.InRest;
+            _cultivationRhythmState.ApplyOfflineRealTime(offlineSeconds);
+            return hadRest;
+        }
+
         private ActionSettlementResult BuildOfflineDungeonSettlement(double offlineSeconds)
         {
             if (_levelConfigLoader == null || _equippedItemsState == null || _playerProgressState == null)
@@ -637,7 +724,12 @@ namespace Xiuxian.Scripts.Game
                     _playerProgressState.BodyCultivationAttackFlat,
                     _playerProgressState.BodyCultivationDefenseFlat,
                     _playerProgressState.TemperCount,
-                    _playerProgressState.BoneforgeCount))
+                    _playerProgressState.BoneforgeCount,
+                    _playerProgressState.BloodflowCount,
+                    _playerProgressState.BodyCultivationPostBattleHealRate,
+                    _playerProgressState.ZhouTianMaxHpRate,
+                    _playerProgressState.ZhouTianAttackRate,
+                    _playerProgressState.ZhouTianDefenseRate))
             };
             CharacterStatBlock playerStats = CharacterStatRules.BuildFinalStats(
                 CharacterStatRules.BuildFinalStats(baseStats, extraModifiers),
@@ -794,10 +886,151 @@ namespace Xiuxian.Scripts.Game
             var dict = _bookTabs.ToSystemSettingsDictionary();
             _cloudSyncEnabled = dict.ContainsKey("cloud_sync") && dict["cloud_sync"].AsBool();
             _activitySaveMarkIntervalSeconds = ReadActivitySaveInterval(dict);
+            bool shouldPauseInputCollection = !_bookTabs.IsPrivacyInputCollectionEnabled();
+            if (_hookService != null && _hookService.IsPaused != shouldPauseInputCollection)
+            {
+                _hookService.SetPaused(shouldPauseInputCollection);
+            }
             bool showValidationPanel = !dict.ContainsKey("show_validation_panel") || dict["show_validation_panel"].AsBool();
             _exploreProgressController?.SetValidationPanelEnabled(showValidationPanel);
             bool globalDebugOverlay = dict.ContainsKey("global_debug_overlay") && dict["global_debug_overlay"].AsBool();
             _exploreProgressController?.SetGlobalDebugOverlayEnabled(globalDebugOverlay);
+        }
+
+        private void ShowFirstLaunchPrivacyCard()
+        {
+            if (_privacyNoticeOverlay != null && IsInstanceValid(_privacyNoticeOverlay))
+            {
+                return;
+            }
+
+            ColorRect overlay = new();
+            overlay.Name = "FirstLaunchPrivacyOverlay";
+            overlay.SetAnchorsPreset(LayoutPreset.FullRect);
+            overlay.Color = new Color(0.0f, 0.0f, 0.0f, 0.3f);
+            overlay.MouseFilter = Control.MouseFilterEnum.Stop;
+            overlay.ZIndex = 1000;
+            overlay.Modulate = new Color(1.0f, 1.0f, 1.0f, 0.0f);
+            AddChild(overlay);
+            _privacyNoticeOverlay = overlay;
+
+            CenterContainer center = new();
+            center.SetAnchorsPreset(LayoutPreset.FullRect);
+            overlay.AddChild(center);
+
+            PanelContainer card = new();
+            card.CustomMinimumSize = new Vector2(480.0f, 220.0f);
+            card.SizeFlagsHorizontal = Control.SizeFlags.ShrinkCenter;
+            card.SizeFlagsVertical = Control.SizeFlags.ShrinkCenter;
+            card.AddThemeStyleboxOverride("panel", new StyleBoxFlat
+            {
+                BgColor = new Color("F5E6C8"),
+                BorderColor = new Color("C8A050"),
+                BorderWidthLeft = 1,
+                BorderWidthTop = 1,
+                BorderWidthRight = 1,
+                BorderWidthBottom = 1,
+                CornerRadiusTopLeft = 8,
+                CornerRadiusTopRight = 8,
+                CornerRadiusBottomLeft = 8,
+                CornerRadiusBottomRight = 8,
+                ShadowColor = new Color(0.0f, 0.0f, 0.0f, 0.18f),
+                ShadowSize = 8,
+            });
+            center.AddChild(card);
+
+            MarginContainer margin = new();
+            margin.AddThemeConstantOverride("margin_left", 16);
+            margin.AddThemeConstantOverride("margin_top", 16);
+            margin.AddThemeConstantOverride("margin_right", 16);
+            margin.AddThemeConstantOverride("margin_bottom", 16);
+            card.AddChild(margin);
+
+            VBoxContainer content = new();
+            content.Alignment = BoxContainer.AlignmentMode.Center;
+            content.AddThemeConstantOverride("separation", 12);
+            margin.AddChild(content);
+
+            Label iconLabel = new();
+            iconLabel.Text = "🔒";
+            iconLabel.HorizontalAlignment = HorizontalAlignment.Center;
+            iconLabel.AddThemeFontSizeOverride("font_size", 28);
+            content.AddChild(iconLabel);
+
+            Label titleLabel = new();
+            titleLabel.Text = UiText.PrivacyNoticeTitle;
+            titleLabel.HorizontalAlignment = HorizontalAlignment.Center;
+            titleLabel.AddThemeFontSizeOverride("font_size", 18);
+            titleLabel.AddThemeColorOverride("font_color", new Color("4A3728"));
+            content.AddChild(titleLabel);
+
+            Label bodyLabel = new();
+            bodyLabel.Text = UiText.PrivacyNoticeBody;
+            bodyLabel.HorizontalAlignment = HorizontalAlignment.Center;
+            bodyLabel.AutowrapMode = TextServer.AutowrapMode.WordSmart;
+            bodyLabel.AddThemeFontSizeOverride("font_size", 14);
+            bodyLabel.AddThemeColorOverride("font_color", new Color("6B5B4E"));
+            content.AddChild(bodyLabel);
+
+            Control spacer = new();
+            spacer.CustomMinimumSize = new Vector2(0.0f, 12.0f);
+            content.AddChild(spacer);
+
+            CenterContainer buttonCenter = new();
+            content.AddChild(buttonCenter);
+
+            Button confirmButton = new();
+            confirmButton.Text = UiText.PrivacyNoticeConfirm;
+            confirmButton.CustomMinimumSize = new Vector2(160.0f, 36.0f);
+            confirmButton.AddThemeColorOverride("font_color", Colors.White);
+            confirmButton.AddThemeStyleboxOverride("normal", new StyleBoxFlat
+            {
+                BgColor = new Color("C8A050"),
+                CornerRadiusTopLeft = 8,
+                CornerRadiusTopRight = 8,
+                CornerRadiusBottomLeft = 8,
+                CornerRadiusBottomRight = 8,
+            });
+            confirmButton.AddThemeStyleboxOverride("hover", new StyleBoxFlat
+            {
+                BgColor = new Color("D6AE59"),
+                CornerRadiusTopLeft = 8,
+                CornerRadiusTopRight = 8,
+                CornerRadiusBottomLeft = 8,
+                CornerRadiusBottomRight = 8,
+            });
+            confirmButton.AddThemeStyleboxOverride("pressed", new StyleBoxFlat
+            {
+                BgColor = new Color("B58F46"),
+                CornerRadiusTopLeft = 8,
+                CornerRadiusTopRight = 8,
+                CornerRadiusBottomLeft = 8,
+                CornerRadiusBottomRight = 8,
+            });
+            confirmButton.Pressed += OnFirstLaunchPrivacyCardConfirmed;
+            buttonCenter.AddChild(confirmButton);
+
+            overlay.TreeExited += () =>
+            {
+                if (_privacyNoticeOverlay == overlay)
+                {
+                    _privacyNoticeOverlay = null;
+                }
+            };
+
+            CreateTween().TweenProperty(overlay, "modulate:a", 1.0f, 0.3f);
+        }
+
+        private void OnFirstLaunchPrivacyCardConfirmed()
+        {
+            _bookTabs.AcknowledgePrivacyNotice();
+            MarkDirty();
+
+            if (_privacyNoticeOverlay != null && IsInstanceValid(_privacyNoticeOverlay))
+            {
+                _privacyNoticeOverlay.QueueFree();
+                _privacyNoticeOverlay = null;
+            }
         }
 
         private static double ReadActivitySaveInterval(Godot.Collections.Dictionary<string, Variant> dict)
