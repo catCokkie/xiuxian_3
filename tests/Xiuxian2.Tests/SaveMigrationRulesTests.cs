@@ -335,6 +335,21 @@ public sealed class SaveMigrationRulesTests
     }
 
     [Fact]
+    public void MigrateToLatest_PromotesV12SaveToV13WithPlayerStatsDefaults()
+    {
+        SaveMigrationRules.MigrationStore cfg = new();
+        cfg.SetValue("meta", "version", 12);
+
+        SaveMigrationRules.MigrateToLatest(cfg, 12);
+
+        Assert.Equal(SaveMigrationRules.LatestVersion, System.Convert.ToInt32(cfg.GetValue("meta", "version", 0)));
+        var stats = (System.Collections.Generic.Dictionary<string, object>)cfg.GetValue("stats", "player", new System.Collections.Generic.Dictionary<string, object>());
+        Assert.Equal(0L, System.Convert.ToInt64(stats["total_battle_losses"]));
+        Assert.Equal(0L, System.Convert.ToInt64(stats["total_garden_harvests"]));
+        Assert.Equal(0.0, System.Convert.ToDouble(stats["total_spent_insight"]));
+    }
+
+    [Fact]
     public void SaveMigrationException_ContainsVersionInfo()
     {
         var inner = new System.InvalidOperationException("test corruption");
@@ -372,7 +387,6 @@ public sealed class SaveMigrationRulesTests
 
         SaveMigrationRules.MigrateToLatest(cfg, 1);
 
-        // All critical sections must exist after full v1→v12 chain
         Assert.True(cfg.HasSectionKey("ui", "submenu_active_left_tab"));
         Assert.True(cfg.HasSectionKey("action", "mode"));
         Assert.True(cfg.HasSectionKey("settings", "system"));
@@ -383,5 +397,6 @@ public sealed class SaveMigrationRulesTests
         Assert.True(cfg.HasSectionKey("progress", "player"));
         Assert.True(cfg.HasSectionKey("rhythm", "state"));
         Assert.True(cfg.HasSectionKey("garden", "state"));
+        Assert.True(cfg.HasSectionKey("stats", "player"));
     }
 }

@@ -159,6 +159,46 @@ public sealed class SaveRoundTripTests
     }
 
     [Fact]
+    public void PlayerStatsPersistenceRules_RoundTripsLifetimeCounters()
+    {
+        PlayerStatsPersistenceRules.PlayerStatsSnapshot expected = new(
+            TotalBattleLosses: 4,
+            TotalBossBattles: 7,
+            TotalEliteBattles: 9,
+            TotalAlchemyCrafts: 12,
+            TotalSmithingCrafts: 6,
+            TotalTalismanCrafts: 8,
+            TotalCookingCrafts: 5,
+            TotalFormationCrafts: 3,
+            TotalMiningCompletions: 14,
+            TotalFishingCompletions: 11,
+            TotalGardenPlants: 15,
+            TotalGardenHarvests: 13,
+            TotalGardenAutoHarvests: 4,
+            TotalSpentSpiritStones: 220,
+            TotalSpentInsight: 88.5);
+
+        Dictionary<string, object> data = PlayerStatsPersistenceRules.ToPlainDictionary(expected);
+        PlayerStatsPersistenceRules.PlayerStatsSnapshot restored = PlayerStatsPersistenceRules.FromPlainDictionary(data);
+
+        Assert.Equal(expected.TotalBattleLosses, restored.TotalBattleLosses);
+        Assert.Equal(expected.TotalBossBattles, restored.TotalBossBattles);
+        Assert.Equal(expected.TotalEliteBattles, restored.TotalEliteBattles);
+        Assert.Equal(expected.TotalAlchemyCrafts, restored.TotalAlchemyCrafts);
+        Assert.Equal(expected.TotalSmithingCrafts, restored.TotalSmithingCrafts);
+        Assert.Equal(expected.TotalTalismanCrafts, restored.TotalTalismanCrafts);
+        Assert.Equal(expected.TotalCookingCrafts, restored.TotalCookingCrafts);
+        Assert.Equal(expected.TotalFormationCrafts, restored.TotalFormationCrafts);
+        Assert.Equal(expected.TotalMiningCompletions, restored.TotalMiningCompletions);
+        Assert.Equal(expected.TotalFishingCompletions, restored.TotalFishingCompletions);
+        Assert.Equal(expected.TotalGardenPlants, restored.TotalGardenPlants);
+        Assert.Equal(expected.TotalGardenHarvests, restored.TotalGardenHarvests);
+        Assert.Equal(expected.TotalGardenAutoHarvests, restored.TotalGardenAutoHarvests);
+        Assert.Equal(expected.TotalSpentSpiritStones, restored.TotalSpentSpiritStones);
+        Assert.Equal(expected.TotalSpentInsight, restored.TotalSpentInsight, 6);
+    }
+
+    [Fact]
     public void ShopPersistenceRules_RoundTripsPurchasesDailyStateAndActiveBuff()
     {
         ShopPersistenceRules.ShopSnapshot expected = new(

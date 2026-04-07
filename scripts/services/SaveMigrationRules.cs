@@ -11,7 +11,7 @@ namespace Xiuxian.Scripts.Services
     /// </summary>
     public static class SaveMigrationRules
     {
-        public const int LatestVersion = 12;
+        public const int LatestVersion = 13;
 
         private const string DefaultLeftTab = "CultivationTab";
         private const string DefaultRightTab = "BugTab";
@@ -113,6 +113,10 @@ namespace Xiuxian.Scripts.Services
                             MigrateV11ToV12(cfg);
                             version = 12;
                             break;
+                        case 12:
+                            MigrateV12ToV13(cfg);
+                            version = 13;
+                            break;
                         default:
                             version = LatestVersion;
                             break;
@@ -159,6 +163,7 @@ namespace Xiuxian.Scripts.Services
                 (9, "rhythm", "state"),
                 (10, "shop", "state"),
                 (11, "garden", "state"),
+                (12, "stats", "player"),
             };
 
             foreach (var (fromMax, section, key) in requiredKeys)
@@ -492,6 +497,14 @@ namespace Xiuxian.Scripts.Services
             Dictionary<string, object> garden = EnsureDictionaryValue(cfg, "garden", "state");
             GardenPersistenceRules.GardenSnapshot snapshot = GardenPersistenceRules.FromPlainDictionary(garden);
             cfg.SetValue("garden", "state", GardenPersistenceRules.ToPlainDictionary(snapshot));
+        }
+
+        private static void MigrateV12ToV13(IMigrationStore cfg)
+        {
+            if (!cfg.HasSectionKey("stats", "player"))
+            {
+                cfg.SetValue("stats", "player", PlayerStatsPersistenceRules.ToPlainDictionary(new PlayerStatsPersistenceRules.PlayerStatsSnapshot()));
+            }
         }
 
         private static Dictionary<string, object> BuildGenericState()
