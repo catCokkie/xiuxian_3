@@ -142,6 +142,7 @@ public partial class BookTabsController : Control
     private FormationState? _formationState;
     private RecipeProgressState? _bodyCultivationState;
     private ResourceWalletState? _resourceWalletState;
+    private PlayerStatsState? _playerStatsState;
     private PlayerProgressState? _playerProgressState;
     private CultivationRhythmState? _cultivationRhythmState;
     private ShopState? _shopState;
@@ -217,6 +218,7 @@ public partial class BookTabsController : Control
         _miningState = services?.MiningState;
         _fishingState = services?.FishingState;
         _resourceWalletState = services?.ResourceWalletState;
+        _playerStatsState = services?.PlayerStatsState;
         _playerProgressState = services?.PlayerProgressState;
         _cultivationRhythmState = services?.CultivationRhythmState;
         _shopState = services?.ShopState;
@@ -275,6 +277,10 @@ public partial class BookTabsController : Control
         if (_resourceWalletState != null)
         {
             _resourceWalletState.WalletChanged += OnWalletChanged;
+        }
+        if (_playerStatsState != null)
+        {
+            _playerStatsState.StatsChanged += OnPlayerStatsChanged;
         }
         if (_playerProgressState != null)
         {
@@ -389,6 +395,10 @@ public partial class BookTabsController : Control
         if (_resourceWalletState != null)
         {
             _resourceWalletState.WalletChanged -= OnWalletChanged;
+        }
+        if (_playerStatsState != null)
+        {
+            _playerStatsState.StatsChanged -= OnPlayerStatsChanged;
         }
         if (_playerProgressState != null)
         {
@@ -508,6 +518,11 @@ public partial class BookTabsController : Control
     private void OnWalletChanged(double lingqi, double insight, int spiritStones)
     {
         RefreshCoinLabel();
+        RefreshDynamicTabContent();
+    }
+
+    private void OnPlayerStatsChanged()
+    {
         RefreshDynamicTabContent();
     }
 
@@ -2091,24 +2106,118 @@ public partial class BookTabsController : Control
         int totalRestCount = _cultivationRhythmState?.TotalRestCount ?? 0;
         int totalMeditationInsights = _cultivationRhythmState?.TotalMeditationInsights ?? 0;
 
-        return
-            UiText.StatsOverview(
-                _activityState.TotalKeyDownCount,
-                _activityState.TotalMouseClickCount,
-                _activityState.TotalMouseScrollSteps,
-                _activityState.TotalMouseMoveDistancePx,
-                _activityState.TotalActiveSeconds,
-                _playerProgressState.RealmLevel,
-                currentRealmDays,
-                battleCount,
-                winRate,
-                _resourceWalletState.TotalEarnedLingqi,
-                _resourceWalletState.TotalEarnedInsight,
-                _resourceWalletState.TotalEarnedSpiritStones,
-                totalSmallCycles,
-                totalGrandCycles,
-                totalRestCount,
-                totalMeditationInsights);
+        long totalInputsRaw = _activityState.TotalKeyDownCount
+            + _activityState.TotalMouseClickCount
+            + _activityState.TotalMouseScrollSteps
+            + _activityState.TotalJoypadButtonCount
+            + _activityState.TotalJoypadAxisInputCount;
+        int totalInputs = totalInputsRaw > int.MaxValue ? int.MaxValue : (int)System.Math.Max(0L, totalInputsRaw);
+        int unlockedPlots = _gardenState?.GetUnlockedPlotCount() ?? 0;
+        int activePlots = _gardenState?.GetActivePlotCount() ?? 0;
+        int readyPlots = _gardenState?.GetReadyPlotCount() ?? 0;
+        int idlePlots = System.Math.Max(0, unlockedPlots - activePlots);
+
+        return UiText.StatsOverview(new UiText.StatsOverviewData(
+            TotalInputs: totalInputs,
+            KeyCount: _activityState.TotalKeyDownCount,
+            ClickCount: _activityState.TotalMouseClickCount,
+            ScrollSteps: _activityState.TotalMouseScrollSteps,
+            JoypadButtonCount: _activityState.TotalJoypadButtonCount,
+            JoypadAxisCount: _activityState.TotalJoypadAxisInputCount,
+            MoveDistance: _activityState.TotalMouseMoveDistancePx,
+            ActiveSeconds: _activityState.TotalActiveSeconds,
+            RealmLevel: _playerProgressState.RealmLevel,
+            RealmExp: _playerProgressState.RealmExp,
+            CurrentRealmDays: currentRealmDays,
+            CurrentActionName: GetCurrentActionStatsLabel(),
+            MasterySummary: BuildStatsMasterySummary(),
+            CurrentLingqi: _resourceWalletState.Lingqi,
+            CurrentInsight: _resourceWalletState.Insight,
+            CurrentSpiritStones: _resourceWalletState.SpiritStones,
+            TotalLingqi: _resourceWalletState.TotalEarnedLingqi,
+            TotalInsight: _resourceWalletState.TotalEarnedInsight,
+            TotalSpiritStones: _resourceWalletState.TotalEarnedSpiritStones,
+            TotalSpentInsight: _playerStatsState?.TotalSpentInsight ?? 0.0,
+            TotalSpentSpiritStones: _playerStatsState?.TotalSpentSpiritStones ?? 0,
+            TotalSmallCycles: totalSmallCycles,
+            TotalGrandCycles: totalGrandCycles,
+            TotalRestCount: totalRestCount,
+            TotalMeditationInsights: totalMeditationInsights,
+            BattleCount: battleCount,
+            BattleWins: battleWins,
+            BattleLosses: _playerStatsState?.TotalBattleLosses ?? System.Math.Max(0, battleCount - battleWins),
+            WinRate: winRate,
+            TotalBossBattles: _playerStatsState?.TotalBossBattles ?? 0,
+            TotalEliteBattles: _playerStatsState?.TotalEliteBattles ?? 0,
+            TotalAlchemyCrafts: _playerStatsState?.TotalAlchemyCrafts ?? 0,
+            TotalSmithingCrafts: _playerStatsState?.TotalSmithingCrafts ?? 0,
+            TotalTalismanCrafts: _playerStatsState?.TotalTalismanCrafts ?? 0,
+            TotalCookingCrafts: _playerStatsState?.TotalCookingCrafts ?? 0,
+            TotalFormationCrafts: _playerStatsState?.TotalFormationCrafts ?? 0,
+            TotalMiningCompletions: _playerStatsState?.TotalMiningCompletions ?? 0,
+            TotalFishingCompletions: _playerStatsState?.TotalFishingCompletions ?? 0,
+            TemperCount: _playerProgressState.TemperCount,
+            BoneforgeCount: _playerProgressState.BoneforgeCount,
+            BloodflowCount: _playerProgressState.BloodflowCount,
+            UnlockedPlots: unlockedPlots,
+            ActivePlots: activePlots,
+            ReadyPlots: readyPlots,
+            IdlePlots: idlePlots,
+            TotalGardenPlants: _playerStatsState?.TotalGardenPlants ?? 0,
+            TotalGardenHarvests: _playerStatsState?.TotalGardenHarvests ?? 0,
+            TotalGardenAutoHarvests: _playerStatsState?.TotalGardenAutoHarvests ?? 0,
+            SelectedPlotSummary: _gardenState?.BuildSelectedPlotSummary() ?? "灵田未加载"));
+    }
+
+    private string GetCurrentActionStatsLabel()
+    {
+        return (_playerActionState?.ActionId ?? PlayerActionState.ModeDungeon) switch
+        {
+            PlayerActionState.ModeDungeon => "副本",
+            PlayerActionState.ModeCultivation => "修炼",
+            PlayerActionState.ModeAlchemy => "炼丹",
+            PlayerActionState.ModeSmithing => "炼器",
+            PlayerActionState.ModeGarden => "灵田",
+            PlayerActionState.ModeMining => "矿脉",
+            PlayerActionState.ModeFishing => "灵渔",
+            PlayerActionState.ModeTalisman => "符箓",
+            PlayerActionState.ModeCooking => "烹饪",
+            PlayerActionState.ModeFormation => "阵法",
+            PlayerActionState.ModeBodyCultivation => "体修",
+            _ => "副本",
+        };
+    }
+
+    private string BuildStatsMasterySummary()
+    {
+        if (_subsystemMasteryState == null)
+        {
+            return "精通未加载";
+        }
+
+        string[] systemIds =
+        {
+            PlayerActionState.ModeDungeon,
+            PlayerActionState.ModeCultivation,
+            PlayerActionState.ModeAlchemy,
+            PlayerActionState.ModeSmithing,
+            PlayerActionState.ModeGarden,
+            PlayerActionState.ModeMining,
+            PlayerActionState.ModeFishing,
+            PlayerActionState.ModeTalisman,
+            PlayerActionState.ModeCooking,
+            PlayerActionState.ModeFormation,
+            PlayerActionState.ModeBodyCultivation,
+        };
+
+        var parts = new List<string>();
+        for (int i = 0; i < systemIds.Length; i++)
+        {
+            string systemId = systemIds[i];
+            parts.Add($"{UiText.MasterySystemName(systemId)} Lv{_subsystemMasteryState.GetLevel(systemId)}");
+        }
+
+        return string.Join("｜", parts);
     }
 
     private string BuildValidationOverviewText()

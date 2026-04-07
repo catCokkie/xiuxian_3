@@ -198,47 +198,116 @@ public static class UiText
             : $"进度未满，还需 {remainingExp:0.0} 经验。";
     }
 
-    public static string StatsOverview(
-        long keyCount,
-        long clickCount,
-        long scrollSteps,
-        double moveDistance,
-        double activeSeconds,
-        int realmLevel,
-        double currentRealmDays,
-        int battleCount,
-        double winRate,
-        double totalLingqi,
-        double totalInsight,
-        int totalSpiritStones,
-        int totalSmallCycles,
-        int totalGrandCycles,
-        int totalRestCount,
-        int totalMeditationInsights)
+    public readonly record struct StatsOverviewData(
+        int TotalInputs,
+        long KeyCount,
+        long ClickCount,
+        long ScrollSteps,
+        long JoypadButtonCount,
+        long JoypadAxisCount,
+        double MoveDistance,
+        double ActiveSeconds,
+        int RealmLevel,
+        double RealmExp,
+        double CurrentRealmDays,
+        string CurrentActionName,
+        string MasterySummary,
+        double CurrentLingqi,
+        double CurrentInsight,
+        int CurrentSpiritStones,
+        double TotalLingqi,
+        double TotalInsight,
+        int TotalSpiritStones,
+        double TotalSpentInsight,
+        int TotalSpentSpiritStones,
+        int TotalSmallCycles,
+        int TotalGrandCycles,
+        int TotalRestCount,
+        int TotalMeditationInsights,
+        int BattleCount,
+        int BattleWins,
+        int BattleLosses,
+        double WinRate,
+        int TotalBossBattles,
+        int TotalEliteBattles,
+        int TotalAlchemyCrafts,
+        int TotalSmithingCrafts,
+        int TotalTalismanCrafts,
+        int TotalCookingCrafts,
+        int TotalFormationCrafts,
+        int TotalMiningCompletions,
+        int TotalFishingCompletions,
+        int TemperCount,
+        int BoneforgeCount,
+        int BloodflowCount,
+        int UnlockedPlots,
+        int ActivePlots,
+        int ReadyPlots,
+        int IdlePlots,
+        int TotalGardenPlants,
+        int TotalGardenHarvests,
+        int TotalGardenAutoHarvests,
+        string SelectedPlotSummary);
+
+    public static string StatsOverview(StatsOverviewData data)
     {
         return
             $"{LeftTabStats}\n\n" +
-            $"输入统计\n" +
-            $"● 累计按键次数：{keyCount:N0}\n" +
-            $"● 累计鼠标点击：{clickCount:N0}\n" +
-            $"● 累计滚轮刻度：{scrollSteps:N0}\n" +
-            $"● 累计鼠标移动距离：{moveDistance:N0} 像素\n" +
-            $"● 累计在线时长：{activeSeconds:N0} 秒 (≈{activeSeconds / 3600.0:0.0} 小时)\n\n" +
-            $"成长统计\n" +
-            $"● 历史最高境界：炼气 {realmLevel} 层\n" +
-            $"● 当前境界天数：{currentRealmDays:0.0} 天\n\n" +
-            $"战斗统计\n" +
-            $"● 累计战斗场次：{battleCount}\n" +
-            $"● 战斗胜率：{winRate * 100.0:0.0}%\n\n" +
-            $"资源统计\n" +
-            $"● 累计获得灵气：{totalLingqi:N0}\n" +
-            $"● 累计获得悟性：{totalInsight:0.0}\n" +
-            $"● 累计获得灵石：{totalSpiritStones}\n\n" +
-            $"周天统计\n" +
-            $"● 小周天完成数：{totalSmallCycles}\n" +
-            $"● 大周天完成数：{totalGrandCycles}\n" +
-            $"● 调息次数：{totalRestCount}\n" +
-            $"● 入定领悟次数：{totalMeditationInsights}";
+            $"【总览】\n" +
+            $"● 当前主行为：{data.CurrentActionName}\n" +
+            $"● 当前境界：炼气 {data.RealmLevel} 层\n" +
+            $"● 当前境界经验：{data.RealmExp:0.0}\n" +
+            $"● 当前境界停留：{data.CurrentRealmDays:0.0} 天\n" +
+            $"● 累计总输入：{data.TotalInputs:N0}\n" +
+            $"● 累计在线时长：{data.ActiveSeconds:N0} 秒 (≈{data.ActiveSeconds / 3600.0:0.0} 小时)\n" +
+            $"● 精通概览：{data.MasterySummary}\n\n" +
+            $"【资源】\n" +
+            $"● 当前灵气：{data.CurrentLingqi:N0}\n" +
+            $"● 当前悟性：{data.CurrentInsight:0.0}\n" +
+            $"● 当前灵石：{data.CurrentSpiritStones}\n" +
+            $"● 累计获得灵气：{data.TotalLingqi:N0}\n" +
+            $"● 累计获得悟性：{data.TotalInsight:0.0}\n" +
+            $"● 累计获得灵石：{data.TotalSpiritStones}\n" +
+            $"● 累计消耗悟性：{data.TotalSpentInsight:0.0}\n" +
+            $"● 累计消耗灵石：{data.TotalSpentSpiritStones}\n" +
+            $"● 小周天完成数：{data.TotalSmallCycles}\n" +
+            $"● 大周天完成数：{data.TotalGrandCycles}\n" +
+            $"● 调息次数：{data.TotalRestCount}\n" +
+            $"● 入定领悟次数：{data.TotalMeditationInsights}\n\n" +
+            $"【战斗】\n" +
+            $"● 累计战斗场次：{data.BattleCount}\n" +
+            $"● 战斗胜场：{data.BattleWins}\n" +
+            $"● 战斗败场：{data.BattleLosses}\n" +
+            $"● 战斗胜率：{data.WinRate * 100.0:0.0}%\n" +
+            $"● Boss 战次数：{data.TotalBossBattles}\n" +
+            $"● 精英战次数：{data.TotalEliteBattles}\n\n" +
+            $"【制作与采集】\n" +
+            $"● 炼丹完成次数：{data.TotalAlchemyCrafts}\n" +
+            $"● 炼器完成次数：{data.TotalSmithingCrafts}\n" +
+            $"● 符箓完成次数：{data.TotalTalismanCrafts}\n" +
+            $"● 烹饪完成次数：{data.TotalCookingCrafts}\n" +
+            $"● 阵法完成次数：{data.TotalFormationCrafts}\n" +
+            $"● 采矿完成次数：{data.TotalMiningCompletions}\n" +
+            $"● 垂钓完成次数：{data.TotalFishingCompletions}\n" +
+            $"● 体修·淬体次数：{data.TemperCount}\n" +
+            $"● 体修·锻骨次数：{data.BoneforgeCount}\n" +
+            $"● 体修·活血次数：{data.BloodflowCount}\n\n" +
+            $"【灵田】\n" +
+            $"● 已解锁田位：{data.UnlockedPlots}\n" +
+            $"● 当前种植田位：{data.ActivePlots}\n" +
+            $"● 当前成熟田位：{data.ReadyPlots}\n" +
+            $"● 当前空闲田位：{data.IdlePlots}\n" +
+            $"● 累计播种次数：{data.TotalGardenPlants}\n" +
+            $"● 累计收获次数：{data.TotalGardenHarvests}\n" +
+            $"● 自动收获次数：{data.TotalGardenAutoHarvests}\n" +
+            $"● 当前田位状态：{data.SelectedPlotSummary}\n\n" +
+            $"【输入明细】\n" +
+            $"● 累计按键次数：{data.KeyCount:N0}\n" +
+            $"● 累计鼠标点击：{data.ClickCount:N0}\n" +
+            $"● 累计滚轮刻度：{data.ScrollSteps:N0}\n" +
+            $"● 累计手柄按键：{data.JoypadButtonCount:N0}\n" +
+            $"● 累计手柄轴输入：{data.JoypadAxisCount:N0}\n" +
+            $"● 累计鼠标移动距离：{data.MoveDistance:N0} 像素";
     }
 
     private static string FormatDuration(double totalSeconds)
