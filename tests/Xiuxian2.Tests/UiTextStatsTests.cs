@@ -27,8 +27,12 @@ public sealed class UiTextStatsTests
             TotalLingqi: 888.0,
             TotalInsight: 66.0,
             TotalSpiritStones: 40,
+            TotalSpentLingqi: 120.0,
             TotalSpentInsight: 12.0,
             TotalSpentSpiritStones: 9,
+            SpentSpiritStonesOnShop: 6,
+            SpentSpiritStonesOnSeeds: 2,
+            SpentSpiritStonesOnOther: 1,
             TotalSmallCycles: 7,
             TotalGrandCycles: 1,
             TotalRestCount: 7,
@@ -39,6 +43,8 @@ public sealed class UiTextStatsTests
             WinRate: 0.75,
             TotalBossBattles: 3,
             TotalEliteBattles: 6,
+            TotalMonsterKills: 15,
+            HighestWinStreak: 8,
             TotalAlchemyCrafts: 12,
             TotalSmithingCrafts: 4,
             TotalTalismanCrafts: 5,
@@ -46,6 +52,8 @@ public sealed class UiTextStatsTests
             TotalFormationCrafts: 1,
             TotalMiningCompletions: 9,
             TotalFishingCompletions: 7,
+            TotalPotionsConsumedInBattle: 4,
+            TotalTalismansConsumedInBattle: 3,
             TemperCount: 3,
             BoneforgeCount: 2,
             BloodflowCount: 1,
@@ -62,6 +70,8 @@ public sealed class UiTextStatsTests
         Assert.Contains("当前境界：炼气 3 层", text);
         Assert.Contains("战斗胜率：", text);
         Assert.Contains("累计获得灵石：40", text);
+        Assert.Contains("累计消耗灵气：120", text);
+        Assert.Contains("└─坊市 6｜种子 2｜其他 1", text);
         Assert.Contains("【总览】", text);
         Assert.Contains("【资源】", text);
         Assert.Contains("【战斗】", text);
@@ -72,6 +82,10 @@ public sealed class UiTextStatsTests
         Assert.Contains("大周天完成数：1", text);
         Assert.Contains("调息次数：7", text);
         Assert.Contains("入定领悟次数：2", text);
+        Assert.Contains("累计击杀怪物：15", text);
+        Assert.Contains("最高连胜：8 场", text);
+        Assert.Contains("累计消耗丹药：4", text);
+        Assert.Contains("累计消耗符咒：3", text);
         Assert.Contains("炼丹完成次数：12", text);
         Assert.Contains("累计收获次数：9", text);
     }

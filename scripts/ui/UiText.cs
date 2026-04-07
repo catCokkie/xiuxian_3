@@ -218,8 +218,12 @@ public static class UiText
         double TotalLingqi,
         double TotalInsight,
         int TotalSpiritStones,
+        double TotalSpentLingqi,
         double TotalSpentInsight,
         int TotalSpentSpiritStones,
+        int SpentSpiritStonesOnShop,
+        int SpentSpiritStonesOnSeeds,
+        int SpentSpiritStonesOnOther,
         int TotalSmallCycles,
         int TotalGrandCycles,
         int TotalRestCount,
@@ -230,6 +234,8 @@ public static class UiText
         double WinRate,
         int TotalBossBattles,
         int TotalEliteBattles,
+        int TotalMonsterKills,
+        int HighestWinStreak,
         int TotalAlchemyCrafts,
         int TotalSmithingCrafts,
         int TotalTalismanCrafts,
@@ -237,6 +243,8 @@ public static class UiText
         int TotalFormationCrafts,
         int TotalMiningCompletions,
         int TotalFishingCompletions,
+        int TotalPotionsConsumedInBattle,
+        int TotalTalismansConsumedInBattle,
         int TemperCount,
         int BoneforgeCount,
         int BloodflowCount,
@@ -266,10 +274,12 @@ public static class UiText
             $"● 当前悟性：{data.CurrentInsight:0.0}\n" +
             $"● 当前灵石：{data.CurrentSpiritStones}\n" +
             $"● 累计获得灵气：{data.TotalLingqi:N0}\n" +
+            $"● 累计消耗灵气：{data.TotalSpentLingqi:N0}\n" +
             $"● 累计获得悟性：{data.TotalInsight:0.0}\n" +
             $"● 累计获得灵石：{data.TotalSpiritStones}\n" +
             $"● 累计消耗悟性：{data.TotalSpentInsight:0.0}\n" +
             $"● 累计消耗灵石：{data.TotalSpentSpiritStones}\n" +
+            $"  └─坊市 {data.SpentSpiritStonesOnShop}｜种子 {data.SpentSpiritStonesOnSeeds}｜其他 {data.SpentSpiritStonesOnOther}\n" +
             $"● 小周天完成数：{data.TotalSmallCycles}\n" +
             $"● 大周天完成数：{data.TotalGrandCycles}\n" +
             $"● 调息次数：{data.TotalRestCount}\n" +
@@ -280,7 +290,11 @@ public static class UiText
             $"● 战斗败场：{data.BattleLosses}\n" +
             $"● 战斗胜率：{data.WinRate * 100.0:0.0}%\n" +
             $"● Boss 战次数：{data.TotalBossBattles}\n" +
-            $"● 精英战次数：{data.TotalEliteBattles}\n\n" +
+            $"● 精英战次数：{data.TotalEliteBattles}\n" +
+            $"● 累计击杀怪物：{data.TotalMonsterKills}\n" +
+            $"● 最高连胜：{data.HighestWinStreak} 场\n" +
+            $"● 累计消耗丹药：{data.TotalPotionsConsumedInBattle}\n" +
+            $"● 累计消耗符咒：{data.TotalTalismansConsumedInBattle}\n\n" +
             $"【制作与采集】\n" +
             $"● 炼丹完成次数：{data.TotalAlchemyCrafts}\n" +
             $"● 炼器完成次数：{data.TotalSmithingCrafts}\n" +

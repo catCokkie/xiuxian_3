@@ -1,4 +1,5 @@
 using Godot;
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Text;
@@ -14,6 +15,15 @@ public partial class BookTabsController : Control
 
     [Signal]
     public delegate void ActiveTabsChangedEventHandler(string leftTabName, string rightTabName);
+
+    [Signal]
+    public delegate void SaveSlotSaveRequestedEventHandler(int slotId);
+
+    [Signal]
+    public delegate void SaveSlotLoadRequestedEventHandler(int slotId);
+
+    [Signal]
+    public delegate void SaveSlotDeleteRequestedEventHandler(int slotId);
 
     private readonly Dictionary<string, string> _leftTabContentMap = new()
     {
@@ -75,6 +85,8 @@ public partial class BookTabsController : Control
     private CheckButton _cloudSyncCheck = null!;
     private CheckButton _milestoneTipsCheck = null!;
     private CheckButton _globalDebugOverlayCheck = null!;
+    private Label _saveSlotStatusLabel = null!;
+    private ConfirmationDialog _saveSlotDeleteDialog = null!;
     private CheckButton _privacyInputCollectionCheck = null!;
     private CheckButton _rhythmEnabledCheck = null!;
     private OptionButton _rhythmStrengthOption = null!;
@@ -165,6 +177,11 @@ public partial class BookTabsController : Control
     private string _lastSimulationSummary = "";
     private string _activeShopCategory = ShopRules.CategoryConsumables;
     private double _livePanelRefreshAccumulator;
+    private int _pendingDeleteSlotId;
+    private readonly Dictionary<int, Label> _saveSlotSummaryLabels = new();
+    private readonly Dictionary<int, Button> _saveSlotLoadButtons = new();
+    private readonly Dictionary<int, Button> _saveSlotDeleteButtons = new();
+    private readonly Dictionary<int, SaveSlotService.SaveSlotSummary> _saveSlotSummaries = new();
 
     private static readonly string[] ValidationScopeFilters = { "all", "config", "level", "monster", "drop_table" };
     private static readonly int[] RhythmCycleOptions = { 25, 45, 60, 90 };
@@ -477,6 +494,27 @@ public partial class BookTabsController : Control
     public void AcknowledgePrivacyNotice()
     {
         _settings[PrivacyNoticeAcknowledgedSettingKey] = true;
+    }
+
+    public void SetSaveSlotSummaries(IReadOnlyList<SaveSlotService.SaveSlotSummary> summaries)
+    {
+        _saveSlotSummaries.Clear();
+        for (int i = 0; i < summaries.Count; i++)
+        {
+            _saveSlotSummaries[summaries[i].SlotId] = summaries[i];
+        }
+
+        RefreshSaveSlotCards();
+    }
+
+    public void SetSaveSlotStatus(string status)
+    {
+        if (_saveSlotStatusLabel == null)
+        {
+            return;
+        }
+
+        _saveSlotStatusLabel.Text = status;
     }
 
     private void SetActiveLeftTab(string tabName)
@@ -2137,8 +2175,12 @@ public partial class BookTabsController : Control
             TotalLingqi: _resourceWalletState.TotalEarnedLingqi,
             TotalInsight: _resourceWalletState.TotalEarnedInsight,
             TotalSpiritStones: _resourceWalletState.TotalEarnedSpiritStones,
+            TotalSpentLingqi: _playerStatsState?.TotalSpentLingqi ?? 0.0,
             TotalSpentInsight: _playerStatsState?.TotalSpentInsight ?? 0.0,
             TotalSpentSpiritStones: _playerStatsState?.TotalSpentSpiritStones ?? 0,
+            SpentSpiritStonesOnShop: _playerStatsState?.SpentSpiritStonesOnShop ?? 0,
+            SpentSpiritStonesOnSeeds: _playerStatsState?.SpentSpiritStonesOnSeeds ?? 0,
+            SpentSpiritStonesOnOther: _playerStatsState?.SpentSpiritStonesOnOther ?? 0,
             TotalSmallCycles: totalSmallCycles,
             TotalGrandCycles: totalGrandCycles,
             TotalRestCount: totalRestCount,
@@ -2149,6 +2191,8 @@ public partial class BookTabsController : Control
             WinRate: winRate,
             TotalBossBattles: _playerStatsState?.TotalBossBattles ?? 0,
             TotalEliteBattles: _playerStatsState?.TotalEliteBattles ?? 0,
+            TotalMonsterKills: _playerStatsState?.TotalMonsterKills ?? battleWins,
+            HighestWinStreak: _playerStatsState?.HighestWinStreak ?? 0,
             TotalAlchemyCrafts: _playerStatsState?.TotalAlchemyCrafts ?? 0,
             TotalSmithingCrafts: _playerStatsState?.TotalSmithingCrafts ?? 0,
             TotalTalismanCrafts: _playerStatsState?.TotalTalismanCrafts ?? 0,
@@ -2156,6 +2200,8 @@ public partial class BookTabsController : Control
             TotalFormationCrafts: _playerStatsState?.TotalFormationCrafts ?? 0,
             TotalMiningCompletions: _playerStatsState?.TotalMiningCompletions ?? 0,
             TotalFishingCompletions: _playerStatsState?.TotalFishingCompletions ?? 0,
+            TotalPotionsConsumedInBattle: _playerStatsState?.TotalPotionsConsumedInBattle ?? 0,
+            TotalTalismansConsumedInBattle: _playerStatsState?.TotalTalismansConsumedInBattle ?? 0,
             TemperCount: _playerProgressState.TemperCount,
             BoneforgeCount: _playerProgressState.BoneforgeCount,
             BloodflowCount: _playerProgressState.BloodflowCount,
@@ -3322,6 +3368,162 @@ public partial class BookTabsController : Control
         _cloudSyncCheck.Toggled += value => OnSettingChanged("cloud_sync", value);
         _milestoneTipsCheck.Toggled += value => OnSettingChanged("milestone_tips", value);
         _globalDebugOverlayCheck.Toggled += value => OnSettingChanged("global_debug_overlay", value);
+
+        Label saveSlotTitle = new();
+        saveSlotTitle.Text = "手动存档槽位";
+        saveSlotTitle.AddThemeFontSizeOverride("font_size", 14);
+        root.AddChild(saveSlotTitle);
+
+        Label saveSlotHint = new();
+        saveSlotHint.AutowrapMode = TextServer.AutowrapMode.WordSmart;
+        saveSlotHint.AddThemeFontSizeOverride("font_size", 12);
+        saveSlotHint.AddThemeColorOverride("font_color", new Color(0.55f, 0.45f, 0.33f, 1.0f));
+        saveSlotHint.Text = "当前进度仍写入自动存档。手动槽位用于留档、切换和删除快照。";
+        root.AddChild(saveSlotHint);
+
+        for (int slotId = 1; slotId <= SaveSlotService.ManualSlotCount; slotId++)
+        {
+            root.AddChild(CreateSaveSlotCard(slotId));
+        }
+
+        _saveSlotStatusLabel = new Label();
+        _saveSlotStatusLabel.AutowrapMode = TextServer.AutowrapMode.WordSmart;
+        _saveSlotStatusLabel.AddThemeFontSizeOverride("font_size", 12);
+        _saveSlotStatusLabel.AddThemeColorOverride("font_color", new Color(0.55f, 0.45f, 0.33f, 1.0f));
+        root.AddChild(_saveSlotStatusLabel);
+
+        _saveSlotDeleteDialog = new ConfirmationDialog();
+        _saveSlotDeleteDialog.Title = "删除手动存档";
+        _saveSlotDeleteDialog.Confirmed += OnSaveSlotDeleteConfirmed;
+        AddChild(_saveSlotDeleteDialog);
+        RefreshSaveSlotCards();
+    }
+
+    private PanelContainer CreateSaveSlotCard(int slotId)
+    {
+        PanelContainer panel = new();
+        panel.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
+        panel.AddThemeStyleboxOverride("panel", new StyleBoxFlat
+        {
+            BgColor = new Color("F0E4C8"),
+            BorderColor = new Color("A8804E"),
+            BorderWidthLeft = 1,
+            BorderWidthTop = 1,
+            BorderWidthRight = 1,
+            BorderWidthBottom = 1,
+            CornerRadiusTopLeft = 6,
+            CornerRadiusTopRight = 6,
+            CornerRadiusBottomRight = 6,
+            CornerRadiusBottomLeft = 6,
+            ContentMarginLeft = 10,
+            ContentMarginTop = 8,
+            ContentMarginRight = 10,
+            ContentMarginBottom = 8,
+        });
+
+        VBoxContainer body = new();
+        body.AddThemeConstantOverride("separation", 6);
+        panel.AddChild(body);
+
+        Label title = new();
+        title.Text = $"槽位 {slotId}";
+        title.AddThemeFontSizeOverride("font_size", 13);
+        body.AddChild(title);
+
+        Label summary = new();
+        summary.AutowrapMode = TextServer.AutowrapMode.WordSmart;
+        summary.AddThemeFontSizeOverride("font_size", 12);
+        summary.AddThemeColorOverride("font_color", new Color(0.33f, 0.24f, 0.16f, 1.0f));
+        body.AddChild(summary);
+        _saveSlotSummaryLabels[slotId] = summary;
+
+        HBoxContainer actions = new();
+        actions.AddThemeConstantOverride("separation", 8);
+        body.AddChild(actions);
+
+        Button saveButton = new();
+        saveButton.Text = "保存到此槽";
+        saveButton.Pressed += () => EmitSignal(SignalName.SaveSlotSaveRequested, slotId);
+        actions.AddChild(saveButton);
+
+        Button loadButton = new();
+        loadButton.Text = "读取此槽";
+        loadButton.Pressed += () => EmitSignal(SignalName.SaveSlotLoadRequested, slotId);
+        actions.AddChild(loadButton);
+        _saveSlotLoadButtons[slotId] = loadButton;
+
+        Button deleteButton = new();
+        deleteButton.Text = "删除";
+        deleteButton.AddThemeColorOverride("font_color", new Color(0.78f, 0.31f, 0.31f));
+        deleteButton.Pressed += () => PromptDeleteSaveSlot(slotId);
+        actions.AddChild(deleteButton);
+        _saveSlotDeleteButtons[slotId] = deleteButton;
+
+        return panel;
+    }
+
+    private void RefreshSaveSlotCards()
+    {
+        for (int slotId = 1; slotId <= SaveSlotService.ManualSlotCount; slotId++)
+        {
+            SaveSlotService.SaveSlotSummary summary = _saveSlotSummaries.TryGetValue(slotId, out SaveSlotService.SaveSlotSummary saved)
+                ? saved
+                : new SaveSlotService.SaveSlotSummary(slotId, false, 0, 0, 0, 0.0, string.Empty, string.Empty);
+            if (_saveSlotSummaryLabels.TryGetValue(slotId, out Label? label))
+            {
+                label.Text = BuildSaveSlotSummaryText(summary);
+            }
+
+            if (_saveSlotLoadButtons.TryGetValue(slotId, out Button? loadButton))
+            {
+                loadButton.Disabled = !summary.Exists;
+            }
+
+            if (_saveSlotDeleteButtons.TryGetValue(slotId, out Button? deleteButton))
+            {
+                deleteButton.Disabled = !summary.Exists;
+            }
+        }
+    }
+
+    private string BuildSaveSlotSummaryText(SaveSlotService.SaveSlotSummary summary)
+    {
+        if (!summary.Exists)
+        {
+            return "空槽位。可将当前自动存档复制到此处。";
+        }
+
+        string savedAt = summary.LastSavedUnix > 0
+            ? DateTimeOffset.FromUnixTimeSeconds(summary.LastSavedUnix).ToLocalTime().ToString("yyyy-MM-dd HH:mm")
+            : "未知";
+        string actionName = string.IsNullOrEmpty(summary.ActionId) ? "未记录" : UiText.MasterySystemName(summary.ActionId);
+        string targetPart = string.IsNullOrEmpty(summary.ActionTargetId) ? string.Empty : $"｜目标 {summary.ActionTargetId}";
+        return $"炼气 {summary.RealmLevel} 层｜保存于 {savedAt}｜活跃 {(summary.ActiveSeconds / 3600.0):0.0} 小时｜行为 {actionName}{targetPart}｜v{summary.SaveVersion}";
+    }
+
+    private void PromptDeleteSaveSlot(int slotId)
+    {
+        if (_saveSlotDeleteDialog == null)
+        {
+            return;
+        }
+
+        SaveSlotService.SaveSlotSummary summary = _saveSlotSummaries.TryGetValue(slotId, out SaveSlotService.SaveSlotSummary saved)
+            ? saved
+            : new SaveSlotService.SaveSlotSummary(slotId, false, 0, 0, 0, 0.0, string.Empty, string.Empty);
+        _pendingDeleteSlotId = slotId;
+        _saveSlotDeleteDialog.DialogText = $"确认删除槽位 {slotId}？\n{BuildSaveSlotSummaryText(summary)}";
+        _saveSlotDeleteDialog.PopupCentered(new Vector2I(420, 180));
+    }
+
+    private void OnSaveSlotDeleteConfirmed()
+    {
+        if (_pendingDeleteSlotId > 0)
+        {
+            EmitSignal(SignalName.SaveSlotDeleteRequested, _pendingDeleteSlotId);
+        }
+
+        _pendingDeleteSlotId = 0;
     }
 
     private void BuildPrivacySection(VBoxContainer root)
