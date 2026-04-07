@@ -172,6 +172,7 @@ namespace Xiuxian.Scripts.Services
                 crop.RecipeId,
                 GetNowUnix(),
                 false);
+            ServiceLocator.Instance?.PlayerStatsState?.RecordGardenPlant();
             summary = $"{FormatPlotName(SelectedPlotIndex)}播下 {UiText.BackpackItemName(crop.SeedItemId)}";
             EmitGardenChanged();
             return true;
@@ -231,6 +232,7 @@ namespace Xiuxian.Scripts.Services
                 Random.Shared.Next());
             GrantHarvest(backpackState, harvest, applyShopMultiplier: true);
             _plots[SelectedPlotIndex] = default;
+            ServiceLocator.Instance?.PlayerStatsState?.RecordGardenHarvest(autoHarvest: false);
             summary = BuildHarvestSummary(plot.PlotIndex, harvest, applyShopMultiplier: true);
             EmitGardenChanged();
             return true;
@@ -449,6 +451,7 @@ namespace Xiuxian.Scripts.Services
                     Random.Shared.Next(),
                     Random.Shared.Next());
                 GrantHarvest(backpackState, harvest, applyShopMultiplier: false);
+                ServiceLocator.Instance?.PlayerStatsState?.RecordGardenHarvest(autoHarvest: true);
                 changed = true;
 
                 if (!backpackState.RemoveItem(crop.SeedItemId, 1))

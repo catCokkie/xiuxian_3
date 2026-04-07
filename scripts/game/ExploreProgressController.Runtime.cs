@@ -105,6 +105,7 @@ namespace Xiuxian.Scripts.Game
         private EquippedItemsState? _equippedItemsState;
         private SubsystemMasteryState? _subsystemMasteryState;
         private ResourceWalletState? _resourceWalletState;
+        private PlayerStatsState? _playerStatsState;
         private LevelConfigLoader? _levelConfigLoader;
         private PlayerActionState? _actionState;
 
@@ -234,6 +235,7 @@ namespace Xiuxian.Scripts.Game
             _equippedItemsState = GetNodeOrNull<EquippedItemsState>(EquippedItemsStatePath);
             _subsystemMasteryState = GetNodeOrNull<SubsystemMasteryState>(SubsystemMasteryStatePath);
             _resourceWalletState = GetNodeOrNull<ResourceWalletState>(ResourceWalletPath);
+            _playerStatsState = GetNodeOrNull<PlayerStatsState>("/root/PlayerStatsState");
             _levelConfigLoader = GetNodeOrNull<LevelConfigLoader>(LevelConfigLoaderPath);
             _actionState = GetNodeOrNull<PlayerActionState>(ActionStatePath);
 
@@ -1064,6 +1066,7 @@ namespace Xiuxian.Scripts.Game
 
             string defeatResult = _lastBattleEndedByBossTimeout ? "超时" : "失败";
             AppendBattleLog(0, 0, 0, "none", defeatResult);
+            _playerStatsState?.RecordBattle(won: false, isBoss: isBossBattle, isElite: IsEliteBattle());
 
             SyncLogicFromControllerState();
             BattleDefeatDecision defeat = _logic.HandleBattleDefeat(_levelConfigLoader?.ActiveLevelId ?? string.Empty, isBossBattle);
@@ -1143,6 +1146,7 @@ namespace Xiuxian.Scripts.Game
             _roundInfoLabel.Text = UiText.BattleRound(_battleRoundCounter, _battleMonsterName, 0);
             _battleInfoLabel.Text = UiText.BattleVictory(_battleMonsterName);
             _battleInfoLabel.Visible = true;
+            _playerStatsState?.RecordBattle(won: true, isBoss: isBossBattle, isElite: IsEliteBattle());
 
             if (_levelConfigLoader != null &&
                 victory.ShouldTryBossUnlock &&
@@ -1805,6 +1809,7 @@ namespace Xiuxian.Scripts.Game
                 out string rewardText);
             if (completed)
             {
+                _playerStatsState?.RecordAlchemyCraft();
                 _battleInfoLabel.Text = rewardText;
                 _battleInfoLabel.Visible = true;
             }
@@ -1856,6 +1861,7 @@ namespace Xiuxian.Scripts.Game
                 out string rewardText);
             if (completed)
             {
+                _playerStatsState?.RecordSmithingCraft();
                 _battleInfoLabel.Text = rewardText;
                 _battleInfoLabel.Visible = true;
                 ApplyLevelConfig();
@@ -1925,6 +1931,7 @@ namespace Xiuxian.Scripts.Game
 
             int finalCount = result.ItemCount * GetShopOutputMultiplier();
             _backpackState.AddItem(result.ItemId, finalCount);
+            _playerStatsState?.RecordMiningCompletion();
             _battleInfoLabel.Text = $"矿脉收获：{result.ItemId} x{finalCount}";
             _battleInfoLabel.Visible = true;
             return true;
@@ -1981,6 +1988,7 @@ namespace Xiuxian.Scripts.Game
             bool baitActive = _backpackState.GetItemCount("fishing_bait") > 0;
             int finalCount = result.ItemCount * GetShopOutputMultiplier();
             _backpackState.AddItem(result.ItemId, finalCount);
+            _playerStatsState?.RecordFishingCompletion();
             string summary = $"灵渔收获：{result.ItemId} x{finalCount}";
             if (baitActive)
             {
@@ -2115,7 +2123,37 @@ namespace Xiuxian.Scripts.Game
 
             _battleInfoLabel.Text = rewardText;
             _battleInfoLabel.Visible = true;
+            RecordGenericRecipeStats(recipe.SystemId);
             return true;
+        }
+
+        private void RecordGenericRecipeStats(string systemId)
+        {
+            if (_playerStatsState == null)
+            {
+                return;
+            }
+
+            switch (systemId)
+            {
+                case PlayerActionState.ModeTalisman:
+                    _playerStatsState.RecordTalismanCraft();
+                    break;
+                case PlayerActionState.ModeCooking:
+                    _playerStatsState.RecordCookingCraft();
+                    break;
+                case PlayerActionState.ModeFormation:
+                    _playerStatsState.RecordFormationCraft();
+                    break;
+            }
+        }
+
+        private bool IsEliteBattle()
+        {
+            return _levelConfigLoader != null
+                && !string.IsNullOrEmpty(_battleMonsterId)
+                && _levelConfigLoader.TryGetMonsterStatProfile(_battleMonsterId, out MonsterStatProfile profile)
+                && profile.MoveCategory == "elite";
         }
 
         private int ApplyFormationGatherSpeed(int inputEvents)

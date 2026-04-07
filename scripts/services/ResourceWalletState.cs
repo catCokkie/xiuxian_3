@@ -71,6 +71,7 @@ namespace Xiuxian.Scripts.Services
             }
 
             Insight -= amount;
+            ServiceLocator.Instance?.PlayerStatsState?.RecordInsightSpend(amount);
             EmitSignal(SignalName.WalletChanged, Lingqi, Insight, SpiritStones);
             return true;
         }
@@ -100,6 +101,7 @@ namespace Xiuxian.Scripts.Services
             }
 
             SpiritStones -= amount;
+            ServiceLocator.Instance?.PlayerStatsState?.RecordSpiritStoneSpend(amount);
             EmitSignal(SignalName.WalletChanged, Lingqi, Insight, SpiritStones);
             return true;
         }
