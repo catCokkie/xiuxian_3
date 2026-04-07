@@ -335,17 +335,20 @@ public sealed class SaveMigrationRulesTests
     }
 
     [Fact]
-    public void MigrateToLatest_PromotesV12SaveToV13WithPlayerStatsDefaults()
+    public void MigrateToLatest_PromotesV13SaveToV14WithPlayerStatsDefaults()
     {
         SaveMigrationRules.MigrationStore cfg = new();
-        cfg.SetValue("meta", "version", 12);
+        cfg.SetValue("meta", "version", 13);
 
-        SaveMigrationRules.MigrateToLatest(cfg, 12);
+        SaveMigrationRules.MigrateToLatest(cfg, 13);
 
         Assert.Equal(SaveMigrationRules.LatestVersion, System.Convert.ToInt32(cfg.GetValue("meta", "version", 0)));
         var stats = (System.Collections.Generic.Dictionary<string, object>)cfg.GetValue("stats", "player", new System.Collections.Generic.Dictionary<string, object>());
         Assert.Equal(0L, System.Convert.ToInt64(stats["total_battle_losses"]));
         Assert.Equal(0L, System.Convert.ToInt64(stats["total_garden_harvests"]));
+        Assert.Equal(0L, System.Convert.ToInt64(stats["spent_spirit_stones_on_shop"]));
+        Assert.Equal(0L, System.Convert.ToInt64(stats["total_potions_consumed_in_battle"]));
+        Assert.Equal(0.0, System.Convert.ToDouble(stats["total_spent_lingqi"]));
         Assert.Equal(0.0, System.Convert.ToDouble(stats["total_spent_insight"]));
     }
 

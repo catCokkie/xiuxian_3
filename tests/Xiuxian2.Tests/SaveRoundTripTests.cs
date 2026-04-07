@@ -165,6 +165,9 @@ public sealed class SaveRoundTripTests
             TotalBattleLosses: 4,
             TotalBossBattles: 7,
             TotalEliteBattles: 9,
+            TotalMonsterKills: 18,
+            HighestWinStreak: 6,
+            CurrentWinStreak: 2,
             TotalAlchemyCrafts: 12,
             TotalSmithingCrafts: 6,
             TotalTalismanCrafts: 8,
@@ -172,10 +175,16 @@ public sealed class SaveRoundTripTests
             TotalFormationCrafts: 3,
             TotalMiningCompletions: 14,
             TotalFishingCompletions: 11,
+            TotalPotionsConsumedInBattle: 9,
+            TotalTalismansConsumedInBattle: 5,
             TotalGardenPlants: 15,
             TotalGardenHarvests: 13,
             TotalGardenAutoHarvests: 4,
+            TotalSpentLingqi: 144.5,
             TotalSpentSpiritStones: 220,
+            SpentSpiritStonesOnShop: 150,
+            SpentSpiritStonesOnSeeds: 50,
+            SpentSpiritStonesOnOther: 20,
             TotalSpentInsight: 88.5);
 
         Dictionary<string, object> data = PlayerStatsPersistenceRules.ToPlainDictionary(expected);
@@ -184,6 +193,9 @@ public sealed class SaveRoundTripTests
         Assert.Equal(expected.TotalBattleLosses, restored.TotalBattleLosses);
         Assert.Equal(expected.TotalBossBattles, restored.TotalBossBattles);
         Assert.Equal(expected.TotalEliteBattles, restored.TotalEliteBattles);
+        Assert.Equal(expected.TotalMonsterKills, restored.TotalMonsterKills);
+        Assert.Equal(expected.HighestWinStreak, restored.HighestWinStreak);
+        Assert.Equal(expected.CurrentWinStreak, restored.CurrentWinStreak);
         Assert.Equal(expected.TotalAlchemyCrafts, restored.TotalAlchemyCrafts);
         Assert.Equal(expected.TotalSmithingCrafts, restored.TotalSmithingCrafts);
         Assert.Equal(expected.TotalTalismanCrafts, restored.TotalTalismanCrafts);
@@ -191,10 +203,16 @@ public sealed class SaveRoundTripTests
         Assert.Equal(expected.TotalFormationCrafts, restored.TotalFormationCrafts);
         Assert.Equal(expected.TotalMiningCompletions, restored.TotalMiningCompletions);
         Assert.Equal(expected.TotalFishingCompletions, restored.TotalFishingCompletions);
+        Assert.Equal(expected.TotalPotionsConsumedInBattle, restored.TotalPotionsConsumedInBattle);
+        Assert.Equal(expected.TotalTalismansConsumedInBattle, restored.TotalTalismansConsumedInBattle);
         Assert.Equal(expected.TotalGardenPlants, restored.TotalGardenPlants);
         Assert.Equal(expected.TotalGardenHarvests, restored.TotalGardenHarvests);
         Assert.Equal(expected.TotalGardenAutoHarvests, restored.TotalGardenAutoHarvests);
+        Assert.Equal(expected.TotalSpentLingqi, restored.TotalSpentLingqi, 6);
         Assert.Equal(expected.TotalSpentSpiritStones, restored.TotalSpentSpiritStones);
+        Assert.Equal(expected.SpentSpiritStonesOnShop, restored.SpentSpiritStonesOnShop);
+        Assert.Equal(expected.SpentSpiritStonesOnSeeds, restored.SpentSpiritStonesOnSeeds);
+        Assert.Equal(expected.SpentSpiritStonesOnOther, restored.SpentSpiritStonesOnOther);
         Assert.Equal(expected.TotalSpentInsight, restored.TotalSpentInsight, 6);
     }
 

@@ -10,6 +10,9 @@ namespace Xiuxian.Scripts.Services
         public int TotalBattleLosses { get; private set; }
         public int TotalBossBattles { get; private set; }
         public int TotalEliteBattles { get; private set; }
+        public int TotalMonsterKills { get; private set; }
+        public int HighestWinStreak { get; private set; }
+        public int CurrentWinStreak { get; private set; }
         public int TotalAlchemyCrafts { get; private set; }
         public int TotalSmithingCrafts { get; private set; }
         public int TotalTalismanCrafts { get; private set; }
@@ -17,11 +20,21 @@ namespace Xiuxian.Scripts.Services
         public int TotalFormationCrafts { get; private set; }
         public int TotalMiningCompletions { get; private set; }
         public int TotalFishingCompletions { get; private set; }
+        public int TotalPotionsConsumedInBattle { get; private set; }
+        public int TotalTalismansConsumedInBattle { get; private set; }
         public int TotalGardenPlants { get; private set; }
         public int TotalGardenHarvests { get; private set; }
         public int TotalGardenAutoHarvests { get; private set; }
+        public double TotalSpentLingqi { get; private set; }
         public int TotalSpentSpiritStones { get; private set; }
+        public int SpentSpiritStonesOnShop { get; private set; }
+        public int SpentSpiritStonesOnSeeds { get; private set; }
+        public int SpentSpiritStonesOnOther { get; private set; }
         public double TotalSpentInsight { get; private set; }
+
+        public const string SpiritStoneSpendCategoryShop = "shop";
+        public const string SpiritStoneSpendCategorySeeds = "seeds";
+        public const string SpiritStoneSpendCategoryOther = "other";
 
         public void RecordBattle(bool won, bool isBoss, bool isElite)
         {
@@ -41,6 +54,22 @@ namespace Xiuxian.Scripts.Services
             if (isElite)
             {
                 TotalEliteBattles++;
+                changed = true;
+            }
+
+            if (won)
+            {
+                TotalMonsterKills++;
+                CurrentWinStreak++;
+                if (CurrentWinStreak > HighestWinStreak)
+                {
+                    HighestWinStreak = CurrentWinStreak;
+                }
+                changed = true;
+            }
+            else if (CurrentWinStreak > 0)
+            {
+                CurrentWinStreak = 0;
                 changed = true;
             }
 
@@ -165,6 +194,40 @@ namespace Xiuxian.Scripts.Services
             EmitSignal(SignalName.StatsChanged);
         }
 
+        public void RecordSpiritStoneSpendByCategory(int amount, string category)
+        {
+            if (amount <= 0)
+            {
+                return;
+            }
+
+            switch (category)
+            {
+                case SpiritStoneSpendCategoryShop:
+                    SpentSpiritStonesOnShop += amount;
+                    break;
+                case SpiritStoneSpendCategorySeeds:
+                    SpentSpiritStonesOnSeeds += amount;
+                    break;
+                default:
+                    SpentSpiritStonesOnOther += amount;
+                    break;
+            }
+
+            EmitSignal(SignalName.StatsChanged);
+        }
+
+        public void RecordLingqiSpend(double amount)
+        {
+            if (amount <= 0.0)
+            {
+                return;
+            }
+
+            TotalSpentLingqi += amount;
+            EmitSignal(SignalName.StatsChanged);
+        }
+
         public void RecordInsightSpend(double amount)
         {
             if (amount <= 0.0)
@@ -176,12 +239,37 @@ namespace Xiuxian.Scripts.Services
             EmitSignal(SignalName.StatsChanged);
         }
 
+        public void RecordBattlePotionConsumption(int count = 1)
+        {
+            if (count <= 0)
+            {
+                return;
+            }
+
+            TotalPotionsConsumedInBattle += count;
+            EmitSignal(SignalName.StatsChanged);
+        }
+
+        public void RecordBattleTalismanConsumption(int count = 1)
+        {
+            if (count <= 0)
+            {
+                return;
+            }
+
+            TotalTalismansConsumedInBattle += count;
+            EmitSignal(SignalName.StatsChanged);
+        }
+
         public Godot.Collections.Dictionary<string, Variant> ToDictionary()
         {
             PlayerStatsPersistenceRules.PlayerStatsSnapshot snapshot = new(
                 TotalBattleLosses,
                 TotalBossBattles,
                 TotalEliteBattles,
+                TotalMonsterKills,
+                HighestWinStreak,
+                CurrentWinStreak,
                 TotalAlchemyCrafts,
                 TotalSmithingCrafts,
                 TotalTalismanCrafts,
@@ -189,10 +277,16 @@ namespace Xiuxian.Scripts.Services
                 TotalFormationCrafts,
                 TotalMiningCompletions,
                 TotalFishingCompletions,
+                TotalPotionsConsumedInBattle,
+                TotalTalismansConsumedInBattle,
                 TotalGardenPlants,
                 TotalGardenHarvests,
                 TotalGardenAutoHarvests,
+                TotalSpentLingqi,
                 TotalSpentSpiritStones,
+                SpentSpiritStonesOnShop,
+                SpentSpiritStonesOnSeeds,
+                SpentSpiritStonesOnOther,
                 TotalSpentInsight);
             return SaveValueConversionRules.ToVariantDictionary(PlayerStatsPersistenceRules.ToPlainDictionary(snapshot));
         }
@@ -204,6 +298,9 @@ namespace Xiuxian.Scripts.Services
             TotalBattleLosses = snapshot.TotalBattleLosses;
             TotalBossBattles = snapshot.TotalBossBattles;
             TotalEliteBattles = snapshot.TotalEliteBattles;
+            TotalMonsterKills = snapshot.TotalMonsterKills;
+            HighestWinStreak = snapshot.HighestWinStreak;
+            CurrentWinStreak = snapshot.CurrentWinStreak;
             TotalAlchemyCrafts = snapshot.TotalAlchemyCrafts;
             TotalSmithingCrafts = snapshot.TotalSmithingCrafts;
             TotalTalismanCrafts = snapshot.TotalTalismanCrafts;
@@ -211,10 +308,16 @@ namespace Xiuxian.Scripts.Services
             TotalFormationCrafts = snapshot.TotalFormationCrafts;
             TotalMiningCompletions = snapshot.TotalMiningCompletions;
             TotalFishingCompletions = snapshot.TotalFishingCompletions;
+            TotalPotionsConsumedInBattle = snapshot.TotalPotionsConsumedInBattle;
+            TotalTalismansConsumedInBattle = snapshot.TotalTalismansConsumedInBattle;
             TotalGardenPlants = snapshot.TotalGardenPlants;
             TotalGardenHarvests = snapshot.TotalGardenHarvests;
             TotalGardenAutoHarvests = snapshot.TotalGardenAutoHarvests;
+            TotalSpentLingqi = snapshot.TotalSpentLingqi;
             TotalSpentSpiritStones = snapshot.TotalSpentSpiritStones;
+            SpentSpiritStonesOnShop = snapshot.SpentSpiritStonesOnShop;
+            SpentSpiritStonesOnSeeds = snapshot.SpentSpiritStonesOnSeeds;
+            SpentSpiritStonesOnOther = snapshot.SpentSpiritStonesOnOther;
             TotalSpentInsight = snapshot.TotalSpentInsight;
             EmitSignal(SignalName.StatsChanged);
         }
