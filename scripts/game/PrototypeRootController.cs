@@ -37,6 +37,7 @@ namespace Xiuxian.Scripts.Game
         private FormationState? _formationState;
         private RecipeProgressState? _bodyCultivationState;
         private ResourceWalletState? _resourceWalletState;
+        private PlayerStatsState? _playerStatsState;
         private PlayerProgressState? _playerProgressState;
         private CultivationRhythmState? _cultivationRhythmState;
         private ShopState? _shopState;
@@ -80,6 +81,7 @@ namespace Xiuxian.Scripts.Game
             _formationState = services?.FormationState;
             _bodyCultivationState = services?.BodyCultivationState;
             _resourceWalletState = services?.ResourceWalletState;
+            _playerStatsState = services?.PlayerStatsState;
             _playerProgressState = services?.PlayerProgressState;
             _cultivationRhythmState = services?.CultivationRhythmState;
             _shopState = services?.ShopState;
@@ -105,6 +107,7 @@ namespace Xiuxian.Scripts.Game
             _persistenceManager.Register("formation", "state", _formationState);
             _persistenceManager.Register("body_cultivation", "state", _bodyCultivationState);
             _persistenceManager.Register("resource", "wallet", _resourceWalletState);
+            _persistenceManager.Register("stats", "player", _playerStatsState);
             _persistenceManager.Register("progress", "player", _playerProgressState);
             _persistenceManager.Register("rhythm", "state", _cultivationRhythmState);
             _persistenceManager.Register("shop", "state", _shopState);
@@ -194,6 +197,10 @@ namespace Xiuxian.Scripts.Game
             if (_playerProgressState == null)
             {
                 GD.PushWarning("PrototypeRootController: PlayerProgressState not found at /root/PlayerProgressState");
+            }
+            if (_playerStatsState == null)
+            {
+                GD.PushWarning("PrototypeRootController: PlayerStatsState not found at /root/PlayerStatsState");
             }
             if (_cultivationRhythmState == null)
             {

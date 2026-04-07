@@ -21,6 +21,7 @@ namespace Xiuxian.Scripts.Services
         public FormationState? FormationState { get; private set; }
         public RecipeProgressState? BodyCultivationState { get; private set; }
         public ResourceWalletState? ResourceWalletState { get; private set; }
+        public PlayerStatsState? PlayerStatsState { get; private set; }
         public PlayerProgressState? PlayerProgressState { get; private set; }
         public CultivationRhythmState? CultivationRhythmState { get; private set; }
         public ShopState? ShopState { get; private set; }
@@ -66,6 +67,7 @@ namespace Xiuxian.Scripts.Services
             FormationState = GetNodeOrNull<FormationState>("/root/FormationState");
             BodyCultivationState = GetNodeOrNull<RecipeProgressState>("/root/BodyCultivationState");
             ResourceWalletState = GetNodeOrNull<ResourceWalletState>("/root/ResourceWalletState");
+            PlayerStatsState = GetNodeOrNull<PlayerStatsState>("/root/PlayerStatsState");
             PlayerProgressState = GetNodeOrNull<PlayerProgressState>("/root/PlayerProgressState");
             CultivationRhythmState = GetNodeOrNull<CultivationRhythmState>("/root/CultivationRhythmState");
             ShopState = GetNodeOrNull<ShopState>("/root/ShopState");
