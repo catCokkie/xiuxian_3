@@ -13,7 +13,7 @@
 ### 总览
 - 代码任务：Phase 1–8 主功能实现项已全部落地，当前仅剩 `TASK-06` 人工验收项
 - 测试现状：`dotnet test tests/Xiuxian2.Tests/Xiuxian2.Tests.csproj` 已稳定通过 `332/332`；`ActivityRegistryTests` / `GenericCraftingProgressionTests` 的共享静态注册器并发污染已修复
-- 存档版本：v13（v5→v6→v7→v8→v9→v10→v11→v12→v13 迁移链完整）
+- 存档版本：v14（v5→v6→v7→v8→v9→v10→v11→v12→v13→v14 迁移链完整）
 - 子系统：11 个活动模式（原 12 个，悟道已移除），11 × 4 = 44 条精通定义总计 1900 悟性
 - 待人工验收：`TASK-06 场景文件 UTF-8 编码修复`
 - 已删除系统：AFK 检测、灵宠数值（pet_affinity/pet_mood）、悟道（EnlightenmentRules/State）
@@ -32,6 +32,20 @@
 ---
 
 ### 变更日志
+
+#### 2026-04-08：N-14 手动存档槽位与删除功能
+
+- **槽位服务接入**：新增 `SaveSlotService`，基于现有统一自动存档 `user://save_state.cfg` 提供 3 个手动快照槽位（`save_slot_1.cfg` ~ `save_slot_3.cfg`）的摘要读取、保存、读取和删除能力；不改动现有自动存档主链与 v14 迁移链
+- **UI 与交互闭环**：`BookTabsController.cs` 的设置→进度页已新增“手动存档槽位”卡片区，支持“保存到此槽 / 读取此槽 / 删除”操作；删除动作带二次确认弹窗，并显示槽位摘要（境界、保存时间、活跃时长、行为目标、版本）
+- **运行时接线完成**：`PrototypeRootController.cs` 已订阅槽位操作信号，保存槽位前会先刷新当前自动存档，读取槽位后会按现有统一读档逻辑重新应用状态与离线结算，再回写到自动存档主文件
+- **验证结果**：`dotnet test tests/Xiuxian2.Tests/Xiuxian2.Tests.csproj` 通过 `332/332`
+
+#### 2026-04-08：N-13 统计概览缺失资源/战斗指标补齐
+
+- **资源累计补齐**：`PlayerStatsState` / `PlayerStatsPersistenceRules` 新增累计消耗灵气、灵石分类消费（坊市/种子/其他）与 v14 迁移兼容；`ShopState.cs`、`CraftingProgressionService.cs` 已在真实扣费结算点写入统计
+- **战斗长期统计补齐**：战斗累计击杀、最高连胜、战斗内丹药消耗、战斗内符咒消耗已接入 `ExploreProgressController.Runtime.cs` 的真实消耗/结算路径，避免由展示层反推
+- **统计页文案扩充**：`BookTabsController.cs` / `UiText.cs` 现已在资源区展示灵气总消耗与灵石分类消费，在战斗区展示累计击杀、最高连胜与战斗消耗品统计
+- **验证结果**：`dotnet test tests/Xiuxian2.Tests/Xiuxian2.Tests.csproj` 通过 `332/332`
 
 #### 2026-04-08：N-12 统计概览 Tab 扩充
 
