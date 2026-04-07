@@ -119,6 +119,9 @@ namespace Xiuxian.Scripts.Game
             _mainBar.LayoutChanged += OnMainBarLayoutChanged;
             _submenu.VisibilityChanged += OnSubmenuVisibilityChanged;
             _bookTabs.ActiveTabsChanged += OnBookTabsActiveTabsChanged;
+            _bookTabs.SaveSlotSaveRequested += OnSaveSlotSaveRequested;
+            _bookTabs.SaveSlotLoadRequested += OnSaveSlotLoadRequested;
+            _bookTabs.SaveSlotDeleteRequested += OnSaveSlotDeleteRequested;
 
             if (_activityState != null)
             {
@@ -248,6 +251,9 @@ namespace Xiuxian.Scripts.Game
             _mainBar.LayoutChanged -= OnMainBarLayoutChanged;
             _submenu.VisibilityChanged -= OnSubmenuVisibilityChanged;
             _bookTabs.ActiveTabsChanged -= OnBookTabsActiveTabsChanged;
+            _bookTabs.SaveSlotSaveRequested -= OnSaveSlotSaveRequested;
+            _bookTabs.SaveSlotLoadRequested -= OnSaveSlotLoadRequested;
+            _bookTabs.SaveSlotDeleteRequested -= OnSaveSlotDeleteRequested;
 
             if (_activityState != null)
             {
@@ -448,6 +454,8 @@ namespace Xiuxian.Scripts.Game
             {
                 ShowFirstLaunchPrivacyCard();
             }
+
+            RefreshSaveSlotUi();
         }
 
         private void EnsureStarterEquipmentLoadout()
@@ -465,7 +473,7 @@ namespace Xiuxian.Scripts.Game
             }
         }
 
-        private void SaveAllState()
+        private bool SaveAllState()
         {
             ConfigFile config = new();
 
@@ -484,14 +492,14 @@ namespace Xiuxian.Scripts.Game
             catch (Exception ex)
             {
                 GD.PushError($"PrototypeRootController: failed to serialize state — save aborted: {ex.Message}");
-                return;
+                return false;
             }
 
             Error err = config.Save(UnifiedStateTempPath);
             if (err != Error.Ok)
             {
                 GD.PushWarning($"PrototypeRootController: failed to save unified state to temp ({err})");
-                return;
+                return false;
             }
 
             using var dir = DirAccess.Open("user://");
@@ -504,7 +512,7 @@ namespace Xiuxian.Scripts.Game
                     if (backupErr != Error.Ok)
                     {
                         GD.PushWarning($"PrototypeRootController: failed to create backup ({backupErr}) — save aborted");
-                        return;
+                        return false;
                     }
                 }
 
@@ -517,11 +525,13 @@ namespace Xiuxian.Scripts.Game
                         dir.Rename(UnifiedStateBackupPath, UnifiedStatePath);
                     }
 
-                    return;
+                    return false;
                 }
             }
 
             _cloudSaveSyncService?.TryUploadLocal(_cloudSyncEnabled);
+            RefreshSaveSlotUi();
+            return true;
         }
 
         private bool LoadUnifiedState(out bool migrated)
@@ -579,6 +589,78 @@ namespace Xiuxian.Scripts.Game
             ReadStateSafe("LevelRuntimeState", () => ReadLevelRuntimeState(config));
             ReadStateSafe("ExploreRuntimeState", () => ReadExploreRuntimeState(config));
             ReadStateSafe("SystemSettings", () => ReadSystemSettings(config));
+        }
+
+        private void OnSaveSlotSaveRequested(int slotId)
+        {
+            if (!SaveAllState())
+            {
+                _bookTabs.SetSaveSlotStatus($"槽位 {slotId} 保存失败：当前自动存档刷新失败。");
+                return;
+            }
+
+            if (SaveSlotService.SaveWorkingStateToSlot(slotId, out string error))
+            {
+                string message = $"已保存到槽位 {slotId}";
+                _bookTabs.SetSaveSlotStatus(message);
+                _toastController?.Enqueue(message, new Color("C8A050"));
+                RefreshSaveSlotUi();
+                return;
+            }
+
+            _bookTabs.SetSaveSlotStatus($"槽位 {slotId} 保存失败：{error}");
+        }
+
+        private void OnSaveSlotLoadRequested(int slotId)
+        {
+            if (!SaveSlotService.TryLoadSlotConfig(slotId, out ConfigFile config, out string error))
+            {
+                _bookTabs.SetSaveSlotStatus($"槽位 {slotId} 读取失败：{error}");
+                return;
+            }
+
+            bool migrated = false;
+            PrepareLoadedState(config, ref migrated);
+            ReadUnifiedState(config);
+            EnsureStarterEquipmentLoadout();
+
+            ApplyOfflineSettlementIfNeeded();
+            ApplyOfflineGardenIfNeeded();
+            ApplyOfflineRhythmIfNeeded();
+            if (!SaveAllState())
+            {
+                _bookTabs.SetSaveSlotStatus($"槽位 {slotId} 已读取，但写回当前自动存档失败。");
+                return;
+            }
+
+            _saveDirty = false;
+            _saveCooldown = SaveIntervalSeconds;
+            _activitySaveMarkTimer = 0.0;
+            RefreshRuntimeSettingsFromBookTabs();
+            RefreshSaveSlotUi();
+
+            string message = $"已读取槽位 {slotId}";
+            _bookTabs.SetSaveSlotStatus(message);
+            _toastController?.Enqueue(message, new Color("C8A050"));
+        }
+
+        private void OnSaveSlotDeleteRequested(int slotId)
+        {
+            if (SaveSlotService.DeleteSlot(slotId, out string error))
+            {
+                string message = $"已删除槽位 {slotId}";
+                _bookTabs.SetSaveSlotStatus(message);
+                _toastController?.Enqueue(message, new Color("B85450"));
+                RefreshSaveSlotUi();
+                return;
+            }
+
+            _bookTabs.SetSaveSlotStatus($"槽位 {slotId} 删除失败：{error}");
+        }
+
+        private void RefreshSaveSlotUi()
+        {
+            _bookTabs.SetSaveSlotSummaries(SaveSlotService.ReadAllSummaries());
         }
 
         private static void ReadStateSafe(string name, Action readAction)
