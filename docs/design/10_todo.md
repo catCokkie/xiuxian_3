@@ -8,12 +8,12 @@
 > 约定：修改后必须通过 `dotnet test tests/Xiuxian2.Tests/Xiuxian2.Tests.csproj` 零失败。
 > 维护规则：`docs/design/10_todo.md` 是任务状态唯一真源；`AGENTS.md` 仅保留流程规则，不重复维护任务进度。
 
-## 当前进度记录（更新：2026-04-07）
+## 当前进度记录（更新：2026-04-08）
 
 ### 总览
 - 代码任务：Phase 1–8 主功能实现项已全部落地，当前仅剩 `TASK-06` 人工验收项
-- 测试现状：`dotnet test tests/Xiuxian2.Tests/Xiuxian2.Tests.csproj` 已稳定通过 `330/330`；`ActivityRegistryTests` / `GenericCraftingProgressionTests` 的共享静态注册器并发污染已修复
-- 存档版本：v12（v5→v6→v7→v8→v9→v10→v11→v12 迁移链完整）
+- 测试现状：`dotnet test tests/Xiuxian2.Tests/Xiuxian2.Tests.csproj` 已稳定通过 `332/332`；`ActivityRegistryTests` / `GenericCraftingProgressionTests` 的共享静态注册器并发污染已修复
+- 存档版本：v13（v5→v6→v7→v8→v9→v10→v11→v12→v13 迁移链完整）
 - 子系统：11 个活动模式（原 12 个，悟道已移除），11 × 4 = 44 条精通定义总计 1900 悟性
 - 待人工验收：`TASK-06 场景文件 UTF-8 编码修复`
 - 已删除系统：AFK 检测、灵宠数值（pet_affinity/pet_mood）、悟道（EnlightenmentRules/State）
@@ -24,7 +24,6 @@
 
 | 优先级 | 编号 | 内容 | 对应文档 |
 |--------|------|------|---------|
-| P2 | — | 统计概览 Tab 扩充（5 区 30+ 指标，需新增 `PlayerStatsState`） | `15_ui_prompts.md` §7 |
 | P2 | — | 区域 3-5 新怪物代码接入（阴潮蛇崽/孢子幼体/骨仆从） | `09_level_monster_drop_sample.json` |
 | V2 | — | 成就/里程碑系统 | — |
 | V2 | — | 灵石商店商品扩展 | `02_systems.md` §22 |
@@ -33,6 +32,13 @@
 ---
 
 ### 变更日志
+
+#### 2026-04-08：N-12 统计概览 Tab 扩充
+
+- **统计层补齐**：新增 `PlayerStatsState` / `PlayerStatsPersistenceRules`，补齐战斗失败、Boss/精英战、制作/采集次数、灵田播种/收获/自动收获、悟性/灵石累计消耗等长期统计，并接入 `ServiceLocator`、统一存档与 v13 存档迁移链
+- **运行时接线完成**：`ExploreProgressController.Runtime.cs`、`GardenState.cs`、`ResourceWalletState.cs` 已在真实结算点写入统计，避免由 UI 反推 lifetime 数据；战斗、炼丹、炼器、符箓、烹饪、阵法、采矿、垂钓与灵田都已纳入统计口径
+- **统计页扩充**：`BookTabsController.cs` / `UiText.cs` 已将 `统计概览` 扩展为“总览 / 资源 / 战斗 / 制作与采集 / 灵田 / 输入明细”六段展示，实际展示指标已超过 30 项，并复用现有精通、周天、体修与灵田实时状态摘要
+- **验证结果**：`dotnet test tests/Xiuxian2.Tests/Xiuxian2.Tests.csproj` 通过 `332/332`
 
 #### 2026-04-07：N-11 隐私首启卡片与设置页
 
@@ -486,4 +492,3 @@
 | FORM-03 | 全局生效链路接入 | 进行中(03-30) | FORM-02 |
 | FORM-04 | 阵法切换 UI 与可视化 | 进行中(03-30) | FORM-01/02/03 |
 | FORM-05 | 阵法存档迁移与测试收口 | 进行中(03-30) | FORM-01/04 |
-
