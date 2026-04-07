@@ -133,6 +133,13 @@ namespace Xiuxian.Scripts.Services
                 return false;
             }
 
+            string spendCategory = item.ItemId switch
+            {
+                ShopRules.ItemSpiritHerbSeed or ShopRules.ItemSpiritFlowerSeed or ShopRules.ItemSpiritFruitSeed => PlayerStatsState.SpiritStoneSpendCategorySeeds,
+                _ => PlayerStatsState.SpiritStoneSpendCategoryShop,
+            };
+            ServiceLocator.Instance?.PlayerStatsState?.RecordSpiritStoneSpendByCategory(item.Price, spendCategory);
+
             _lifetimePurchases[item.ItemId] = GetLifetimePurchaseCount(item.ItemId) + 1;
             if (item.DailyLimit > 0)
             {

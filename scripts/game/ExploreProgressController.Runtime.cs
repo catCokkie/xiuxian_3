@@ -2732,6 +2732,8 @@ namespace Xiuxian.Scripts.Game
                     continue;
                 }
 
+                _playerStatsState?.RecordBattlePotionConsumption();
+
                 _consumedPotionsThisBattle.Add(UiText.BackpackItemName(usage.PotionId));
                 if (usage.PotionId == "potion_huiqi_dan")
                 {
@@ -2762,6 +2764,8 @@ namespace Xiuxian.Scripts.Game
                 {
                     continue;
                 }
+
+                _playerStatsState?.RecordBattleTalismanConsumption();
 
                 CharacterStatModifier modifier = ActivityEffectRules.GetBackpackConsumableModifier(usage.ItemId);
                 _battleConsumableModifier = new CharacterStatModifier(

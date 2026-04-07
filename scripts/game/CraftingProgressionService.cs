@@ -53,6 +53,8 @@ namespace Xiuxian.Scripts.Game
                 return false;
             }
 
+            ServiceLocator.Instance?.PlayerStatsState?.RecordLingqiSpend(result.LingqiCost);
+
             int finalPotionCount = result.PotionCount * System.Math.Max(1, outputMultiplier);
             potionInventoryState.AddPotion(result.PotionItemId, finalPotionCount);
             rewardText = $"炼丹完成，获得 {UiText.BackpackItemName(result.PotionItemId)} x{finalPotionCount}";
@@ -118,6 +120,8 @@ namespace Xiuxian.Scripts.Game
 
                 return false;
             }
+
+            ServiceLocator.Instance?.PlayerStatsState?.RecordLingqiSpend(cost.Lingqi);
 
             if (!equippedItemsState.TryEnhanceEquippedProfile(targetProfile.EquipmentId))
             {
@@ -193,6 +197,8 @@ namespace Xiuxian.Scripts.Game
             {
                 return false;
             }
+
+            ServiceLocator.Instance?.PlayerStatsState?.RecordLingqiSpend(recipe.LingqiCost);
 
             for (int i = 0; i < effectiveInputs.Length; i++)
             {
