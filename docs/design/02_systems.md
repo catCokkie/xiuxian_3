@@ -129,7 +129,7 @@
 - `boss.defeated_zones[]` / `boss.current_hp`（断点续战）
 - `consumable.active_meal`：`{meal_id, remaining_active_seconds}`（null = 无灵膳）
 - `formation.state.active_primary_id` / `formation.state.active_secondary_id`：当前激活的主阵 / 副阵 ID（副阵需精通 Lv3）
-- `recent_battle_logs[]`：时间戳/区域/怪物/结果/资源/掉落/flags（最多 200 条）
+- `recent_battle_logs[]`：时间戳/区域/怪物/结果/资源/掉落/flags（最多 10 条；仅作旧 battle log 兼容字段，动态页正式事件流以 `event_log.state` 最近 200 条为准）
 
 ## 5) 装备、背包与最小奖励闭环
 - 已具备 `BackpackState`、`EquippedItemsState`、`EquipmentStatProfile` 的最小闭环。
@@ -155,7 +155,7 @@
 - 左上角提供关闭按钮（`X`）。
 - 底部状态条固定显示 `灵石数量`。
 - 可单独开关，不中断主窗口探索循环。
-- `动态` Tab 承载全部游戏事件流（含战斗、制作、突破、精通、装备、系统、周天），支持分类筛选。原独立"战斗日志"Tab 已合并至动态中，通过"战斗"筛选按钮查看展开格式。
+- `动态` Tab 承载全部游戏事件流（含战斗、制作、突破、精通、装备、系统、周天），默认以单页时间线展示，不提供顶部分类筛选按钮。原独立"战斗日志"Tab 已合并至动态中，战斗事件在同一时间线内使用展开格式展示。
 - 动态默认保留最近 200 条，按时间倒序展示。
 - Demo 阶段隐藏 `联机`、`管理员模式`、`手写支持`、`开机启动动画` 等未形成闭环的入口，避免把预留项暴露为可用功能。
 - `Bug反馈` 提供最小闭环：问题描述输入、复制日志路径、导出反馈文件、打开数据目录。
@@ -483,7 +483,7 @@
 - 设计目标：玩家每 1-3 天解锁一个新能力，保持"每隔几天发现有新东西"的新鲜感。
 - 详细悟性消费表见 `03_progression_and_balance.md`「悟性消费设计」。
 
-> **实现状态（2026-04-02）**：11 系统 × 4 级 = 44 条 `MasteryDefinition` 已全部在 `SubsystemMasteryRules.cs` 中落地，总悟性精确 1900。存档主链已升级为 v9（v5→v6→v7→v8→v9），其中精通字段在 v6→v7 / v7→v8 完成接入，v8→v9 追加了阵法专用状态迁移。
+> **实现状态（2026-04-09）**：11 系统 × 4 级 = 44 条 `MasteryDefinition` 已全部在 `SubsystemMasteryRules.cs` 中落地，总悟性精确 1900。存档主链已升级为 v14（v5→v6→v7→v8→v9→v10→v11→v12→v13→v14），其中精通字段在 v6→v7 / v7→v8 完成接入，后续 v8→v14 继续补齐阵法、周天、坊市、灵田与统计迁移。
 
 ### 12.4 存档字段
 - `mastery.levels.{system_id}` (int, 默认 1)
@@ -493,7 +493,7 @@
 - 新增 `SubsystemMasteryRules.cs`：纯静态规则，定义各系统等级、解锁成本、效果查询。
 - 新增 `SubsystemMasteryState.cs`：Godot Node，持久化 `mastery.levels` 中的各系统当前等级。
 - 扩展 `InsightSpendRules.cs`：移除境界突破消耗，新增 `CanUnlockMastery()` / `GetMasteryCost()`。
-- 扩展 `SaveMigrationRules.cs`：`v6→v7` 初始化 `mastery.levels`，`v7→v8` 补齐新增系统状态，`v8→v9` 与阵法专用状态迁移衔接。
+- 扩展 `SaveMigrationRules.cs`：`v6→v7` 初始化 `mastery.levels`，`v7→v8` 补齐新增系统状态，`v8→v14` 继续与阵法专用状态、周天、坊市、灵田与统计字段迁移衔接。
 - 修改 `AlchemyRules.cs`：聚灵散可用性改为依赖炼丹精通 Lv2。
 - 修改 `SmithingRules.cs`：强化段上限改为依赖炼器精通等级。
 

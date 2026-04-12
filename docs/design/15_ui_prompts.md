@@ -133,9 +133,9 @@ Bottom section — Scrollable RichText:
 
 ## 4. 动态 (Event Feed Tab — includes Battle Log)
 
-> 原"战斗日志"Tab 已合并至此。战斗事件通过"战斗"筛选按钮查看，不再有独立战斗日志 Tab。
+> 原"战斗日志"Tab 已合并至此。当前版本保持“打开即读”的单页时间线，不提供顶部筛选按钮；战斗事件直接在统一时间线中展开显示。
 
-**文件**: `BookTabsController.cs` → `BuildEventFeedUi()` / `EventLogState.cs`
+**文件**: `BookTabsController.cs` → `BuildBattleLogText()` / `EventLogState.cs` / `EventLogPresentationRules.cs`
 
 ```
 Design the "动态" (Event Feed) page, 856×336px, parchment background.
@@ -143,41 +143,33 @@ Persistent event log showing all game events in chronological order, newest at t
 This is the core "catch-up" view for a desktop pet idle game where the user often
 looks away — they can scroll through everything that happened while they were gone.
 
-Top — Filter Row (horizontal, 8px gap):
-- 7 small toggle buttons, each a category filter:
-  "全部" (default active, gold highlight) | "战斗" | "制作" | "突破" | "精通" | "装备" | "系统" | "周天"
-  Active: filled gold accent (#C8A050). Inactive: outline only.
-  Multiple filters can be active simultaneously. "全部" deselects others.
+Top — Compact Summary Block (stacked, 4px gap):
+- Optional battle summary line in muted brown (#8D7763):
+  "最近战况：胜 8 / 负 1 ｜ 灵气 +360 ｜ 悟性 +12 ｜ 灵石 +27"
+- Category summary line in muted brown (#8D7763):
+  "本页动态：战斗 8｜制作 3｜突破 1｜装备 2"
+- No filter buttons. The page should feel like a low-friction inbox rather than a control panel.
 
 Middle — Scrollable Event List (full remaining height):
-Each event entry is a single row or compact block:
-- Timestamp (left, 11px, muted #5C4633): "14:32"
-- Category icon (inline, 12px): ⚔ battle / ⚗ craft / ⬆ breakthrough / ⭐ mastery / 🛡 equipment / ⌛ system / 🔄 cycle
-- Message (13px, dark text #4B3622):
-  - Battle: "击败 阴潮蛇（精英）— 3回合 — 掉落：灵草×2, 寒铁×1"
-  - Battle loss: "败于 暗穴蛛王 — 超时"
-  - Craft: "炼丹完成 ×5 — 回气丹×3, 聚灵散×2"
-  - Breakthrough: "突破成功 → 炼气3层" (金色 #C8A050)
-  - Mastery: "领悟成功 → 副本精通 Lv3" (金色)
-  - Equipment: "获得 寒铁剑 [法器]" (稀有度着色)
+Each event entry is newest-first, separated by a subtle 1px horizontal rule (#D0C0A0).
+- Non-battle events stay compact:
+  - Craft: "炼丹完成 ×5"
+  - Breakthrough: "突破成功 → 炼气3层"
+  - Mastery: "领悟成功 → 副本精通 Lv3"
+  - Equipment: "获得 寒铁剑 [法器]"
   - System: "离线结算：2.5 小时 — 灵气+1200, 悟性+45"
   - Cycle: "小周天·第3轮圆满 — 悟性+3（周天奖励）"
-- Separator: 1px horizontal line (#D0C0A0), subtle
-
-"战斗" filter view (selecting "战斗" button):
-- Shows only battle events, but with expanded detail compared to "全部" view:
+- Battle events use an expanded 3-line block for readability:
   - Header line: "[14:32:05] 遭遇 阴潮蛇 (精英)" — timestamp + enemy name + type badge
-    Elite enemies: amber highlight. Boss: red highlight. Normal: no highlight.
   - Result line: "战斗胜利 — 3 回合" or "战斗失败 — 超时"
-    Win: green text. Loss: red text.
-  - Rewards line: "掉落：灵草 x2, 灵气 +45, 寒铁矿 x1"
-  This expanded format replaces the former standalone "战斗日志" Tab.
+  - Context/reward line: "区域：幽泉洞外围｜掉落：灵草×2｜灵气 +45｜寒铁×1"
+- Separator: 1px horizontal line (#D0C0A0), subtle
 
 High-value events have accent styling:
 - Breakthrough / 宝器-tier equipment: gold left-border (3px #C8A050)
 - Battle loss / system warning: red-ish left-border (3px #B85450)
 
-If no events yet: centered placeholder "暂无动态。开始操作后，所有事件将记录在此处。"
+If no events yet: centered placeholder "暂无动态。开始操作后，所有重要事件都会记录在此处。"
 
 Bottom status line (right-aligned, 11px muted):
 "共 156 条，显示最近 200 条"

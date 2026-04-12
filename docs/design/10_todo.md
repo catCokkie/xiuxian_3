@@ -8,16 +8,16 @@
 > 约定：修改后必须通过 `dotnet test tests/Xiuxian2.Tests/Xiuxian2.Tests.csproj` 零失败。
 > 维护规则：`docs/design/10_todo.md` 是任务状态唯一真源；`AGENTS.md` 仅保留流程规则，不重复维护任务进度。
 
-## 当前进度记录（更新：2026-04-08）
+## 当前进度记录（更新：2026-04-09）
 
 ### 总览
 - 代码任务：Phase 1–8 主功能实现项已全部落地，当前仅剩 `TASK-06` 人工验收项
-- 测试现状：`dotnet test tests/Xiuxian2.Tests/Xiuxian2.Tests.csproj` 已稳定通过 `332/332`；`ActivityRegistryTests` / `GenericCraftingProgressionTests` 的共享静态注册器并发污染已修复
+- 测试现状：`dotnet test tests/Xiuxian2.Tests/Xiuxian2.Tests.csproj` 已稳定通过 `354/354`；`ActivityRegistryTests` / `GenericCraftingProgressionTests` 的共享静态注册器并发污染已修复
 - 存档版本：v14（v5→v6→v7→v8→v9→v10→v11→v12→v13→v14 迁移链完整）
 - 子系统：11 个活动模式（原 12 个，悟道已移除），11 × 4 = 44 条精通定义总计 1900 悟性
 - 待人工验收：`TASK-06 场景文件 UTF-8 编码修复`
 - 已删除系统：AFK 检测、灵宠数值（pet_affinity/pet_mood）、悟道（EnlightenmentRules/State）
-- 深化迭代：`16_subsystem_deepening.md` 追踪 25 项深化意见（D-01~D-25），D-01 / D-25 已完成
+- 深化迭代：`16_subsystem_deepening.md` 追踪 25 项深化意见（D-01~D-25），D-01 / D-14（无筛选方案） / D-21 / D-22 / D-23 / D-25 已完成
 - 维护规则：新增任务或状态变更时，只更新本文件，不在 agent 指令文件重复记录
 
 ### 待办事项
@@ -32,6 +32,60 @@
 ---
 
 ### 变更日志
+
+#### 2026-04-09：N-21 文档口径收口（1 / 2 / 5）
+
+- **动态页文档对齐**：`02_systems.md`、`04_milestones.md`、`15_ui_prompts.md` 已统一改为“动态页默认单页时间线、无顶部筛选按钮”的当前方案；战斗事件保留在同一时间线内的展开格式，不再描述未实现的筛选交互
+- **迁移文档升级到 v14**：`14_save_migration.md` 已从旧 `v9` 口径更新到当前 `v14`，补齐 `v9→v10→v11→v12→v13→v14` 的迁移总览，并明确当前读取链采用 `TryMigrateToLatestCopy()` 的 fail-closed 副本迁移语义
+- **旧战斗日志字段纠偏**：`02_systems.md` 已将 `recent_battle_logs[]` 修正为旧兼容字段、最多 10 条；同时明确动态页正式事件流以 `event_log.state` 最近 200 条为准，避免与新事件日志容量混淆
+- **验证结果**：文档收口，无代码逻辑变更；本次会话前后的实现口径均以 `dotnet test tests/Xiuxian2.Tests/Xiuxian2.Tests.csproj` 通过 `354/354` 为基线
+
+#### 2026-04-09：N-20 Toast 合并折叠（D-21）
+
+- **重复提示折叠**：新增 `ToastFoldRules.cs`，将 3 秒窗口内、同一 `foldKey` 的重复 Toast 合并为单条显示，并以 `×N` 形式累计次数，减少屏幕顶部被高频提示刷屏
+- **运行时队列改造**：`ToastController.cs` 已改为维护带计数与最近出现时间的运行时条目；命中折叠规则时，会优先合并到当前正在显示的 Toast，其次合并到等待队列，并刷新活动 Toast 的剩余显示时长
+- **适用范围收敛**：当前仅对“获得新装备”“炼丹完成”“强化完成”三类高频重复提示启用折叠；突破、精通升级、坊市与存读档类一次性提示保持逐条展示，避免把关键反馈吞掉
+- **测试补齐**：新增 `ToastFoldRulesTests`，覆盖 3 秒窗口判定、空 key/过期不折叠以及 `×N` 展示文案
+- **验证结果**：`dotnet test tests/Xiuxian2.Tests/Xiuxian2.Tests.csproj` 通过 `354/354`
+
+#### 2026-04-09：N-19 动态页默认时间线增强（D-14 无筛选方案）
+
+- **交互方向调整**：基于试玩反馈，动态页不再追加顶部筛选按钮，保持“打开即读”的单页时间线形态；D-14 的目标改为强化默认视图可读性，而不是增加筛选负担
+- **战况汇总补齐**：`EventLogPresentationRules.cs` 现会在动态页顶部输出最近战况摘要，汇总当前时间线中的胜/负场次、灵气、悟性与灵石收益，帮助玩家一眼看懂最近发生了什么
+- **战斗条目展开**：战斗事件改为更展开的三段式展示，包含敌人名与精英/Boss 标记、胜负与回合数、区域名、奖励摘要；非战斗事件仍保持简洁一行，避免整页噪音过高
+- **旧档兼容补齐**：`EventLogEntryData` / `EventLogPersistenceRules` / `EventLogState` 新增结构化战斗奖励字段，新事件会写入区域与资源明细；同时展示层会回退解析旧 `detail` 文本，保证已落库的旧战斗事件仍能参与顶部汇总
+- **验证结果**：`dotnet test tests/Xiuxian2.Tests/Xiuxian2.Tests.csproj` 通过 `347/347`
+
+#### 2026-04-08：N-18 未读事件徽标（D-23）
+
+- **书本按钮红点接入**：`MainBarLayoutController.cs` 已为主栏书本按钮新增程序化红点徽标，显示事件流未读数，并按设计将双位数钳制为 `9+`
+- **清零语义调整**：`PrototypeRootController.cs` 现改为“打开书卷即清空当前未读事件”，不再要求玩家必须切到“动态”页才能消除徽标；事件流后续仍会继续累计新未读
+- **现有事件流复用**：D-23 直接复用了 `EventLogState` 的未读计数，不新增第二套 UI 状态，保证自动存档 / 手动槽位 / 未来动态页筛选与徽标都共享同一份数据
+- **测试补齐**：新增 `EventLogBadgeTests`，覆盖 `9+` 钳制规则，避免后续 UI 重构把徽标口径改乱
+- **验证结果**：`dotnet test tests/Xiuxian2.Tests/Xiuxian2.Tests.csproj` 通过 `346/346`
+
+#### 2026-04-08：N-17 动态事件流 MVP
+
+- **反馈层落地**：新增 `EventLogState`、`EventLogPersistenceRules`、`EventLogPresentationRules`，实现 200 条环形缓冲、分类事件（战斗/制作/突破/精通/装备/系统/周天）、未读计数地基与统一存档接入；旧档缺少 `event_log.state` 时会按空事件流安全启动
+- **事件入口接通**：`ExploreProgressController.Runtime.cs` 已在战斗结算时写入持久化战斗事件；`ToastController.cs` 已将突破、精通升级、装备提醒、炼丹完成、强化完成、周天总结与坊市通知同步写入事件流，避免只存在于瞬时 Toast
+- **UI 切到动态页**：`BookTabsController.cs` 现复用原 `BattleLogTab` 节点显示“动态”页，内容来源改为持久化事件流；首版同时补了未读计数地基，后续 D-23 书本徽标已复用该计数
+- **测试补齐**：新增 `EventLogRulesTests`，覆盖事件流 round-trip、200 条裁剪与动态页文本格式化
+- **验证结果**：`dotnet test tests/Xiuxian2.Tests/Xiuxian2.Tests.csproj` 通过 `341/341`
+
+#### 2026-04-08：N-16 存档迁移 fail-closed 保护
+
+- **迁移改为副本执行**：`SaveMigrationRules` 新增复制后迁移入口，统一自动存档与手动槽位都改为先在副本上跑迁移链，只有整条链成功后才把结果交给运行时读取，避免半迁移 `ConfigFile` 直接污染当前会话
+- **加载失败即中止读取**：`PrototypeRootController.cs` 现已区分“无统一存档”和“统一存档迁移失败”两类路径；遇到迁移失败时不再继续 `ReadUnifiedState()`，也不会退回旧 `legacy` 存档路径把坏档静默覆盖
+- **覆盖保护补齐**：若自动存档首次加载失败，会临时阻止后续自动保存覆盖当前主存档，并通过设置页槽位状态 / Toast 提示玩家改用手动槽位恢复；成功读取一个有效槽位后会解除阻止并按正常统一存档链回写
+- **测试补齐**：`SaveMigrationRulesTests` 已新增“复制迁移成功不改源配置”和“复制迁移失败保留源配置原样”覆盖，避免后续重构把 fail-closed 语义回退
+- **验证结果**：`dotnet test tests/Xiuxian2.Tests/Xiuxian2.Tests.csproj` 通过 `337/337`
+
+#### 2026-04-08：N-15 自动存档失败重试修复
+
+- **重试链路修复**：`PrototypeRootController.cs` 的自动保存调度现已在保存失败时保留 `_saveDirty`，不再出现“本次写盘失败后直接丢掉后续重试机会”的情况；失败后会按既有 `0.5s` 自动保存节流重新排队下一次尝试
+- **规则层抽离**：新增 `SaveRetryRules`，将“成功后清脏 / 失败后保脏并重置冷却”的保存决策抽成纯规则，避免后续在控制器重构时被不小心改回
+- **测试补齐**：新增 `SaveRetryRulesTests`，覆盖成功清脏、失败保脏重试、异常重试间隔归零保护三类场景
+- **验证结果**：`dotnet test tests/Xiuxian2.Tests/Xiuxian2.Tests.csproj` 通过 `335/335`
 
 #### 2026-04-08：N-14 手动存档槽位与删除功能
 
