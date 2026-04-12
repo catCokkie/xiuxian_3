@@ -25,6 +25,7 @@ namespace Xiuxian.Scripts.Services
         public PlayerProgressState? PlayerProgressState { get; private set; }
         public CultivationRhythmState? CultivationRhythmState { get; private set; }
         public ShopState? ShopState { get; private set; }
+        public EventLogState? EventLogState { get; private set; }
         public PlayerActionState? PlayerActionState { get; private set; }
         public EquippedItemsState? EquippedItemsState { get; private set; }
         public SubsystemMasteryState? SubsystemMasteryState { get; private set; }
@@ -71,6 +72,7 @@ namespace Xiuxian.Scripts.Services
             PlayerProgressState = GetNodeOrNull<PlayerProgressState>("/root/PlayerProgressState");
             CultivationRhythmState = GetNodeOrNull<CultivationRhythmState>("/root/CultivationRhythmState");
             ShopState = GetNodeOrNull<ShopState>("/root/ShopState");
+            EventLogState = GetNodeOrNull<EventLogState>("/root/EventLogState");
             PlayerActionState = GetNodeOrNull<PlayerActionState>("/root/PlayerActionState");
             EquippedItemsState = GetNodeOrNull<EquippedItemsState>("/root/EquippedItemsState");
             SubsystemMasteryState = GetNodeOrNull<SubsystemMasteryState>("/root/SubsystemMasteryState");

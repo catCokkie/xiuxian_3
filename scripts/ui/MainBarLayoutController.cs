@@ -1,4 +1,5 @@
-﻿using Godot;
+using Godot;
+using Xiuxian.Scripts.Services;
 
 public partial class MainBarLayoutController : Control
 {
@@ -38,6 +39,8 @@ public partial class MainBarLayoutController : Control
     private Panel _validationPanel = null!;
     private OptionButton? _actionModeOptionButton;
     private OptionButton? _levelOptionButton;
+    private PanelContainer _bookUnreadBadge = null!;
+    private Label _bookUnreadBadgeLabel = null!;
 
     private bool _isDragging;
     private bool _isResizing;
@@ -61,6 +64,7 @@ public partial class MainBarLayoutController : Control
         _validationPanel = GetNode<Panel>("Chrome/ConfigValidationPanel");
         _actionModeOptionButton = GetNodeOrNull<OptionButton>("Chrome/ActionModeOptionButton");
         _levelOptionButton = GetNodeOrNull<OptionButton>("Chrome/LevelOptionButton");
+        EnsureBookUnreadBadge();
 
         _dragHandle.GuiInput += OnDragHandleGuiInput;
         _resizeHandle.GuiInput += OnResizeHandleGuiInput;
@@ -69,6 +73,7 @@ public partial class MainBarLayoutController : Control
         _resizeHandle.Text = UiText.ResizeHandle;
         _bookButton.Text = UiText.BookButton;
         _zoneLabel.Visible = false;
+        SetBookUnreadCount(0);
 
         _bottomMargin = Mathf.Max(MinBottomMargin, GetViewportRect().Size.Y - (Position.Y + Size.Y));
         _fixedBottomY = GetBottomLockedY();
@@ -99,6 +104,7 @@ public partial class MainBarLayoutController : Control
             {
                 EmitSignal(SignalName.LayoutChanged, Position.X, Size.X);
             }
+
             _isDragging = false;
             _isResizing = false;
         }
@@ -154,31 +160,35 @@ public partial class MainBarLayoutController : Control
         UpdateRightAnchoredLayout();
     }
 
+    public void SetBookUnreadCount(int unreadCount)
+    {
+        string badgeText = EventLogPresentationRules.BuildUnreadBadgeText(unreadCount);
+        bool isVisible = !string.IsNullOrEmpty(badgeText);
+        _bookUnreadBadge.Visible = isVisible;
+        _bookUnreadBadgeLabel.Text = badgeText;
+        UpdateBookUnreadBadgeLayout();
+    }
+
     private void UpdateRightAnchoredLayout()
     {
         float panelWidth = Size.X;
         float dragW = 44.0f;
 
-        // --- Row 1: BattleTrack fills width between drag handle and right margin ---
         float trackLeft = dragW + ControlGap;
         float trackRight = panelWidth - RightMargin;
         float trackWidth = Mathf.Max(MinBattleTrackWidth, trackRight - trackLeft);
         _battleTrack.Position = new Vector2(trackLeft, BattleTrackTopY);
         _battleTrack.Size = new Vector2(trackWidth, BattleTrackBottomY - BattleTrackTopY);
 
-        // --- Row 2: Bottom control strip ---
-        // Left side: RealmStageLabel + ActionMode + Level
         float controlX = LeftPadding;
         _realmStageLabel.Position = new Vector2(controlX, ControlRowY);
         controlX += _realmStageLabel.Size.X + ControlGap;
 
-        // Calculate right-side button widths first to know remaining space
         float bookW = 42.0f;
         float resizeW = 36.0f;
         float rightButtonsWidth = bookW + ControlGap + resizeW + RightMargin;
         float rightButtonsStartX = panelWidth - rightButtonsWidth;
 
-        // Allocate space for option buttons
         float optionBudget = Mathf.Max(0.0f, rightButtonsStartX - controlX - ControlGap);
         float actionButtonWidth = Mathf.Min(130.0f, optionBudget * 0.35f);
         float levelButtonWidth = Mathf.Max(MinOptionButtonWidth, optionBudget - actionButtonWidth - ControlGap);
@@ -197,15 +207,18 @@ public partial class MainBarLayoutController : Control
             _levelOptionButton.Size = new Vector2(levelButtonWidth, ControlRowHeight);
         }
 
-        // Right side: Book + Resize anchored to right edge (handled by tscn anchors, just ensure Y)
         _activityRateLabel.Visible = false;
-
         if (_validationPanel != null)
         {
             _validationPanel.Visible = false;
         }
 
-        // --- Progress bars: positioned inside the control row, right-aligned ---
+        _bookButton.Position = new Vector2(panelWidth - RightMargin - resizeW - ControlGap - bookW, ControlRowY);
+        _bookButton.Size = new Vector2(bookW, ControlRowHeight);
+        _resizeHandle.Position = new Vector2(panelWidth - RightMargin - resizeW, ControlRowY);
+        _resizeHandle.Size = new Vector2(resizeW, ControlRowHeight);
+        UpdateBookUnreadBadgeLayout();
+
         float barAreaRight = rightButtonsStartX - ControlGap;
         float breakthroughWidth = _breakthroughButton?.Size.X > 0.0f ? _breakthroughButton.Size.X : 78.0f;
         float cultivationWidth = Mathf.Clamp(barAreaRight * 0.22f, 120.0f, 240.0f);
@@ -238,5 +251,50 @@ public partial class MainBarLayoutController : Control
     private float GetBottomLockedY()
     {
         return GetViewportRect().Size.Y - Size.Y - _bottomMargin;
+    }
+
+    private void EnsureBookUnreadBadge()
+    {
+        _bookUnreadBadge = new PanelContainer();
+        _bookUnreadBadge.Name = "BookUnreadBadge";
+        _bookUnreadBadge.Visible = false;
+        _bookUnreadBadge.MouseFilter = MouseFilterEnum.Ignore;
+        _bookUnreadBadge.ZIndex = 10;
+
+        StyleBoxFlat badgeStyle = new();
+        badgeStyle.BgColor = new Color("B85450");
+        badgeStyle.BorderColor = new Color("F5E6D3");
+        badgeStyle.SetBorderWidthAll(1);
+        badgeStyle.SetCornerRadiusAll(10);
+        badgeStyle.ContentMarginLeft = 4;
+        badgeStyle.ContentMarginRight = 4;
+        badgeStyle.ContentMarginTop = 1;
+        badgeStyle.ContentMarginBottom = 1;
+        _bookUnreadBadge.AddThemeStyleboxOverride("panel", badgeStyle);
+
+        _bookUnreadBadgeLabel = new Label();
+        _bookUnreadBadgeLabel.HorizontalAlignment = HorizontalAlignment.Center;
+        _bookUnreadBadgeLabel.VerticalAlignment = VerticalAlignment.Center;
+        _bookUnreadBadgeLabel.AddThemeColorOverride("font_color", Colors.White);
+        _bookUnreadBadgeLabel.AddThemeFontSizeOverride("font_size", 11);
+        _bookUnreadBadgeLabel.MouseFilter = MouseFilterEnum.Ignore;
+        _bookUnreadBadge.AddChild(_bookUnreadBadgeLabel);
+
+        GetNode<Control>("Chrome").AddChild(_bookUnreadBadge);
+    }
+
+    private void UpdateBookUnreadBadgeLayout()
+    {
+        if (_bookUnreadBadge == null)
+        {
+            return;
+        }
+
+        Vector2 badgeSize = _bookUnreadBadgeLabel.Text == "9+" ? new Vector2(24.0f, 18.0f) : new Vector2(18.0f, 18.0f);
+        _bookUnreadBadge.CustomMinimumSize = badgeSize;
+        _bookUnreadBadge.Size = badgeSize;
+        _bookUnreadBadge.Position = new Vector2(
+            _bookButton.Position.X + _bookButton.Size.X - badgeSize.X * 0.55f,
+            _bookButton.Position.Y - badgeSize.Y * 0.35f);
     }
 }

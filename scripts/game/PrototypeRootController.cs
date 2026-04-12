@@ -11,6 +11,13 @@ namespace Xiuxian.Scripts.Game
     /// </summary>
     public partial class PrototypeRootController : Control
     {
+        private enum UnifiedStateLoadStatus
+        {
+            Missing,
+            Loaded,
+            FailedClosed,
+        }
+
         private const string UnifiedStatePath = "user://save_state.cfg";
         private const string UnifiedStateBackupPath = "user://save_state.cfg.backup";
         private const string UnifiedStateTempPath = "user://save_state.cfg.tmp";
@@ -41,6 +48,7 @@ namespace Xiuxian.Scripts.Game
         private PlayerProgressState? _playerProgressState;
         private CultivationRhythmState? _cultivationRhythmState;
         private ShopState? _shopState;
+        private EventLogState? _eventLogState;
         private PlayerActionState? _playerActionState;
         private EquippedItemsState? _equippedItemsState;
         private SubsystemMasteryState? _subsystemMasteryState;
@@ -52,6 +60,7 @@ namespace Xiuxian.Scripts.Game
         private bool _cloudSyncEnabled;
         private long _lastLoadedSavedUnix;
         private Control? _privacyNoticeOverlay;
+        private bool _saveBlockedByLoadFailure;
 
         private bool _saveDirty;
         private double _saveCooldown;
@@ -85,6 +94,7 @@ namespace Xiuxian.Scripts.Game
             _playerProgressState = services?.PlayerProgressState;
             _cultivationRhythmState = services?.CultivationRhythmState;
             _shopState = services?.ShopState;
+            _eventLogState = services?.EventLogState;
             _playerActionState = services?.PlayerActionState;
             _equippedItemsState = services?.EquippedItemsState;
             _subsystemMasteryState = services?.SubsystemMasteryState;
@@ -111,6 +121,7 @@ namespace Xiuxian.Scripts.Game
             _persistenceManager.Register("progress", "player", _playerProgressState);
             _persistenceManager.Register("rhythm", "state", _cultivationRhythmState);
             _persistenceManager.Register("shop", "state", _shopState);
+            _persistenceManager.Register("event_log", "state", _eventLogState);
             _persistenceManager.Register("mastery", "levels", _subsystemMasteryState);
             _persistenceManager.Register("action", "mode", _playerActionState);
             _persistenceManager.Register("equipment", "equipped", _equippedItemsState);
@@ -155,6 +166,10 @@ namespace Xiuxian.Scripts.Game
             if (_shopState != null)
             {
                 _shopState.ShopChanged += OnShopChanged;
+            }
+            if (_eventLogState != null)
+            {
+                _eventLogState.EntriesChanged += OnEventLogChanged;
             }
             if (_gardenState != null)
             {
@@ -288,6 +303,10 @@ namespace Xiuxian.Scripts.Game
             {
                 _shopState.ShopChanged -= OnShopChanged;
             }
+            if (_eventLogState != null)
+            {
+                _eventLogState.EntriesChanged -= OnEventLogChanged;
+            }
             if (_gardenState != null)
             {
                 _gardenState.GardenChanged -= OnGardenChanged;
@@ -331,21 +350,36 @@ namespace Xiuxian.Scripts.Game
                 return;
             }
 
-            SaveAllState();
-            _saveDirty = false;
+            ApplyAutosaveAttempt(SaveAllState());
         }
 
         public override void _Notification(int what)
         {
-            if (what == NotificationWMCloseRequest)
+            if (what == NotificationWMCloseRequest && !_saveBlockedByLoadFailure)
             {
                 SaveAllState();
             }
         }
 
+        private void ApplyAutosaveAttempt(bool saveSucceeded)
+        {
+            SaveRetryRules.SaveRetryDecision decision = SaveRetryRules.ResolveAutosaveAttempt(saveSucceeded, SaveIntervalSeconds);
+            _saveDirty = decision.KeepDirty;
+            _saveCooldown = decision.NextCooldownSeconds;
+        }
+
         private void OnMainBarLayoutChanged(float x, float width) => MarkDirty();
 
-        private void OnSubmenuVisibilityChanged(bool isVisible) => MarkDirty();
+        private void OnSubmenuVisibilityChanged(bool isVisible)
+        {
+            if (isVisible)
+            {
+                _eventLogState?.MarkAllRead();
+            }
+
+            RefreshBookUnreadBadge();
+            MarkDirty();
+        }
 
         private void OnBookTabsActiveTabsChanged(string leftTab, string rightTab)
         {
@@ -391,6 +425,12 @@ namespace Xiuxian.Scripts.Game
             MarkDirty();
         }
 
+        private void OnEventLogChanged()
+        {
+            RefreshBookUnreadBadge();
+            MarkDirty();
+        }
+
         private void OnAlchemyChanged(string selectedRecipeId, float currentProgress, float requiredProgress)
         {
             MarkDirty();
@@ -428,11 +468,21 @@ namespace Xiuxian.Scripts.Game
 
         private void LoadAllState()
         {
-            bool loaded = LoadUnifiedState(out bool migrated);
-            if (!loaded)
+            UnifiedStateLoadStatus loadStatus = LoadUnifiedState(out bool migrated);
+            bool loaded = loadStatus == UnifiedStateLoadStatus.Loaded;
+            if (loadStatus == UnifiedStateLoadStatus.Missing)
             {
                 migrated = false;
                 LoadLegacyState();
+            }
+            else if (loadStatus == UnifiedStateLoadStatus.FailedClosed)
+            {
+                _saveDirty = false;
+                _saveCooldown = SaveIntervalSeconds;
+                _activitySaveMarkTimer = 0.0;
+                RefreshRuntimeSettingsFromBookTabs();
+                RefreshSaveSlotUi();
+                return;
             }
 
             EnsureStarterEquipmentLoadout();
@@ -441,7 +491,7 @@ namespace Xiuxian.Scripts.Game
             bool appliedOfflineGarden = loaded && ApplyOfflineGardenIfNeeded();
             bool appliedOfflineRhythm = loaded && ApplyOfflineRhythmIfNeeded();
 
-            if (!loaded || migrated || appliedOfflineSettlement || appliedOfflineGarden || appliedOfflineRhythm)
+            if (loadStatus == UnifiedStateLoadStatus.Missing || migrated || appliedOfflineSettlement || appliedOfflineGarden || appliedOfflineRhythm)
             {
                 SaveAllState();
             }
@@ -455,7 +505,13 @@ namespace Xiuxian.Scripts.Game
                 ShowFirstLaunchPrivacyCard();
             }
 
+            RefreshBookUnreadBadge();
             RefreshSaveSlotUi();
+        }
+
+        private void RefreshBookUnreadBadge()
+        {
+            _mainBar?.SetBookUnreadCount(_eventLogState?.UnreadCount ?? 0);
         }
 
         private void EnsureStarterEquipmentLoadout()
@@ -475,6 +531,12 @@ namespace Xiuxian.Scripts.Game
 
         private bool SaveAllState()
         {
+            if (_saveBlockedByLoadFailure)
+            {
+                GD.PushWarning("PrototypeRootController: save blocked because the last unified load failed closed.");
+                return false;
+            }
+
             ConfigFile config = new();
 
             config.SetValue("meta", "version", SaveSchemaVersion);
@@ -534,48 +596,69 @@ namespace Xiuxian.Scripts.Game
             return true;
         }
 
-        private bool LoadUnifiedState(out bool migrated)
+        private UnifiedStateLoadStatus LoadUnifiedState(out bool migrated)
         {
             migrated = false;
             ConfigFile config = new();
             if (config.Load(UnifiedStatePath) != Error.Ok)
             {
-                return false;
+                return UnifiedStateLoadStatus.Missing;
             }
 
-            PrepareLoadedState(config, ref migrated);
-            ReadUnifiedState(config);
+            if (!TryPrepareLoadedState(config, out ConfigFile prepared, out bool localMigrated, out string error))
+            {
+                BlockSavingAfterLoadFailure($"自动存档迁移失败，已阻止覆盖当前存档。{error}");
+                return UnifiedStateLoadStatus.FailedClosed;
+            }
+
+            migrated = localMigrated;
+            ReadUnifiedState(prepared);
+            ClearSaveLoadFailureBlock();
 
             if (_cloudSyncEnabled && _cloudSaveSyncService != null && _cloudSaveSyncService.TryDownloadToLocal(true))
             {
                 ConfigFile refreshed = new();
                 if (refreshed.Load(UnifiedStatePath) == Error.Ok)
                 {
-                    PrepareLoadedState(refreshed, ref migrated);
-                    ReadUnifiedState(refreshed);
+                    if (TryPrepareLoadedState(refreshed, out ConfigFile preparedCloud, out bool cloudMigrated, out string cloudError))
+                    {
+                        migrated |= cloudMigrated;
+                        ReadUnifiedState(preparedCloud);
+                    }
+                    else
+                    {
+                        GD.PushWarning($"PrototypeRootController: cloud save ignored because migration failed closed: {cloudError}");
+                    }
                 }
             }
 
-            return true;
+            return UnifiedStateLoadStatus.Loaded;
         }
 
-        private void PrepareLoadedState(ConfigFile config, ref bool migrated)
+        private bool TryPrepareLoadedState(ConfigFile config, out ConfigFile prepared, out bool migrated, out string error)
         {
-            int version = config.GetValue("meta", "version", 1).AsInt32();
-            if (!SaveMigrationRules.NeedsMigration(version))
+            if (SaveMigrationRules.TryMigrateToLatestCopy(config, out prepared, out migrated, out SaveMigrationException? migrationError))
             {
-                return;
+                error = string.Empty;
+                return true;
             }
 
-            try
-            {
-                SaveMigrationRules.MigrateToLatest(config, version);
-                migrated = true;
-            }
-            catch (SaveMigrationException ex)
-            {
-                GD.PushError($"PrototypeRootController: {ex.Message} — save version rolled back to v{ex.FromVersion}");
-            }
+            error = migrationError?.Message ?? "未知迁移错误";
+            GD.PushError($"PrototypeRootController: {error} — load aborted before runtime state was applied");
+            return false;
+        }
+
+        private void BlockSavingAfterLoadFailure(string message)
+        {
+            _saveBlockedByLoadFailure = true;
+            _saveDirty = false;
+            _bookTabs.SetSaveSlotStatus(message);
+            _toastController?.Enqueue(message, new Color("B85450"));
+        }
+
+        private void ClearSaveLoadFailureBlock()
+        {
+            _saveBlockedByLoadFailure = false;
         }
 
         private void ReadUnifiedState(ConfigFile config)
@@ -619,14 +702,19 @@ namespace Xiuxian.Scripts.Game
                 return;
             }
 
-            bool migrated = false;
-            PrepareLoadedState(config, ref migrated);
-            ReadUnifiedState(config);
+            if (!TryPrepareLoadedState(config, out ConfigFile prepared, out bool migrated, out string migrationError))
+            {
+                _bookTabs.SetSaveSlotStatus($"槽位 {slotId} 读取失败：{migrationError}");
+                return;
+            }
+
+            ReadUnifiedState(prepared);
             EnsureStarterEquipmentLoadout();
 
             ApplyOfflineSettlementIfNeeded();
             ApplyOfflineGardenIfNeeded();
             ApplyOfflineRhythmIfNeeded();
+            ClearSaveLoadFailureBlock();
             if (!SaveAllState())
             {
                 _bookTabs.SetSaveSlotStatus($"槽位 {slotId} 已读取，但写回当前自动存档失败。");
@@ -1135,6 +1223,11 @@ namespace Xiuxian.Scripts.Game
 
         private void MarkDirty()
         {
+            if (_saveBlockedByLoadFailure)
+            {
+                return;
+            }
+
             _saveDirty = true;
             _saveCooldown = SaveIntervalSeconds;
         }

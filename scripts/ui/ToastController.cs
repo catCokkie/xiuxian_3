@@ -10,6 +10,20 @@ namespace Xiuxian.Scripts.Ui
     /// </summary>
     public partial class ToastController : Control
     {
+        private sealed class ToastRuntimeEntry
+        {
+            public string BaseMessage { get; set; } = string.Empty;
+            public string FoldKey { get; set; } = string.Empty;
+            public Color TextColor { get; set; }
+            public int Count { get; set; } = 1;
+            public float Remaining { get; set; } = ToastDuration;
+            public double LastSeenAt { get; set; }
+            public PanelContainer? Panel { get; set; }
+            public Label? Label { get; set; }
+
+            public string DisplayMessage => ToastFoldRules.BuildDisplayMessage(BaseMessage, Count);
+        }
+
         private const float ToastDuration = 2.8f;
         private const float FadeOutDuration = 0.4f;
         private const int MaxVisible = 3;
@@ -18,8 +32,9 @@ namespace Xiuxian.Scripts.Ui
         private const int ToastGap = 6;
         private const int TopMargin = 12;
 
-        private readonly Queue<(string message, Color color)> _pendingQueue = new();
-        private readonly List<(PanelContainer panel, float remaining)> _activeToasts = new();
+        private readonly List<ToastRuntimeEntry> _pendingQueue = new();
+        private readonly List<ToastRuntimeEntry> _activeToasts = new();
+        private double _toastClock;
 
         // Track last craft progress to detect completion edges
         private float _lastAlchemyProgress;
@@ -41,44 +56,125 @@ namespace Xiuxian.Scripts.Ui
         public override void _Process(double delta)
         {
             float dt = (float)delta;
+            _toastClock += delta;
 
-            // Update active toasts
             for (int i = _activeToasts.Count - 1; i >= 0; i--)
             {
-                var (panel, remaining) = _activeToasts[i];
-                remaining -= dt;
-                _activeToasts[i] = (panel, remaining);
+                ToastRuntimeEntry entry = _activeToasts[i];
+                entry.Remaining -= dt;
 
-                if (remaining <= FadeOutDuration)
+                if (entry.Panel != null && entry.Remaining <= FadeOutDuration)
                 {
-                    panel.Modulate = new Color(1, 1, 1, Mathf.Max(0, remaining / FadeOutDuration));
+                    entry.Panel.Modulate = new Color(1, 1, 1, Mathf.Max(0, entry.Remaining / FadeOutDuration));
                 }
 
-                if (remaining <= 0)
+                if (entry.Remaining <= 0)
                 {
-                    panel.QueueFree();
+                    entry.Panel?.QueueFree();
                     _activeToasts.RemoveAt(i);
                     RepositionToasts();
                 }
             }
 
-            // Show pending toasts if slots available
             while (_activeToasts.Count < MaxVisible && _pendingQueue.Count > 0)
             {
-                var (message, color) = _pendingQueue.Dequeue();
-                ShowToast(message, color);
+                ToastRuntimeEntry next = _pendingQueue[0];
+                _pendingQueue.RemoveAt(0);
+                ShowToast(next);
             }
         }
 
         /// <summary>
         /// Enqueue a toast message for display.
         /// </summary>
-        public void Enqueue(string message, Color? color = null)
+        public void Enqueue(string message, Color? color = null, string foldKey = "")
         {
-            _pendingQueue.Enqueue((message, color ?? new Color("4B3622")));
+            string normalizedMessage = message?.Trim() ?? string.Empty;
+            if (string.IsNullOrEmpty(normalizedMessage))
+            {
+                return;
+            }
+
+            Color textColor = color ?? new Color("4B3622");
+            double now = _toastClock;
+            string normalizedFoldKey = ToastFoldRules.NormalizeFoldKey(foldKey);
+            if (TryFoldExistingToast(normalizedFoldKey, textColor, now))
+            {
+                return;
+            }
+
+            _pendingQueue.Add(new ToastRuntimeEntry
+            {
+                BaseMessage = normalizedMessage,
+                FoldKey = normalizedFoldKey,
+                TextColor = textColor,
+                Count = 1,
+                Remaining = ToastDuration,
+                LastSeenAt = now,
+            });
         }
 
-        private void ShowToast(string message, Color textColor)
+        private static void PushEventLog(string categoryId, string message, string detail = "", string accentId = EventLogState.AccentNeutral)
+        {
+            ServiceLocator.Instance?.EventLogState?.AddEvent(categoryId, message, detail, accentId);
+        }
+
+        private bool TryFoldExistingToast(string foldKey, Color textColor, double now)
+        {
+            if (string.IsNullOrEmpty(foldKey))
+            {
+                return false;
+            }
+
+            for (int i = _activeToasts.Count - 1; i >= 0; i--)
+            {
+                if (TryFoldEntry(_activeToasts[i], foldKey, textColor, now, refreshLifetime: true))
+                {
+                    return true;
+                }
+            }
+
+            for (int i = _pendingQueue.Count - 1; i >= 0; i--)
+            {
+                if (TryFoldEntry(_pendingQueue[i], foldKey, textColor, now, refreshLifetime: false))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static bool TryFoldEntry(ToastRuntimeEntry entry, string foldKey, Color textColor, double now, bool refreshLifetime)
+        {
+            if (!ToastFoldRules.CanFold(entry.FoldKey, foldKey, entry.LastSeenAt, now))
+            {
+                return false;
+            }
+
+            entry.Count = ToastFoldRules.GetNextCount(entry.Count);
+            entry.LastSeenAt = now;
+            entry.TextColor = textColor;
+            if (refreshLifetime)
+            {
+                entry.Remaining = ToastDuration;
+            }
+
+            if (entry.Label != null)
+            {
+                entry.Label.Text = entry.DisplayMessage;
+                entry.Label.AddThemeColorOverride("font_color", textColor);
+            }
+
+            if (entry.Panel != null)
+            {
+                entry.Panel.Modulate = Colors.White;
+            }
+
+            return true;
+        }
+
+        private void ShowToast(ToastRuntimeEntry entry)
         {
             var panel = new PanelContainer();
             panel.MouseFilter = MouseFilterEnum.Ignore;
@@ -95,9 +191,9 @@ namespace Xiuxian.Scripts.Ui
             panel.AddThemeStyleboxOverride("panel", styleBox);
 
             var label = new Label();
-            label.Text = message;
+            label.Text = entry.DisplayMessage;
             label.HorizontalAlignment = HorizontalAlignment.Center;
-            label.AddThemeColorOverride("font_color", textColor);
+            label.AddThemeColorOverride("font_color", entry.TextColor);
             label.AddThemeFontSizeOverride("font_size", 13);
             label.MouseFilter = MouseFilterEnum.Ignore;
             panel.AddChild(label);
@@ -105,8 +201,11 @@ namespace Xiuxian.Scripts.Ui
             panel.CustomMinimumSize = new Vector2(0, ToastHeight);
             panel.Size = new Vector2(ToastWidth, ToastHeight);
 
+            entry.Label = label;
+            entry.Panel = panel;
+            entry.Remaining = ToastDuration;
             AddChild(panel);
-            _activeToasts.Add((panel, ToastDuration));
+            _activeToasts.Add(entry);
             RepositionToasts();
         }
 
@@ -118,7 +217,12 @@ namespace Xiuxian.Scripts.Ui
 
             for (int i = 0; i < _activeToasts.Count; i++)
             {
-                var (panel, _) = _activeToasts[i];
+                PanelContainer? panel = _activeToasts[i].Panel;
+                if (panel == null)
+                {
+                    continue;
+                }
+
                 panel.Position = new Vector2(x, y);
                 y += ToastHeight + ToastGap;
             }
@@ -129,7 +233,10 @@ namespace Xiuxian.Scripts.Ui
         private void SubscribeEvents()
         {
             ServiceLocator? services = ServiceLocator.Instance;
-            if (services == null) return;
+            if (services == null)
+            {
+                return;
+            }
 
             services.PlayerProgressState?.Connect(
                 PlayerProgressState.SignalName.RealmLevelUp,
@@ -167,7 +274,10 @@ namespace Xiuxian.Scripts.Ui
         private void UnsubscribeEvents()
         {
             ServiceLocator? services = ServiceLocator.Instance;
-            if (services == null) return;
+            if (services == null)
+            {
+                return;
+            }
 
             if (services.PlayerProgressState != null && services.PlayerProgressState.IsConnected(
                     PlayerProgressState.SignalName.RealmLevelUp,
@@ -221,26 +331,33 @@ namespace Xiuxian.Scripts.Ui
 
         private void OnRealmLevelUp(int newRealmLevel)
         {
-            Enqueue($"突破成功 → 炼气{newRealmLevel}层", new Color("C8A050"));
+            string message = $"突破成功 → 炼气{newRealmLevel}层";
+            Enqueue(message, new Color("C8A050"));
+            PushEventLog(EventLogState.CategoryBreakthrough, message, accentId: EventLogState.AccentHighlight);
         }
 
         private void OnMasteryChanged(string systemId, int newLevel)
         {
             string name = UiText.MasterySystemName(systemId);
-            Enqueue($"领悟成功 → {name} Lv{newLevel}", new Color("C8A050"));
+            string message = $"领悟成功 → {name} Lv{newLevel}";
+            Enqueue(message, new Color("C8A050"));
+            PushEventLog(EventLogState.CategoryMastery, message, accentId: EventLogState.AccentHighlight);
         }
 
         private void OnEquipmentInventoryChanged()
         {
-            Enqueue("获得新装备，请查看背包", new Color("6689B3"));
+            const string message = "获得新装备，请查看背包";
+            Enqueue(message, new Color("6689B3"), foldKey: "equipment_new");
+            PushEventLog(EventLogState.CategoryEquipment, message);
         }
 
         private void OnAlchemyChanged(string selectedRecipeId, float currentProgress, float requiredProgress)
         {
-            // Detect completion edge: progress reset after reaching required
             if (_lastAlchemyProgress > 0 && _lastAlchemyProgress >= requiredProgress && currentProgress < _lastAlchemyProgress)
             {
-                Enqueue("炼丹完成", new Color("8CB870"));
+                const string message = "炼丹完成";
+                Enqueue(message, new Color("8CB870"), foldKey: "craft_alchemy_complete");
+                PushEventLog(EventLogState.CategoryCraft, message);
             }
 
             _lastAlchemyProgress = currentProgress;
@@ -250,7 +367,9 @@ namespace Xiuxian.Scripts.Ui
         {
             if (_lastSmithingProgress > 0 && _lastSmithingProgress >= requiredProgress && currentProgress < _lastSmithingProgress)
             {
-                Enqueue("强化完成", new Color("8CB870"));
+                const string message = "强化完成";
+                Enqueue(message, new Color("8CB870"), foldKey: "craft_smithing_complete");
+                PushEventLog(EventLogState.CategoryCraft, message);
             }
 
             _lastSmithingProgress = currentProgress;
@@ -265,6 +384,15 @@ namespace Xiuxian.Scripts.Ui
                 Enqueue(suggestion, new Color("D8CBA6"));
             }
 
+            string detail = string.IsNullOrEmpty(suggestion)
+                ? rewardSummary
+                : string.IsNullOrEmpty(rewardSummary) ? suggestion : $"{rewardSummary}｜{suggestion}";
+            PushEventLog(
+                EventLogState.CategoryCycle,
+                title,
+                detail,
+                requestAttention ? EventLogState.AccentHighlight : EventLogState.AccentNeutral);
+
             if (requestAttention)
             {
                 DisplayServer.WindowRequestAttention();
@@ -274,6 +402,7 @@ namespace Xiuxian.Scripts.Ui
         private void OnShopNoticeReady(string title, string detail)
         {
             Enqueue(string.IsNullOrEmpty(detail) ? title : $"{title}｜{detail}", new Color("C8A050"));
+            PushEventLog(EventLogState.CategorySystem, title, detail);
         }
     }
 }

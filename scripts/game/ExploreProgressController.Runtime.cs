@@ -2689,21 +2689,35 @@ namespace Xiuxian.Scripts.Game
                 monsterType = "elite";
             }
 
+            string rewardSummary = RewardRules.BuildBattleRewardSummary(lingqi, insight, spiritStones, itemPart) + potionSummary;
+            string monsterName = string.IsNullOrEmpty(_battleMonsterName) ? UiText.DefaultMonsterName : _battleMonsterName;
+
             _recentBattleLogs.Insert(0, new BattleLogEntry
             {
                 TimestampUnix = (long)Time.GetUnixTimeFromSystem(),
                 ZoneName = _currentZone,
-                MonsterName = string.IsNullOrEmpty(_battleMonsterName) ? UiText.DefaultMonsterName : _battleMonsterName,
+                MonsterName = monsterName,
                 MonsterType = monsterType,
                 RoundCount = _battleRoundCounter,
                 BattleResult = result,
-                RewardSummary = RewardRules.BuildBattleRewardSummary(lingqi, insight, spiritStones, itemPart) + potionSummary,
+                RewardSummary = rewardSummary,
             });
 
             if (_recentBattleLogs.Count > 10)
             {
                 _recentBattleLogs.RemoveAt(_recentBattleLogs.Count - 1);
             }
+
+            ServiceLocator.Instance?.EventLogState?.AddBattleEvent(
+                _currentZone,
+                monsterName,
+                monsterType,
+                _battleRoundCounter,
+                result,
+                rewardSummary,
+                lingqi,
+                insight,
+                spiritStones);
         }
 
         private void ApplyAutoConsumables(bool isBattleStart)

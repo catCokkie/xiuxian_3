@@ -45,6 +45,11 @@ namespace Xiuxian.Scripts.Services
 
                 values[key] = value;
             }
+
+            internal IEnumerable<KeyValuePair<string, Dictionary<string, object>>> EnumerateSections()
+            {
+                return _sections;
+            }
         }
 
         public static bool NeedsMigration(int savedVersion) => savedVersion < LatestVersion;
@@ -57,6 +62,58 @@ namespace Xiuxian.Scripts.Services
         public static void MigrateToLatest(MigrationStore cfg, int fromVersion)
         {
             MigrateToLatest((IMigrationStore)cfg, fromVersion);
+        }
+
+        public static bool TryMigrateToLatestCopy(ConfigFile source, out ConfigFile preparedConfig, out bool migrated, out SaveMigrationException? error)
+        {
+            preparedConfig = CloneConfig(source);
+            migrated = false;
+            error = null;
+
+            int version = preparedConfig.GetValue("meta", "version", 1).AsInt32();
+            if (!NeedsMigration(version))
+            {
+                return true;
+            }
+
+            try
+            {
+                MigrateToLatest(preparedConfig, version);
+                migrated = true;
+                return true;
+            }
+            catch (SaveMigrationException ex)
+            {
+                error = ex;
+                preparedConfig = new ConfigFile();
+                return false;
+            }
+        }
+
+        public static bool TryMigrateToLatestCopy(MigrationStore source, out MigrationStore preparedStore, out bool migrated, out SaveMigrationException? error)
+        {
+            preparedStore = CloneStore(source);
+            migrated = false;
+            error = null;
+
+            int version = ReadInt(preparedStore.GetValue("meta", "version", 1), 1);
+            if (!NeedsMigration(version))
+            {
+                return true;
+            }
+
+            try
+            {
+                MigrateToLatest(preparedStore, version);
+                migrated = true;
+                return true;
+            }
+            catch (SaveMigrationException ex)
+            {
+                error = ex;
+                preparedStore = new MigrationStore();
+                return false;
+            }
         }
 
         private static void MigrateToLatest(IMigrationStore cfg, int fromVersion)
@@ -743,6 +800,66 @@ namespace Xiuxian.Scripts.Services
                 default:
                     return value.ToString() ?? string.Empty;
             }
+        }
+
+        private static ConfigFile CloneConfig(ConfigFile source)
+        {
+            ConfigFile clone = new();
+            foreach (string section in source.GetSections())
+            {
+                foreach (string key in source.GetSectionKeys(section))
+                {
+                    clone.SetValue(section, key, source.GetValue(section, key, default(Variant)));
+                }
+            }
+
+            return clone;
+        }
+
+        private static MigrationStore CloneStore(MigrationStore source)
+        {
+            MigrationStore clone = new();
+            foreach ((string section, Dictionary<string, object> values) in source.EnumerateSections())
+            {
+                foreach ((string key, object value) in values)
+                {
+                    clone.SetValue(section, key, ClonePlainValue(value));
+                }
+            }
+
+            return clone;
+        }
+
+        private static object ClonePlainValue(object value)
+        {
+            return value switch
+            {
+                Dictionary<string, object> dict => CloneDictionary(dict),
+                IList list => CloneList(list),
+                _ => value,
+            };
+        }
+
+        private static Dictionary<string, object> CloneDictionary(Dictionary<string, object> source)
+        {
+            var clone = new Dictionary<string, object>(source.Count, StringComparer.Ordinal);
+            foreach ((string key, object value) in source)
+            {
+                clone[key] = ClonePlainValue(value);
+            }
+
+            return clone;
+        }
+
+        private static List<object> CloneList(IList source)
+        {
+            var clone = new List<object>(source.Count);
+            foreach (object item in source)
+            {
+                clone.Add(ClonePlainValue(item));
+            }
+
+            return clone;
         }
 
         private static object ConvertFromVariant(Variant value)

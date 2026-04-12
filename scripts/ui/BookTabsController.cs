@@ -28,7 +28,7 @@ public partial class BookTabsController : Control
     private readonly Dictionary<string, string> _leftTabContentMap = new()
     {
         { "CultivationTab", UiText.CultivationTemplate },
-        { "BattleLogTab", UiText.BattleLogEmpty },
+        { "BattleLogTab", EventLogPresentationRules.BuildEmptyText() },
         { "EquipmentTab", UiText.EquipmentTemplate },
         { "BackpackTab", UiText.BackpackTemplate },
         { "ShopTab", UiText.ShopTemplate },
@@ -158,6 +158,7 @@ public partial class BookTabsController : Control
     private PlayerProgressState? _playerProgressState;
     private CultivationRhythmState? _cultivationRhythmState;
     private ShopState? _shopState;
+    private EventLogState? _eventLogState;
     private PlayerActionState? _playerActionState;
     private EquippedItemsState? _equippedItemsState;
     private SubsystemMasteryState? _subsystemMasteryState;
@@ -239,6 +240,7 @@ public partial class BookTabsController : Control
         _playerProgressState = services?.PlayerProgressState;
         _cultivationRhythmState = services?.CultivationRhythmState;
         _shopState = services?.ShopState;
+        _eventLogState = services?.EventLogState;
         _playerActionState = services?.PlayerActionState;
         _equippedItemsState = services?.EquippedItemsState;
         _subsystemMasteryState = services?.SubsystemMasteryState;
@@ -306,6 +308,10 @@ public partial class BookTabsController : Control
         if (_shopState != null)
         {
             _shopState.ShopChanged += OnShopChanged;
+        }
+        if (_eventLogState != null)
+        {
+            _eventLogState.EntriesChanged += OnEventLogChanged;
         }
         if (_equippedItemsState != null)
         {
@@ -425,6 +431,10 @@ public partial class BookTabsController : Control
         {
             _shopState.ShopChanged -= OnShopChanged;
         }
+        if (_eventLogState != null)
+        {
+            _eventLogState.EntriesChanged -= OnEventLogChanged;
+        }
         if (_equippedItemsState != null)
         {
             _equippedItemsState.EquippedItemsChanged -= OnEquippedItemsChanged;
@@ -455,6 +465,10 @@ public partial class BookTabsController : Control
         ActiveLeftTabName = leftTabName;
         ActiveRightTabName = rightTabName;
         _isShowingRightTab = false;
+        if (ActiveLeftTabName == "BattleLogTab")
+        {
+            _eventLogState?.MarkAllRead();
+        }
 
         RefreshUnlockedTabs(emitIfActiveTabChanged: false);
         RefreshCurrentPageContent();
@@ -532,6 +546,10 @@ public partial class BookTabsController : Control
 
         ActiveLeftTabName = tabName;
         _isShowingRightTab = false;
+        if (ActiveLeftTabName == "BattleLogTab")
+        {
+            _eventLogState?.MarkAllRead();
+        }
         RefreshUnlockedTabs(emitIfActiveTabChanged: false);
         RefreshCurrentPageContent();
         EmitSignal(SignalName.ActiveTabsChanged, ActiveLeftTabName, ActiveRightTabName);
@@ -611,6 +629,16 @@ public partial class BookTabsController : Control
 
     private void OnShopChanged()
     {
+        RefreshDynamicTabContent();
+    }
+
+    private void OnEventLogChanged()
+    {
+        if (!_isShowingRightTab && ActiveLeftTabName == "BattleLogTab")
+        {
+            _eventLogState?.MarkAllRead();
+        }
+
         RefreshDynamicTabContent();
     }
 
@@ -793,9 +821,14 @@ public partial class BookTabsController : Control
 
     private string BuildBattleLogText()
     {
+        if (_eventLogState != null)
+        {
+            return _eventLogState.BuildFeedText();
+        }
+
         if (_exploreProgressController == null)
         {
-            return UiText.BattleLogEmpty;
+            return EventLogPresentationRules.BuildEmptyText();
         }
 
         return _exploreProgressController.BuildRecentBattleLogText();
@@ -4171,7 +4204,7 @@ public partial class BookTabsController : Control
     private void ApplyStaticTexts()
     {
         SetButtonText("TopStrip/LeftTabs/CultivationTab", UiText.LeftTabCultivation);
-        SetButtonText("TopStrip/LeftTabs/BattleLogTab", UiText.LeftTabBattleLog);
+        SetButtonText("TopStrip/LeftTabs/BattleLogTab", "动态");
         SetButtonText("TopStrip/LeftTabs/EquipmentTab", UiText.LeftTabEquipment);
         SetButtonText("TopStrip/LeftTabs/BackpackTab", UiText.LeftTabBackpack);
         SetButtonText("TopStrip/LeftTabs/ShopTab", UiText.LeftTabShop);

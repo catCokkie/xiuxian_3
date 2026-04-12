@@ -353,6 +353,44 @@ public sealed class SaveMigrationRulesTests
     }
 
     [Fact]
+    public void TryMigrateToLatestCopy_MigratesCloneWithoutMutatingSourceConfig()
+    {
+        SaveMigrationRules.MigrationStore source = new();
+        source.SetValue("meta", "version", 13);
+
+        bool ok = SaveMigrationRules.TryMigrateToLatestCopy(source, out SaveMigrationRules.MigrationStore prepared, out bool migrated, out SaveMigrationException? error);
+
+        Assert.True(ok);
+        Assert.True(migrated);
+        Assert.Null(error);
+        Assert.Equal(13, System.Convert.ToInt32(source.GetValue("meta", "version", 0)));
+        Assert.False(source.HasSectionKey("stats", "player"));
+        Assert.Equal(SaveMigrationRules.LatestVersion, System.Convert.ToInt32(prepared.GetValue("meta", "version", 0)));
+        Assert.True(prepared.HasSectionKey("stats", "player"));
+    }
+
+    [Fact]
+    public void TryMigrateToLatestCopy_LeavesSourceUntouchedWhenMigrationFails()
+    {
+        SaveMigrationRules.MigrationStore source = new();
+        source.SetValue("meta", "version", 13);
+        source.SetValue("stats", "player", new System.Collections.Generic.Dictionary<string, object>
+        {
+            ["total_battle_losses"] = "bad"
+        });
+
+        bool ok = SaveMigrationRules.TryMigrateToLatestCopy(source, out SaveMigrationRules.MigrationStore prepared, out bool migrated, out SaveMigrationException? error);
+
+        Assert.False(ok);
+        Assert.False(migrated);
+        Assert.NotNull(error);
+        Assert.Equal(13, System.Convert.ToInt32(source.GetValue("meta", "version", 0)));
+        var stats = (System.Collections.Generic.Dictionary<string, object>)source.GetValue("stats", "player", new System.Collections.Generic.Dictionary<string, object>());
+        Assert.Equal("bad", System.Convert.ToString(stats["total_battle_losses"]));
+        Assert.False(prepared.HasSectionKey("stats", "player"));
+    }
+
+    [Fact]
     public void SaveMigrationException_ContainsVersionInfo()
     {
         var inner = new System.InvalidOperationException("test corruption");
