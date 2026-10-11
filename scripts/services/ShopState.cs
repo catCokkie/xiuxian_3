@@ -67,6 +67,10 @@ namespace Xiuxian.Scripts.Services
             }
 
             int realmLevel = ServiceLocator.Instance?.PlayerProgressState?.RealmLevel ?? 1;
+            if (!item.IsAvailable) { reason = "功能预留，暂不可购买"; return false; }
+            if ((itemId == ShopRules.ItemGardenPlot3 || itemId == ShopRules.ItemGardenPlot4 || itemId == ShopRules.ItemGardenPlot5 || itemId == ShopRules.ItemGardenPlot6)
+                && (_gardenState?.GetUnlockedPlotCount() ?? 2) >= GardenRules.MaxPlotCount)
+            { reason = "田位已满，无需扩容"; return false; }
             if (realmLevel < item.UnlockRealmLevel)
             {
                 reason = $"需炼气 {item.UnlockRealmLevel} 层";
@@ -238,7 +242,7 @@ namespace Xiuxian.Scripts.Services
             string doubleYield = ActiveDoubleYieldSeconds > 0.0
                 ? $"双倍产出剩余 {FormatDuration(ActiveDoubleYieldSeconds)}"
                 : "双倍产出未激活";
-            return $"{doubleYield} | 残页 {pageFragments}/10 | 灵田扩容 {2 + GardenPlotUnlockCount}/6 | 背包扩容 +{BackpackExpansionCount * 10}";
+            return $"{doubleYield} | 残页 {pageFragments}/10 | 灵田田位 {_gardenState?.GetUnlockedPlotCount() ?? 2}/6 | 背包扩容暂未开放";
         }
 
         public Godot.Collections.Dictionary<string, Variant> ToDictionary()
@@ -287,14 +291,14 @@ namespace Xiuxian.Scripts.Services
             }
         }
 
-        private void OnSettlementApplied(double apFinal10s, double lingqiGain, double insightGain, double realmExpGain)
+        private void OnSettlementApplied(double apFinal, double lingqiGain, double insightGain, double realmExpGain, double activeSeconds)
         {
-            if (apFinal10s <= 0.0 || ActiveDoubleYieldSeconds <= 0.0)
+            if (apFinal <= 0.0 || activeSeconds <= 0.0 || ActiveDoubleYieldSeconds <= 0.0)
             {
                 return;
             }
 
-            ActiveDoubleYieldSeconds = Math.Max(0.0, ActiveDoubleYieldSeconds - (_activityConversionService?.SettlementIntervalSeconds ?? 10.0));
+            ActiveDoubleYieldSeconds = Math.Max(0.0, ActiveDoubleYieldSeconds - activeSeconds);
             EmitSignal(SignalName.ShopChanged);
         }
 

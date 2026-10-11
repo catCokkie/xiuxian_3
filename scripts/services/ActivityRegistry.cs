@@ -263,39 +263,23 @@ namespace Xiuxian.Scripts.Services
                 OfflineEfficiency = 0.5,
             };
 
-            cooking.AddRecipe(new SimpleRecipeDefinition
+            MaterialCost[][] inputs = {
+                new[] { new MaterialCost("spirit_fish", 2), new MaterialCost("spirit_spring_water", 1) },
+                new[] { new MaterialCost("cold_scale_fish", 2), new MaterialCost("spirit_flower", 1) },
+                new[] { new MaterialCost("deep_abyss_fish", 3), new MaterialCost("spirit_ink", 1) },
+                new[] { new MaterialCost("armored_fish", 2), new MaterialCost("cold_iron_ore", 1) }
+            };
+            string[] ids = { "cooking_spirit_porridge", "cooking_fruit_jelly", "cooking_dragon_soup", "cooking_iron_fish_meal" };
+            double[] costs = { 40, 50, 70, 60 };
+            for (int i = 0; i < MealRules.Meals.Length; i++)
             {
-                RecipeId = "cooking_spirit_porridge",
-                SystemId = PlayerActionState.ModeCooking,
-                DisplayName = "灵鱼粥",
-                Inputs = new[] { new MaterialCost("spirit_fish", 2), new MaterialCost("spirit_herb", 1) },
-                LingqiCost = 40.0,
-                RequiredInputEvents = 200,
-                Outputs = new[] { new MaterialOutput("food_spirit_porridge", 1) },
-                RequiredMasteryLevel = 1,
-            });
-            cooking.AddRecipe(new SimpleRecipeDefinition
-            {
-                RecipeId = "cooking_fruit_jelly",
-                SystemId = PlayerActionState.ModeCooking,
-                DisplayName = "灵果蜜饮",
-                Inputs = new[] { new MaterialCost("spirit_fruit", 2), new MaterialCost("spirit_flower", 1) },
-                LingqiCost = 60.0,
-                RequiredInputEvents = 240,
-                Outputs = new[] { new MaterialOutput("food_fruit_jelly", 1) },
-                RequiredMasteryLevel = 2,
-            });
-            cooking.AddRecipe(new SimpleRecipeDefinition
-            {
-                RecipeId = "cooking_dragon_soup",
-                SystemId = PlayerActionState.ModeCooking,
-                DisplayName = "龙涎鱼汤",
-                Inputs = new[] { new MaterialCost("spirit_fish", 1), new MaterialCost("dragon_saliva", 1) },
-                LingqiCost = 100.0,
-                RequiredInputEvents = 280,
-                Outputs = new[] { new MaterialOutput("food_dragon_soup", 1) },
-                RequiredMasteryLevel = 4,
-            });
+                var meal = MealRules.Meals[i];
+                cooking.AddRecipe(new SimpleRecipeDefinition {
+                    RecipeId = ids[i], SystemId = PlayerActionState.ModeCooking, DisplayName = meal.Name,
+                    Inputs = inputs[i], LingqiCost = costs[i], RequiredInputEvents = 200 + i * 40,
+                    Outputs = new[] { new MaterialOutput(meal.Id, 1) }, RequiredMasteryLevel = meal.RequiredMastery
+                });
+            }
 
             Register(cooking);
         }

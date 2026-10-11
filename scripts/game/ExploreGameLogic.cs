@@ -177,7 +177,12 @@ namespace Xiuxian.Scripts.Game
             IReadOnlyList<EquipmentStatProfile> equippedProfiles,
             bool isBossBattle,
             int maxBossBattleRounds,
-            Action? afterRoundResolved = null)
+            Action? afterRoundResolved = null,
+            MonsterStatProfile? monsterProfile = null,
+            Func<double>? criticalRoll = null,
+            bool suppressMonsterHealing = false,
+            int healPerRound = 0,
+            double incomingDamageReduction = 0)
         {
             BattleInputProgress progress = BattleRules.ConsumeBattleInputs(PendingBattleInputEvents, inputEvents, InputsPerBattleRoundRuntime);
             PendingBattleInputEvents = progress.RemainingInputs;
@@ -193,15 +198,22 @@ namespace Xiuxian.Scripts.Game
                     playerBaseStats,
                     equippedProfiles ?? Array.Empty<EquipmentStatProfile>(),
                     PlayerHp);
-                CharacterBattleSnapshot monsterSnapshot = new(EnemyMaxHp, EnemyHp, EnemyAttackPower, 0, 1, 0.0, 1.5);
+                CharacterStatBlock enemyStats = monsterProfile?.BaseStats ?? new CharacterStatBlock(EnemyMaxHp, EnemyAttackPower, 0, 1, 0, 1.5);
+                CharacterBattleSnapshot monsterSnapshot = CharacterStatRules.CreateBattleSnapshot(
+                    enemyStats with { MaxHp = EnemyMaxHp, Attack = Math.Max(1, (int)Math.Round(EnemyAttackPower * (1 - incomingDamageReduction))) }, EnemyHp);
                 BattleRoundResult roundResult = BattleRules.ResolvePlayerVsMonsterRound(
                     playerSnapshot,
                     monsterSnapshot,
                     EnemyDamageDividerRuntime,
-                    EnemyMinDamageRuntime);
+                    EnemyMinDamageRuntime, criticalRoll?.Invoke() ?? 1.0, criticalRoll?.Invoke() ?? 1.0);
 
                 EnemyHp = roundResult.Monster.CurrentHp;
                 PlayerHp = roundResult.Player.CurrentHp;
+                if (roundResult.Outcome == BattleOutcome.Ongoing)
+                {
+                    if (!suppressMonsterHealing) EnemyHp = Math.Min(EnemyMaxHp, EnemyHp + Math.Max(0, monsterProfile?.HealPerRound ?? 0));
+                    PlayerHp = Math.Min(roundResult.Player.MaxHp, PlayerHp + Math.Max(0, healPerRound));
+                }
                 afterRoundResolved?.Invoke();
 
                 BattleFlowDecision flowDecision = BattleRules.DetermineBattleFlow(roundResult.Outcome);

@@ -650,11 +650,11 @@ public sealed class CoreRegressionRulesTests
     }
 
     [Fact]
-    public void DetermineDefeatReset_ResetsProgressForBossDefeatOnly()
+    public void DetermineDefeatReset_PreservesProgressForBossDefeat()
     {
         BattleDefeatDecision boss = BattleLifecycleRules.DetermineDefeatReset("lv_test_001", isBossBattle: true);
 
-        Assert.True(boss.ShouldResetExploreProgress);
+        Assert.False(boss.ShouldResetExploreProgress);
         Assert.False(boss.ShouldResetLevel);
     }
 

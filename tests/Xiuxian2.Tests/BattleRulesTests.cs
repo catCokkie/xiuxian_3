@@ -69,7 +69,7 @@ public sealed class BattleRulesTests
     [Fact]
     public void ResolvePlayerVsMonsterRound_DoubleKO()
     {
-        CharacterBattleSnapshot player = new(8, 4, 8, 1, 1, 0.0, 1.5);
+        CharacterBattleSnapshot player = new(8, 4, 8, 0, 1, 0.0, 1.5);
         CharacterBattleSnapshot monster = new(8, 8, 4, 0, 1, 0.0, 1.5);
 
         BattleRoundResult result = BattleRules.ResolvePlayerVsMonsterRound(player, monster, 1, 1);

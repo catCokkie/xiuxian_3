@@ -1,19 +1,11 @@
 using Godot;
 using Xiuxian.Scripts.Services;
+using Xiuxian.Scripts.UI;
 
 public partial class MainBarLayoutController : Control
 {
     private const float DefaultMinWidth = 800.0f;
     private const float DefaultMaxWidth = 1500.0f;
-    private const float RightMargin = 12.0f;
-    private const float LeftPadding = 8.0f;
-    private const float ControlGap = 8.0f;
-    private const float ControlRowHeight = 26.0f;
-    private const float ControlRowY = 172.0f;
-    private const float BattleTrackTopY = 6.0f;
-    private const float BattleTrackBottomY = 164.0f;
-    private const float MinBattleTrackWidth = 220.0f;
-    private const float MinOptionButtonWidth = 92.0f;
 
     [Signal]
     public delegate void BookButtonPressedEventHandler();
@@ -47,6 +39,14 @@ public partial class MainBarLayoutController : Control
     private Vector2 _lastMousePos;
     private float _fixedBottomY;
     private float _bottomMargin;
+    private float _preferredWidth = 1152;
+    private Vector2 _lastViewport;
+    private float _lastBreakthroughWidth;
+    private float _lastWorkWidth;
+    private bool _expanded;
+    private Button? _workButton;
+    private Label _exploreCaption = null!;
+    private Label _cultivationCaption = null!;
 
     public override void _Ready()
     {
@@ -64,6 +64,7 @@ public partial class MainBarLayoutController : Control
         _validationPanel = GetNode<Panel>("Chrome/ConfigValidationPanel");
         _actionModeOptionButton = GetNodeOrNull<OptionButton>("Chrome/ActionModeOptionButton");
         _levelOptionButton = GetNodeOrNull<OptionButton>("Chrome/LevelOptionButton");
+        ApplyCompactTheme();
         EnsureBookUnreadBadge();
 
         _dragHandle.GuiInput += OnDragHandleGuiInput;
@@ -71,11 +72,26 @@ public partial class MainBarLayoutController : Control
         _bookButton.Pressed += () => EmitSignal(SignalName.BookButtonPressed);
         _dragHandle.Text = UiText.DragHandle;
         _resizeHandle.Text = UiText.ResizeHandle;
-        _bookButton.Text = UiText.BookButton;
+        _bookButton.Text = string.Empty;
+        _bookButton.Icon = GameArtCatalog.Get("ui:book");
+        _bookButton.AddThemeConstantOverride("icon_max_width", 24);
+        _bookButton.ExpandIcon = true;
+        _bookButton.TooltipText = "打开修炼书卷";
         _zoneLabel.Visible = false;
         SetBookUnreadCount(0);
 
-        _bottomMargin = Mathf.Max(MinBottomMargin, GetViewportRect().Size.Y - (Position.Y + Size.Y));
+        _bottomMargin = MinBottomMargin;
+        _preferredWidth = Size.X;
+        _exploreCaption = new Label { Text = "探索", MouseFilter = MouseFilterEnum.Ignore };
+        _cultivationCaption = new Label { Text = "修炼", MouseFilter = MouseFilterEnum.Ignore };
+        GetNode<Control>("Chrome").AddChild(_exploreCaption);
+        GetNode<Control>("Chrome").AddChild(_cultivationCaption);
+        _realmStageLabel.ClipText = true;
+        _realmStageLabel.AddThemeColorOverride("font_color", new Color("FFF6E2"));
+        if (_levelOptionButton != null) { _levelOptionButton.ClipText = true; _levelOptionButton.FitToLongestItem = false; }
+        if (_actionModeOptionButton != null) { _actionModeOptionButton.ClipText = true; _actionModeOptionButton.FitToLongestItem = false; }
+        _cultivationLabel.ClipText = true;
+        _cultivationLabel.HorizontalAlignment = HorizontalAlignment.Right;
         _fixedBottomY = GetBottomLockedY();
         Position = new Vector2(Position.X, _fixedBottomY);
         UpdateRightAnchoredLayout();
@@ -83,17 +99,35 @@ public partial class MainBarLayoutController : Control
 
     public override void _Process(double delta)
     {
-        if (!LockToBottom)
+        Vector2 viewport = GetViewportRect().Size;
+        if (_workButton == null)
         {
-            return;
+            _workButton = GetNodeOrNull<Button>("Chrome/BattleTrack/WorkModeButton");
+            if (_workButton != null) { _workButton.Reparent(GetNode("Chrome")); UpdateRightAnchoredLayout(); }
         }
+        float width = Mathf.Min(_preferredWidth, Mathf.Max(320, viewport.X - 16));
+        float height = _expanded ? 210 : 96;
+        float breakthroughWidth = _breakthroughButton.GetCombinedMinimumSize().X;
+        float workWidth = _workButton?.GetCombinedMinimumSize().X ?? 0;
+        if (Size != new Vector2(width, height) || _lastViewport != viewport || _lastBreakthroughWidth != breakthroughWidth || _lastWorkWidth != workWidth)
+        {
+            Size = new Vector2(width, height);
+            _lastViewport = viewport;
+            _lastBreakthroughWidth = breakthroughWidth;
+            _lastWorkWidth = workWidth;
+            UpdateRightAnchoredLayout();
+        }
+        float x = Mathf.Clamp(Position.X, 8, Mathf.Max(8, viewport.X - Size.X - 8));
+        Position = new Vector2(x, LockToBottom ? GetBottomLockedY() : Position.Y);
+        _validationPanel.Hide();
+    }
 
-        float nextY = GetBottomLockedY();
-        _fixedBottomY = nextY;
-        if (!Mathf.IsEqualApprox(Position.Y, nextY))
-        {
-            Position = new Vector2(Position.X, nextY);
-        }
+    public void SetBattleExpanded(bool expanded)
+    {
+        if (_expanded == expanded) return;
+        _expanded = expanded;
+        Size = new Vector2(Size.X, expanded ? 210 : 96);
+        UpdateRightAnchoredLayout();
     }
 
     public override void _Input(InputEvent @event)
@@ -126,7 +160,8 @@ public partial class MainBarLayoutController : Control
 
         if (_isResizing)
         {
-            float nextWidth = Mathf.Clamp(Size.X + mouseMotion.Relative.X, MinWidth, MaxWidth);
+            float nextWidth = Mathf.Clamp(Size.X + mouseMotion.Relative.X, Mathf.Min(MinWidth, GetViewportRect().Size.X - 16), Mathf.Min(MaxWidth, GetViewportRect().Size.X - 16));
+            _preferredWidth = nextWidth;
             Size = new Vector2(nextWidth, Size.Y);
             UpdateRightAnchoredLayout();
             EmitSignal(SignalName.LayoutChanged, Position.X, Size.X);
@@ -152,7 +187,8 @@ public partial class MainBarLayoutController : Control
 
     public void ApplyLayout(float x, float width)
     {
-        float clampedWidth = Mathf.Clamp(width, MinWidth, MaxWidth);
+        _preferredWidth = Mathf.Clamp(width, MinWidth, MaxWidth);
+        float clampedWidth = Mathf.Min(_preferredWidth, Mathf.Max(320, GetViewportRect().Size.X - 16));
         Size = new Vector2(clampedWidth, Size.Y);
 
         float maxX = GetViewportRect().Size.X - Size.X;
@@ -169,83 +205,65 @@ public partial class MainBarLayoutController : Control
         UpdateBookUnreadBadgeLayout();
     }
 
+    private static void Place(Control control, float x, float y, float width, float height)
+    {
+        control.SetAnchorsPreset(LayoutPreset.TopLeft);
+        control.Position = new Vector2(x, y); control.Size = new Vector2(width, height);
+    }
+
     private void UpdateRightAnchoredLayout()
     {
-        float panelWidth = Size.X;
-        float dragW = 44.0f;
-
-        float trackLeft = dragW + ControlGap;
-        float trackRight = panelWidth - RightMargin;
-        float trackWidth = Mathf.Max(MinBattleTrackWidth, trackRight - trackLeft);
-        _battleTrack.Position = new Vector2(trackLeft, BattleTrackTopY);
-        _battleTrack.Size = new Vector2(trackWidth, BattleTrackBottomY - BattleTrackTopY);
-
-        float controlX = LeftPadding;
-        _realmStageLabel.Position = new Vector2(controlX, ControlRowY);
-        controlX += _realmStageLabel.Size.X + ControlGap;
-
-        float bookW = 42.0f;
-        float resizeW = 36.0f;
-        float rightButtonsWidth = bookW + ControlGap + resizeW + RightMargin;
-        float rightButtonsStartX = panelWidth - rightButtonsWidth;
-
-        float optionBudget = Mathf.Max(0.0f, rightButtonsStartX - controlX - ControlGap);
-        float actionButtonWidth = Mathf.Min(130.0f, optionBudget * 0.35f);
-        float levelButtonWidth = Mathf.Max(MinOptionButtonWidth, optionBudget - actionButtonWidth - ControlGap);
-        actionButtonWidth = Mathf.Max(MinOptionButtonWidth, actionButtonWidth);
-
-        if (_actionModeOptionButton != null)
-        {
-            _actionModeOptionButton.Position = new Vector2(controlX, ControlRowY);
-            _actionModeOptionButton.Size = new Vector2(actionButtonWidth, ControlRowHeight);
-            controlX += actionButtonWidth + ControlGap;
-        }
-
-        if (_levelOptionButton != null)
-        {
-            _levelOptionButton.Position = new Vector2(controlX, ControlRowY);
-            _levelOptionButton.Size = new Vector2(levelButtonWidth, ControlRowHeight);
-        }
-
+        float width = Size.X;
+        float selectorY = Size.Y - 62;
+        float progressY = Size.Y - 30;
+        float bookX = width - 98;
+        Place(_dragHandle, 8, 6, 32, 24);
+        Place(_realmStageLabel, 8, selectorY, 116, 28);
+        float modeWidth = Mathf.Max(160, _actionModeOptionButton?.GetCombinedMinimumSize().X ?? 160);
+        if (_actionModeOptionButton != null) Place(_actionModeOptionButton, 132, selectorY, modeWidth, 28);
+        float targetX = 140 + modeWidth;
+        float workWidth = _workButton == null ? 0 : Mathf.Max(110, _workButton.GetCombinedMinimumSize().X);
+        float targetWidth = Mathf.Max(100, bookX - workWidth - 24 - targetX);
+        if (_levelOptionButton != null) Place(_levelOptionButton, targetX, selectorY, targetWidth, 28);
+        if (_workButton != null) Place(_workButton, bookX - workWidth - 12, selectorY, workWidth, 28);
+        Place(_bookButton, bookX, selectorY, 42, 28);
+        Place(_resizeHandle, width - 48, selectorY, 36, 28);
+        float breakthroughWidth = Mathf.Max(78, _breakthroughButton.GetCombinedMinimumSize().X);
+        float cultivationWidth = Mathf.Max(120, (width - breakthroughWidth - 120) * .44f);
+        Place(_cultivationCaption, 8, progressY, 36, 24);
+        Place(_cultivationProgressBar, 48, progressY + 3, cultivationWidth, 18);
+        float breakthroughX = 56 + cultivationWidth;
+        Place(_breakthroughButton, breakthroughX, progressY - 1, breakthroughWidth, 26);
+        float exploreX = breakthroughX + breakthroughWidth + 48;
+        Place(_exploreCaption, exploreX - 36, progressY, 32, 24);
+        Place(_exploreProgressBar, exploreX, progressY + 3, Mathf.Max(80, width - exploreX - 12), 18);
+        Place(_battleTrack, 48, 6, _expanded ? width - 60 : Mathf.Max(200, width - 376), _expanded ? 138 : 26);
+        _battleTrack.ClipContents = true;
+        Place(_cultivationLabel, width - 312, 7, 300, 22);
+        _cultivationLabel.Visible = !_expanded;
         _activityRateLabel.Visible = false;
-        if (_validationPanel != null)
-        {
-            _validationPanel.Visible = false;
-        }
-
-        _bookButton.Position = new Vector2(panelWidth - RightMargin - resizeW - ControlGap - bookW, ControlRowY);
-        _bookButton.Size = new Vector2(bookW, ControlRowHeight);
-        _resizeHandle.Position = new Vector2(panelWidth - RightMargin - resizeW, ControlRowY);
-        _resizeHandle.Size = new Vector2(resizeW, ControlRowHeight);
+        _zoneLabel.Visible = false;
+        _validationPanel.Visible = false;
         UpdateBookUnreadBadgeLayout();
+    }
 
-        float barAreaRight = rightButtonsStartX - ControlGap;
-        float breakthroughWidth = _breakthroughButton?.Size.X > 0.0f ? _breakthroughButton.Size.X : 78.0f;
-        float cultivationWidth = Mathf.Clamp(barAreaRight * 0.22f, 120.0f, 240.0f);
-        float exploreWidth = Mathf.Clamp(barAreaRight * 0.22f, 120.0f, 228.0f);
-
-        float exploreX = barAreaRight - exploreWidth;
-        float breakthroughX = exploreX - ControlGap - breakthroughWidth;
-        float cultivationX = breakthroughX - ControlGap - cultivationWidth;
-
-        float barRowY = ControlRowY;
-
-        _exploreProgressBar.Position = new Vector2(exploreX, barRowY);
-        _exploreProgressBar.Size = new Vector2(exploreWidth, _exploreProgressBar.Size.Y);
-
-        if (_breakthroughButton != null)
+    private void ApplyCompactTheme()
+    {
+        Theme theme = new() { DefaultFontSize = 14 };
+        foreach (string type in new[] { "Button", "OptionButton" })
         {
-            _breakthroughButton.Position = new Vector2(breakthroughX, barRowY - 2.0f);
+            foreach (var state in new[] { ("normal", "5B4838"), ("hover", "73583D"), ("pressed", "80603A"), ("disabled", "826B57") })
+            {
+                StyleBoxFlat style = new() { BgColor = new Color(state.Item2), ContentMarginLeft = 8, ContentMarginRight = 8, ContentMarginTop = 2, ContentMarginBottom = 2 };
+                style.SetCornerRadiusAll(4);
+                theme.SetStylebox(state.Item1, type, style);
+            }
+            theme.SetColor("font_color", type, new Color("FFF6E2"));
+            theme.SetColor("font_disabled_color", type, new Color("DACAB2"));
         }
-
-        _cultivationProgressBar.Position = new Vector2(cultivationX, barRowY);
-        _cultivationProgressBar.Size = new Vector2(cultivationWidth, _cultivationProgressBar.Size.Y);
-
-        _cultivationLabel.Position = new Vector2(cultivationX, barRowY - 18.0f);
-        _cultivationLabel.Size = new Vector2(cultivationWidth + breakthroughWidth + ControlGap + exploreWidth, _cultivationLabel.Size.Y);
-
-        _zoneLabel.Position = new Vector2(exploreX, barRowY - 18.0f);
-        _zoneLabel.Size = new Vector2(exploreWidth, _zoneLabel.Size.Y);
+        foreach (var state in new[] { ("background", "674936"), ("fill", "BA9462") })
+            theme.SetStylebox(state.Item1, "ProgressBar", new StyleBoxFlat { BgColor = new Color(state.Item2) });
+        Theme = theme;
     }
 
     private float GetBottomLockedY()

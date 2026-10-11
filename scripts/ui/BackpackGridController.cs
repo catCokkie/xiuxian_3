@@ -1,6 +1,7 @@
 using Godot;
 using System.Collections.Generic;
 using Xiuxian.Scripts.Services;
+using Xiuxian.Scripts.UI;
 
 /// <summary>
 /// Grid-based backpack display. Replaces the old RichTextLabel list.
@@ -13,12 +14,12 @@ public partial class BackpackGridController : VBoxContainer
     private const int SectionGap = 8;
     private const int DefaultColumns = 12;
 
-    private static readonly Color MaterialColor = new(0.42f, 0.58f, 0.38f, 0.85f);
-    private static readonly Color PotionColor = new(0.35f, 0.48f, 0.65f, 0.85f);
-    private static readonly Color EquipCommonColor = new(0.55f, 0.50f, 0.45f, 0.85f);
-    private static readonly Color EquipArtifactColor = new(0.40f, 0.55f, 0.70f, 0.85f);
-    private static readonly Color EquipSpiritColor = new(0.55f, 0.40f, 0.70f, 0.85f);
-    private static readonly Color EquipTreasureColor = new(0.75f, 0.55f, 0.25f, 0.85f);
+    private static readonly Color MaterialColor = new("E3E5C9");
+    private static readonly Color PotionColor = new("D5DFD9");
+    private static readonly Color EquipCommonColor = new("DED3BD");
+    private static readonly Color EquipArtifactColor = new("D2DDD4");
+    private static readonly Color EquipSpiritColor = new("DED7E1");
+    private static readonly Color EquipTreasureColor = new("EAD6AE");
     private static readonly Color BorderColor = new(0.45f, 0.32f, 0.20f, 1.0f);
     private static readonly Color HoverBorderColor = new(0.85f, 0.70f, 0.35f, 1.0f);
     private static readonly Color SectionLabelColor = new(0.35f, 0.22f, 0.12f, 1.0f);
@@ -65,9 +66,15 @@ public partial class BackpackGridController : VBoxContainer
         _innerContainer.SizeFlagsHorizontal = SizeFlags.ExpandFill;
         _innerContainer.AddThemeConstantOverride("separation", SectionGap);
         _scrollContainer.AddChild(_innerContainer);
+        Resized += UpdateGridColumns;
+        _scrollContainer.Resized += UpdateGridColumns;
+        VisibilityChanged += () => CallDeferred(nameof(UpdateGridColumns));
 
         // Detail popup (initially hidden)
         _detailPopup = new Panel();
+        _detailPopup.Name = "InventoryDetailPopup";
+        _detailPopup.TopLevel = true;
+        _detailPopup.MouseFilter = MouseFilterEnum.Ignore;
         _detailPopup.Visible = false;
         _detailPopup.ZIndex = 10;
         StyleBoxFlat popupStyle = new();
@@ -110,9 +117,8 @@ public partial class BackpackGridController : VBoxContainer
         _actionRow.AddThemeConstantOverride("separation", 8);
         _innerContainer.AddChild(_actionRow);
 
-        AddEquipButton(_actionRow, UiText.BackpackEquipWeapon, EquipmentSlotType.Weapon);
-        AddEquipButton(_actionRow, UiText.BackpackEquipArmor, EquipmentSlotType.Armor);
-        AddEquipButton(_actionRow, UiText.BackpackEquipAccessory, EquipmentSlotType.Accessory);
+        _actionRow.AddChild(new Label { Text = "点击装备穿戴，悬停查看属性与差值。", AutowrapMode = TextServer.AutowrapMode.WordSmart, SizeFlagsHorizontal = SizeFlags.ExpandFill });
+        CallDeferred(nameof(UpdateGridColumns));
 
         if (!hasAnything)
         {
@@ -134,7 +140,7 @@ public partial class BackpackGridController : VBoxContainer
 
             foreach ((string itemId, int amount) in items)
             {
-                Control cell = CreateItemCell(UiText.BackpackItemName(itemId), amount, MaterialColor);
+                Control cell = CreateItemCell(itemId, UiText.BackpackItemName(itemId), amount, MaterialColor);
                 _materialGrid.AddChild(cell);
                 _materialCells.Add(cell);
             }
@@ -151,7 +157,7 @@ public partial class BackpackGridController : VBoxContainer
 
             foreach ((string itemId, int amount) in potions)
             {
-                Control cell = CreateItemCell(UiText.BackpackItemName(itemId), amount, PotionColor);
+                Control cell = CreateItemCell(itemId, UiText.BackpackItemName(itemId), amount, PotionColor);
                 _potionGrid.AddChild(cell);
                 _potionCells.Add(cell);
             }
@@ -170,8 +176,7 @@ public partial class BackpackGridController : VBoxContainer
             {
                 EquipmentInstanceData inst = equipInstances[i];
                 Color bg = GetRarityColor(inst.RarityTier);
-                string slotIcon = GetSlotIcon(inst.Slot);
-                Control cell = CreateEquipmentCell(slotIcon, inst.DisplayName, bg, BuildInstanceTooltip(inst));
+                Control cell = CreateEquipmentCell(GameArtCatalog.Equipment(inst.EquipmentTemplateId, inst.Slot), inst.DisplayName, bg, BuildInstanceTooltip(inst));
                 string capturedId = inst.EquipmentId;
                 ((Button)cell.GetChild(0)).Pressed += () => EmitSignal(SignalName.EquipmentCellClicked, capturedId);
                 _equipmentGrid.AddChild(cell);
@@ -181,8 +186,7 @@ public partial class BackpackGridController : VBoxContainer
             for (int i = 0; i < equipProfiles.Length; i++)
             {
                 EquipmentStatProfile profile = equipProfiles[i];
-                string slotIcon = GetSlotIcon(profile.Slot);
-                Control cell = CreateEquipmentCell(slotIcon, profile.DisplayName, EquipCommonColor, BuildProfileTooltip(profile));
+                Control cell = CreateEquipmentCell(GameArtCatalog.Equipment(string.Empty, profile.Slot), profile.DisplayName, EquipCommonColor, BuildProfileTooltip(profile));
                 string capturedId = profile.EquipmentId;
                 ((Button)cell.GetChild(0)).Pressed += () => EmitSignal(SignalName.EquipmentCellClicked, capturedId);
                 _equipmentGrid.AddChild(cell);
@@ -231,7 +235,7 @@ public partial class BackpackGridController : VBoxContainer
         return header;
     }
 
-    private Control CreateItemCell(string displayName, int count, Color bgColor)
+    private Control CreateItemCell(string itemId, string displayName, int count, Color bgColor)
     {
         Panel cell = new();
         cell.CustomMinimumSize = new Vector2(CellSize, CellSize);
@@ -249,18 +253,21 @@ public partial class BackpackGridController : VBoxContainer
         style.CornerRadiusBottomRight = 3;
         cell.AddThemeStyleboxOverride("panel", style);
 
-        // Item name (top portion, centered)
+        AddCellIcon(cell, GameArtCatalog.Item(itemId), 2);
+
+        // Text and quantity stay readable even for unknown future items.
         Label nameLabel = new();
         nameLabel.Text = displayName.Length > 3 ? displayName[..3] : displayName;
         nameLabel.HorizontalAlignment = HorizontalAlignment.Center;
         nameLabel.VerticalAlignment = VerticalAlignment.Center;
         nameLabel.SetAnchorsPreset(LayoutPreset.FullRect);
         nameLabel.OffsetLeft = 2;
-        nameLabel.OffsetTop = 4;
+        nameLabel.OffsetTop = 30;
         nameLabel.OffsetRight = -2;
         nameLabel.OffsetBottom = -16;
         nameLabel.AddThemeFontSizeOverride("font_size", 13);
-        nameLabel.AddThemeColorOverride("font_color", new Color(0.95f, 0.92f, 0.85f));
+        nameLabel.AddThemeColorOverride("font_color", new Color("201B15"));
+        nameLabel.MouseFilter = MouseFilterEnum.Ignore;
         cell.AddChild(nameLabel);
 
         // Count label (bottom-right)
@@ -273,7 +280,8 @@ public partial class BackpackGridController : VBoxContainer
         countLabel.OffsetRight = -3;
         countLabel.OffsetBottom = -2;
         countLabel.AddThemeFontSizeOverride("font_size", 11);
-        countLabel.AddThemeColorOverride("font_color", new Color(1.0f, 1.0f, 0.85f));
+        countLabel.AddThemeColorOverride("font_color", new Color("201B15"));
+        countLabel.MouseFilter = MouseFilterEnum.Ignore;
         cell.AddChild(countLabel);
 
         // Hover handling for tooltip
@@ -283,7 +291,7 @@ public partial class BackpackGridController : VBoxContainer
         return cell;
     }
 
-    private Control CreateEquipmentCell(string slotIcon, string displayName, Color bgColor, string tooltip)
+    private Control CreateEquipmentCell(Texture2D? icon, string displayName, Color bgColor, string tooltip)
     {
         Panel wrapper = new();
         wrapper.CustomMinimumSize = new Vector2(CellSize, CellSize);
@@ -308,18 +316,7 @@ public partial class BackpackGridController : VBoxContainer
         style.CornerRadiusBottomRight = 3;
         wrapper.AddThemeStyleboxOverride("panel", style);
 
-        // Slot icon (top-left)
-        Label slotLabel = new();
-        slotLabel.Text = slotIcon;
-        slotLabel.SetAnchorsPreset(LayoutPreset.TopLeft);
-        slotLabel.OffsetLeft = 3;
-        slotLabel.OffsetTop = 2;
-        slotLabel.OffsetRight = 20;
-        slotLabel.OffsetBottom = 16;
-        slotLabel.AddThemeFontSizeOverride("font_size", 11);
-        slotLabel.AddThemeColorOverride("font_color", new Color(1.0f, 0.95f, 0.80f));
-        slotLabel.MouseFilter = MouseFilterEnum.Ignore;
-        wrapper.AddChild(slotLabel);
+        AddCellIcon(wrapper, icon, 7);
 
         // Equipment name (centered)
         Label nameLabel = new();
@@ -329,11 +326,11 @@ public partial class BackpackGridController : VBoxContainer
         nameLabel.VerticalAlignment = VerticalAlignment.Center;
         nameLabel.SetAnchorsPreset(LayoutPreset.FullRect);
         nameLabel.OffsetLeft = 2;
-        nameLabel.OffsetTop = 14;
+        nameLabel.OffsetTop = 38;
         nameLabel.OffsetRight = -2;
         nameLabel.OffsetBottom = -4;
         nameLabel.AddThemeFontSizeOverride("font_size", 12);
-        nameLabel.AddThemeColorOverride("font_color", new Color(0.95f, 0.92f, 0.85f));
+        nameLabel.AddThemeColorOverride("font_color", new Color("201B15"));
         nameLabel.MouseFilter = MouseFilterEnum.Ignore;
         wrapper.AddChild(nameLabel);
 
@@ -355,7 +352,9 @@ public partial class BackpackGridController : VBoxContainer
         Vector2 popupPos = new(cellGlobal.X, cellGlobal.Y - _detailPopup.Size.Y - 4);
 
         // Convert to local coordinates relative to this control
-        _detailPopup.GlobalPosition = popupPos;
+        Vector2 viewport = GetViewportRect().Size;
+        if (popupPos.Y < 8) popupPos.Y = cellGlobal.Y + cell.Size.Y + 4;
+        _detailPopup.GlobalPosition = new Vector2(Mathf.Clamp(popupPos.X, 8, Mathf.Max(8, viewport.X - _detailPopup.Size.X - 8)), Mathf.Clamp(popupPos.Y, 8, Mathf.Max(8, viewport.Y - _detailPopup.Size.Y - 8)));
         _detailPopup.Visible = true;
         _detailVisible = true;
     }
@@ -371,7 +370,9 @@ public partial class BackpackGridController : VBoxContainer
     /// </summary>
     public void UpdateGridColumns()
     {
-        int cols = Mathf.Max(1, (int)((Size.X - 20) / (CellSize + CellGap)));
+        if (_scrollContainer == null || !IsVisibleInTree()) return;
+        float available = _scrollContainer.Size.X - _scrollContainer.GetVScrollBar().Size.X - 8;
+        int cols = Mathf.Max(1, (int)((available + CellGap) / (CellSize + CellGap)));
         if (_materialGrid != null) _materialGrid.Columns = cols;
         if (_potionGrid != null) _potionGrid.Columns = cols;
         if (_equipmentGrid != null) _equipmentGrid.Columns = cols;
@@ -395,15 +396,21 @@ public partial class BackpackGridController : VBoxContainer
         EmitSignal(SignalName.EquipmentCellClicked, $"__equip_slot__{slot}");
     }
 
-    private static string GetSlotIcon(EquipmentSlotType slot)
+    private static void AddCellIcon(Control cell, Texture2D? texture, float top)
     {
-        return slot switch
+        var icon = new TextureRect
         {
-            EquipmentSlotType.Weapon => "⚔",
-            EquipmentSlotType.Armor => "🛡",
-            EquipmentSlotType.Accessory => "💎",
-            _ => "?"
+            Name = "ItemIcon", Position = new Vector2(18, top),
+            ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
+            StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered,
+            TextureFilter = TextureFilterEnum.Nearest,
+            MouseFilter = MouseFilterEnum.Ignore,
+            Texture = texture,
         };
+        cell.AddChild(icon);
+        icon.Size = new Vector2(28, 28);
+        // A texture change invalidates minimum size on the next layout pass.
+        icon.SetDeferred(Control.PropertyName.Size, new Vector2(28, 28));
     }
 
     private static Color GetRarityColor(EquipmentRarityTier rarity)
@@ -418,14 +425,15 @@ public partial class BackpackGridController : VBoxContainer
         };
     }
 
-    private static string BuildInstanceTooltip(EquipmentInstanceData inst)
+    private string BuildInstanceTooltip(EquipmentInstanceData inst)
     {
         string rarity = UiText.EquipmentRarityLabel(inst.RarityTier);
         string source = UiText.EquipmentSourceLabel(inst.SourceStage);
         string slot = UiText.SlotLabel(inst.Slot);
         string main = EquipmentPresentationRules.BuildSingleStatLine(inst.MainStatKey, inst.MainStatValue);
         string sub = EquipmentPresentationRules.BuildSubStatSummary(inst.SubStats);
-        return $"[{slot}] {inst.DisplayName}\n{rarity} | {source}\n主属性: {main}\n副属性: {sub}";
+        string comparison = EquipmentPresentationRules.BuildComparisonHint(inst, ServiceLocator.Instance?.EquippedItemsState?.GetEquippedProfiles() ?? System.Array.Empty<EquipmentStatProfile>());
+        return $"[{slot}] {inst.DisplayName} +{inst.EnhanceLevel}\n{rarity} | {source}\n主属性: {main}\n副属性: {sub}\n对比当前装备: {comparison}";
     }
 
     private static string BuildProfileTooltip(EquipmentStatProfile profile)

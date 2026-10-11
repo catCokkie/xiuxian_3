@@ -1,4 +1,4 @@
-﻿# 04 开发里程碑
+# 04 开发里程碑
 
 ## M0 - 技术预研（2-3 天）
 - 完成 Windows 全局键鼠计数 PoC（仅次数，不含内容）。
@@ -37,8 +37,8 @@
 ## M2 当前实现口径（与代码对齐）
 - 子菜单窗口：顶部左右两组页签，内容区单页全宽显示，左上角关闭按钮。
 - 主条窗口：`BattleTrack` 精简为一行核心状态 + 角色/怪物/HP 信息。
-- 状态机最小集：`Exploring`、`InBattle`、`ExploreComplete`。
-- `battle_state` 存档口径：`exploring` / `in_battle`（读档安全回退到 `exploring`）。
+- 状态机（**现行 5 态**，2026-05-26 补注）：`Exploring` / `InBattle` / `BossReady` / `BossChallenge` / `ExploreComplete`（完整定义见 `02_systems.md` §4.1；M2 阶段的最小集 `Exploring`/`InBattle`/`ExploreComplete` 为历史快照）。
+- `battle_state` 存档口径：`exploring` / `in_battle` / `boss_ready`（读档安全回退到 `exploring`）。
 
 <!-- REVIEW-DONE: M3 已与 Melvor 新设计对齐 -->
 ## M3 - 养成系统与资源循环（4-5 天）

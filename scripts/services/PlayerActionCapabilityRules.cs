@@ -4,6 +4,10 @@ namespace Xiuxian.Scripts.Services
     {
         public static bool HasCapability(string actionId, PlayerActionCapability capability)
         {
+            if (capability == PlayerActionCapability.SupportsOfflineSettlement)
+                return NormalizeActionId(actionId) != PlayerActionState.ActionMining
+                    && NormalizeActionId(actionId) != PlayerActionState.ActionFishing
+                    && NormalizeActionId(actionId) != PlayerActionState.ActionBodyCultivation;
             return NormalizeActionId(actionId) switch
             {
                 PlayerActionState.ActionCultivation => capability switch
@@ -51,6 +55,7 @@ namespace Xiuxian.Scripts.Services
                 },
                 _ => capability switch
                 {
+                    PlayerActionCapability.ConsumesApSettlement => true,
                     PlayerActionCapability.AdvancesDungeon => true,
                     PlayerActionCapability.RunsBattle => true,
                     PlayerActionCapability.GeneratesLoot => true,

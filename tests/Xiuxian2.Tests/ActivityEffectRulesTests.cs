@@ -17,7 +17,7 @@ public sealed class ActivityEffectRulesTests
             });
 
         Assert.Contains(usages, x => x.ItemId == "talisman_fire_charm");
-        Assert.Contains(usages, x => x.ItemId == "food_dragon_soup");
+        Assert.DoesNotContain(usages, x => x.ItemId == "food_dragon_soup");
     }
 
     [Fact]
@@ -66,7 +66,7 @@ public sealed class ActivityEffectRulesTests
     public void GetBackpackConsumableModifier_ReturnsTalismanStats()
     {
         CharacterStatModifier modifier = ActivityEffectRules.GetBackpackConsumableModifier("talisman_fire_charm");
-        Assert.Equal(0.15, modifier.AttackRate, 6);
+        Assert.Equal(0, modifier.AttackRate);
     }
 
     [Fact]

@@ -20,7 +20,7 @@ public sealed class MiningRulesTests
         MiningRules.MiningProgressDecision decision = MiningRules.AdvanceProgress(80.0f, 40, 100, currentDurability: 60);
 
         Assert.True(decision.CompletedBatch);
-        Assert.Equal(0.0f, decision.NextProgress);
+        Assert.Equal(120.0f, decision.NextProgress);
         Assert.Equal(59, decision.NextDurability);
         Assert.False(decision.RefreshedNode);
     }

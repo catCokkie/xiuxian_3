@@ -122,6 +122,9 @@ namespace Xiuxian.Scripts.Game
             _persistenceManager.Register("rhythm", "state", _cultivationRhythmState);
             _persistenceManager.Register("shop", "state", _shopState);
             _persistenceManager.Register("event_log", "state", _eventLogState);
+            var guideState = ServiceLocator.Instance?.GuideState;
+            _persistenceManager.Register("guide", "state", guideState);
+            if (guideState != null) guideState.NoticeReady += OnGuideNotice;
             _persistenceManager.Register("mastery", "levels", _subsystemMasteryState);
             _persistenceManager.Register("action", "mode", _playerActionState);
             _persistenceManager.Register("equipment", "equipped", _equippedItemsState);
@@ -265,6 +268,7 @@ namespace Xiuxian.Scripts.Game
             _mainBar.BookButtonPressed -= _submenu.ToggleVisible;
             _mainBar.LayoutChanged -= OnMainBarLayoutChanged;
             _submenu.VisibilityChanged -= OnSubmenuVisibilityChanged;
+            if (ServiceLocator.Instance?.GuideState is GuideState guide) guide.NoticeReady -= OnGuideNotice;
             _bookTabs.ActiveTabsChanged -= OnBookTabsActiveTabsChanged;
             _bookTabs.SaveSlotSaveRequested -= OnSaveSlotSaveRequested;
             _bookTabs.SaveSlotLoadRequested -= OnSaveSlotLoadRequested;
@@ -369,11 +373,17 @@ namespace Xiuxian.Scripts.Game
         }
 
         private void OnMainBarLayoutChanged(float x, float width) => MarkDirty();
+        private void OnGuideNotice(string message)
+        {
+            _toastController?.Enqueue(message, new Color("D8CBA6"));
+            MarkDirty();
+        }
 
         private void OnSubmenuVisibilityChanged(bool isVisible)
         {
             if (isVisible)
             {
+                ServiceLocator.Instance?.GuideState?.Complete("first_book");
                 _eventLogState?.MarkAllRead();
             }
 
@@ -387,9 +397,9 @@ namespace Xiuxian.Scripts.Game
             MarkDirty();
         }
 
-        private void OnActivityTick(double apThisSecond, double apFinal)
+        private void OnActivityTick(double apThisSecond, double apFinal, double activeSecondsThisBatch)
         {
-            _activitySaveMarkTimer += 1.0;
+            _activitySaveMarkTimer += activeSecondsThisBatch;
             if (_activitySaveMarkTimer >= _activitySaveMarkIntervalSeconds)
             {
                 _activitySaveMarkTimer = 0.0;
@@ -468,6 +478,11 @@ namespace Xiuxian.Scripts.Game
 
         private void LoadAllState()
         {
+            if (Array.IndexOf(OS.GetCmdlineUserArgs(), "--smoke-test") >= 0)
+            {
+                EnsureStarterEquipmentLoadout();
+                return;
+            }
             UnifiedStateLoadStatus loadStatus = LoadUnifiedState(out bool migrated);
             bool loaded = loadStatus == UnifiedStateLoadStatus.Loaded;
             if (loadStatus == UnifiedStateLoadStatus.Missing)
@@ -531,6 +546,7 @@ namespace Xiuxian.Scripts.Game
 
         private bool SaveAllState()
         {
+            if (Array.IndexOf(OS.GetCmdlineUserArgs(), "--smoke-test") >= 0) return true;
             if (_saveBlockedByLoadFailure)
             {
                 GD.PushWarning("PrototypeRootController: save blocked because the last unified load failed closed.");
@@ -770,7 +786,8 @@ namespace Xiuxian.Scripts.Game
                 return false;
             }
 
-            if (_playerActionState.ActionId == PlayerActionState.ActionGarden)
+            if (_playerActionState.ActionId == PlayerActionState.ActionGarden
+                || !PlayerActionCapabilityRules.HasCapability(_playerActionState, PlayerActionCapability.SupportsOfflineSettlement))
             {
                 return false;
             }
@@ -795,7 +812,20 @@ namespace Xiuxian.Scripts.Game
                 return false;
             }
 
-            ActionSettlementResult result = isCultivation
+            int craftingBudget = OfflineCraftingRules.InputBudget(evaluation.EffectiveOfflineSeconds, _playerActionState.ActionId);
+            if (craftingBudget > 0 && _exploreProgressController != null)
+            {
+                string detail = _exploreProgressController.AdvanceOfflineCrafting(craftingBudget);
+                string title = $"闭关加工 · {UiText.MasterySystemName(_playerActionState.ActionId)}";
+                _eventLogState?.AddEvent(EventLogState.CategoryCraft, title, detail);
+                _exploreProgressController.ShowOfflineSummary(title, detail);
+                _bookTabs?.ShowReturnCard(title, detail);
+                MarkDirty();
+                return true;
+            }
+            if (!isDungeon && _playerActionState.ActionId != PlayerActionState.ActionCultivation) return false;
+
+            ActionSettlementResult result = !isDungeon
                 ? OfflineSettlementRules.BuildCultivationOfflineSettlement(
                     evaluation.EffectiveOfflineSeconds,
                     apPerInput: GameBalanceConstants.Offline.ApPerInput,
@@ -815,6 +845,14 @@ namespace Xiuxian.Scripts.Game
             _resourceWalletState.AddLingqi(result.LingqiGain);
             _resourceWalletState.AddInsight(result.InsightGain);
             _playerProgressState.AddRealmExp(result.RealmExpGain);
+            if (isDungeon)
+            {
+                _exploreProgressController?.ApplyOfflineExploreProgress(result.ExploreProgressGain);
+                _levelConfigLoader?.ConsumeOfflineDropRolls(result.ActionTargetId,
+                    (int)Math.Ceiling(result.BattleRoundsAdvanced * DungeonOfflineSettlementRules.CalculateWeightedVictoryFactor(
+                        BuildOfflinePlayerStats(), _levelConfigLoader.GetOfflineWeightedMonsters(result.ActionTargetId))
+                        * _levelConfigLoader.GetOfflineAverageDropRollsPerVictory(result.ActionTargetId)));
+            }
             if (_backpackState != null)
             {
                 foreach (KeyValuePair<string, int> drop in result.ItemDrops)
@@ -833,6 +871,8 @@ namespace Xiuxian.Scripts.Game
             _exploreProgressController?.ShowOfflineSummary(
                 OfflineSummaryPresentationRules.BuildTitle(result),
                 OfflineSummaryPresentationRules.BuildBody(result));
+            _bookTabs?.ShowReturnCard(OfflineSummaryPresentationRules.BuildTitle(result), OfflineSummaryPresentationRules.BuildBody(result));
+            _eventLogState?.AddEvent(EventLogState.CategorySystem, OfflineSummaryPresentationRules.BuildTitle(result), OfflineSummaryPresentationRules.BuildBody(result));
             _toastController?.Enqueue(OfflineSummaryPresentationRules.BuildTitle(result), new Color("C8A050"));
             MarkDirty();
             return true;
@@ -869,11 +909,13 @@ namespace Xiuxian.Scripts.Game
             }
 
             bool hadRest = _cultivationRhythmState.InRest;
+            if (hadRest) _resourceWalletState?.AddLingqi(Math.Min(offlineSeconds, _cultivationRhythmState.RestRemainingSeconds)
+                * GameBalanceConstants.ResourceConversion.PassiveLingqiPerMinute / 60 * _cultivationRhythmState.RestLingqiMultiplier);
             _cultivationRhythmState.ApplyOfflineRealTime(offlineSeconds);
             return hadRest;
         }
 
-        private ActionSettlementResult BuildOfflineDungeonSettlement(double offlineSeconds)
+        internal ActionSettlementResult BuildOfflineDungeonSettlement(double offlineSeconds, double? equipmentRoll = null)
         {
             if (_levelConfigLoader == null || _equippedItemsState == null || _playerProgressState == null)
             {
@@ -881,6 +923,31 @@ namespace Xiuxian.Scripts.Game
             }
 
             double offlineInputBudget = OfflineSettlementRules.CalculateOfflineInputBudget(offlineSeconds);
+            CharacterStatBlock playerStats = BuildOfflinePlayerStats();
+            string targetLevelId = _playerActionState?.ActionTargetId ?? string.Empty;
+            if (string.IsNullOrEmpty(targetLevelId)) targetLevelId = _levelConfigLoader.ActiveLevelId;
+
+            return DungeonOfflineSettlementRules.BuildDungeonOfflineSettlement(
+                actionTargetId: targetLevelId,
+                offlineInputBudget: offlineInputBudget,
+                dungeonProgressPerInput: _levelConfigLoader.ProgressPer100Inputs / 100.0,
+                encounterProgressThreshold: _levelConfigLoader.EncounterCheckIntervalProgress,
+                playerStats: playerStats,
+                weightedMonsters: _levelConfigLoader.GetOfflineWeightedMonsters(targetLevelId),
+                averageLingqiPerVictory: _levelConfigLoader.GetOfflineAverageLingqiPerVictory(targetLevelId),
+                averageInsightPerVictory: _levelConfigLoader.GetOfflineAverageInsightPerVictory(targetLevelId),
+                averageItemDropsPerVictory: _levelConfigLoader.GetOfflineAverageItemDropsPerVictory(targetLevelId),
+                remainingDailyRolls: _levelConfigLoader.GetOfflineRemainingDailyRolls(targetLevelId),
+                averageDropRollsPerVictory: _levelConfigLoader.GetOfflineAverageDropRollsPerVictory(targetLevelId),
+                equipmentDropCap: 2,
+                estimatedEquipmentDropsPerVictory: _levelConfigLoader.GetOfflineAverageEquipmentDropsPerVictory(targetLevelId),
+                createEquipment: _levelConfigLoader.BuildOfflineEquipmentFactory(targetLevelId),
+                remainingExploreProgress: 100 - (_exploreProgressController?.ExploreProgressValue ?? 0),
+                equipmentRoll: equipmentRoll ?? Random.Shared.NextDouble());
+        }
+
+        private CharacterStatBlock BuildOfflinePlayerStats()
+        {
             CharacterStatBlock baseStats = PlayerBaseStatRules.BuildBaseStats(
                 _playerProgressState.RealmLevel,
                 _levelConfigLoader.PlayerBaseHp,
@@ -906,27 +973,11 @@ namespace Xiuxian.Scripts.Game
                     _playerProgressState.BodyCultivationPostBattleHealRate,
                     _playerProgressState.ZhouTianMaxHpRate,
                     _playerProgressState.ZhouTianAttackRate,
-                    _playerProgressState.ZhouTianDefenseRate))
+                    _playerProgressState.ZhouTianDefenseRate, _playerProgressState.BodyCultivationMaxHpRate, _playerProgressState.BodyCultivationDefenseRate))
             };
-            CharacterStatBlock playerStats = CharacterStatRules.BuildFinalStats(
+            return CharacterStatRules.BuildFinalStats(
                 CharacterStatRules.BuildFinalStats(baseStats, extraModifiers),
                 _equippedItemsState.GetEquippedProfiles());
-            string targetLevelId = _playerActionState?.ActionTargetId ?? _levelConfigLoader.ActiveLevelId;
-
-            return DungeonOfflineSettlementRules.BuildDungeonOfflineSettlement(
-                actionTargetId: targetLevelId,
-                offlineInputBudget: offlineInputBudget,
-                dungeonProgressPerInput: _levelConfigLoader.ProgressPer100Inputs / 100.0,
-                encounterProgressThreshold: _levelConfigLoader.EncounterCheckIntervalProgress,
-                playerStats: playerStats,
-                weightedMonsters: _levelConfigLoader.GetOfflineWeightedMonsters(targetLevelId),
-                averageLingqiPerVictory: _levelConfigLoader.GetOfflineAverageLingqiPerVictory(targetLevelId),
-                averageInsightPerVictory: _levelConfigLoader.GetOfflineAverageInsightPerVictory(targetLevelId),
-                averageItemDropsPerVictory: _levelConfigLoader.GetOfflineAverageItemDropsPerVictory(targetLevelId),
-                remainingDailyRolls: _levelConfigLoader.GetOfflineRemainingDailyRolls(targetLevelId),
-                averageDropRollsPerVictory: _levelConfigLoader.GetOfflineAverageDropRollsPerVictory(targetLevelId),
-                equipmentDropCap: 2,
-                estimatedEquipmentDropsPerVictory: _levelConfigLoader.GetOfflineAverageEquipmentDropsPerVictory(targetLevelId));
         }
 
         private void LoadLegacyState()
@@ -961,6 +1012,7 @@ namespace Xiuxian.Scripts.Game
             }
 
             _bookTabs.RestoreActiveTabs(activeLeftTab, activeRightTab);
+            if (config.HasSectionKey("ui", "submenu_active_page")) _bookTabs.RestoreActivePage(config.GetValue("ui", "submenu_active_page").AsString());
 
             bool submenuVisible = config.GetValue("ui", "submenu_visible", false).AsBool();
             _submenu.SetVisibleImmediate(submenuVisible);
@@ -973,6 +1025,7 @@ namespace Xiuxian.Scripts.Game
             config.SetValue("ui", "submenu_visible", _submenu.Visible);
             config.SetValue("ui", "submenu_active_left_tab", _bookTabs.ActiveLeftTabName);
             config.SetValue("ui", "submenu_active_right_tab", _bookTabs.ActiveRightTabName);
+            config.SetValue("ui", "submenu_active_page", _bookTabs.ActivePageName);
         }
 
         private void ReadInputHookState(ConfigFile config)
@@ -1128,10 +1181,12 @@ namespace Xiuxian.Scripts.Game
             content.AddThemeConstantOverride("separation", 12);
             margin.AddChild(content);
 
-            Label iconLabel = new();
-            iconLabel.Text = "🔒";
-            iconLabel.HorizontalAlignment = HorizontalAlignment.Center;
-            iconLabel.AddThemeFontSizeOverride("font_size", 28);
+            TextureRect iconLabel = new();
+            iconLabel.Texture = Xiuxian.Scripts.UI.GameArtCatalog.Get("ui:lock");
+            iconLabel.ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize;
+            iconLabel.StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered;
+            iconLabel.CustomMinimumSize = new Vector2(32, 32);
+            iconLabel.SizeFlagsHorizontal = Control.SizeFlags.ShrinkCenter;
             content.AddChild(iconLabel);
 
             Label titleLabel = new();

@@ -1,8 +1,8 @@
-@# UI 页面设计提示词
+# UI 页面设计提示词
 
 > 用于在 v0.dev / Figma AI / Galileo AI 等工具中生成 UI 原型图。
 > 生成日期：2026-03-29
-> 页面总数：16（主底栏 + 书本外框 + 6 左 Tab + 坊市 + 1 右 Tab + 4 设置子页 + 首启隐私卡片）
+> 页面总数：16（主底栏 + 书本外框 + 7 左 Tab（含坊市）+ 2 右 Tab + 4 设置子页 + 首启隐私卡片）
 
 ---
 
@@ -22,7 +22,11 @@ Colors:
 - Accent/active: #C8A050 (gold-brown)
 Font: sans-serif with Chinese character support. All labels in Simplified Chinese.
 No heavy decoration, minimal iconography, scholarly/calligraphy vibe.
-Desktop resolution reference: 1152×648. Book window: 960×520.
+Reference viewport: 1600×900; also adapt to 1280×720, 1024×768 and UI scales 1.25/1.5.
+Book window: at most 960×720 logical pixels, shrink to fit the logical viewport.
+Keep one active page and one selected navigation item across both tab groups.
+All content scrolls within the paper area; headers and footer stay fixed.
+Fixed dimensions below are composition references, not minimum sizes.
 ```
 
 ---
@@ -32,34 +36,21 @@ Desktop resolution reference: 1152×648. Book window: 960×520.
 **文件**: `MainBarWindow.tscn` / `MainBarLayoutController.cs`
 
 ```
-Design a bottom-anchored horizontal HUD bar (1152×210px) for a 修仙 idle game.
-Background: semi-transparent dark brown panel (#986244, 0.97 opacity), rounded 10px top corners.
+Design a bottom-anchored HUD, 1152px preferred width, capped to viewport width minus margins.
+Normal height: 96 logical pixels. Expand to 210 only during battle with book closed.
+Work mode uses the compact height and a quiet activity summary.
+Background: warm dark brown, rounded top corners.
 
-Row 1 — Battle Visualization (top, Y:6–164):
-- Left: small "DragHandle" button (44×28, text "↕", top-left corner)
-- Main area: "BattleTrack" panel spanning full width (clip_contents=true).
-  Inside shows a horizontal battle scene:
-  - Player marker (left side, ~X:60): small green diamond icon with "玩家" label
-  - Up to 5 monster slot markers (spaced X:200–900): small red circle icons,
-    each with a name label above ("阴潮蛇", "暗穴蛛") and a tiny HP bar below.
-  - Light grid lines or distance markings on the track background.
-  Background: slightly darker than frame (#7A4A34, 0.4 opacity)
-
-Row 2 — Controls (bottom strip, Y:172, height:26px):
-Left group:
-- RealmStageLabel: "炼气3层 45%" (gold text)
-- ActionMode dropdown: "副本" (only shows unlocked modes; initial: 副本/修炼/炼丹; others unlock progressively by realm_level, see 02_systems.md §21)
-- LevelOption dropdown: "幽泉洞外围 (lv_qi_001)"
-
-Center-right group:
-- CultivationLabel: "修炼进度" small text
-- CultivationProgressBar: thin horizontal bar showing realm XP (60%)
-- BreakthroughButton: "突破" small button (enabled when XP full, otherwise grayed)
-- ExploreProgressBar: thin horizontal bar showing zone exploration (35%)
-
-Right-anchored:
-- BookButton: "📖" (opens book submenu)
-- ResizeHandle: "⟷" (resize grip)
+Row 1: small draggable handle, 24px companion portrait, current activity summary;
+right-aligned realm XP / cultivation rhythm. Hide enemy cards in compact mode.
+Row 2: realm label, unlocked activity dropdown, localized dungeon selector,
+work mode button, book button with unread badge, resize grip.
+Row 3: cultivation caption and progress, breakthrough button, exploration caption and progress.
+Do not place selectors on top of progress bars. Reserve width for long disabled breakthrough
+and exit-work-mode labels; clip long dropdown text within its allotted width.
+During battle, replace the compact summary with player/enemy stage and round information.
+BossReady offers a manual challenge action; no automatic challenge.
+Developer validation details belong to the diagnostic page.
 ```
 
 ---
@@ -69,26 +60,26 @@ Right-anchored:
 **文件**: `SubmenuBookWindow.tscn` / `SubmenuWindowController.cs` / `BookTabsController.cs`
 
 ```
-Design the outer frame of a book-style submenu window (960×520px) for a 修仙 idle game.
+Design the outer frame of a book-style submenu window (up to 960×720 logical pixels, responsive) for a 修仙 idle game.
 Floating, draggable window with shadow.
 
 Structure:
 - Outer frame: #986244 panel, 3px border, rounded 10px, slight drop shadow
-- Top-left: "X" close button (44×32)
-- Top strip (Y:8–46): horizontal tab bar
+- Top-left: "X" close button (36×36, 16px left / 12px top)
+- Top strip (Y:12–48, left:64px, right:16px): horizontal tab bar
   - Left-aligned tabs (toggle buttons, separated 4px):
-    Only shows unlocked tabs. Initial: "修炼概况" | "动态"
-    Unlock later: "装备情况" (first equipment) | "背包" (first item) | "统计概览" (realm≥3) | "配置校验" (dev toggle)
+    Only shows unlocked tabs. Initial: "修炼" | "动态"
+    Unlock later: "装备" (first equipment) | "背包" (first item) | "坊市" (realm≥2) | "统计" (realm≥3) | "校验" (dev toggle)
     Active tab: darker brown fill, pressed state
   - Right-aligned tabs (separated 6px):
     "Bug反馈" | "设置" (always visible)
   - New tab unlock: tab appears with 3s gold glow animation, then returns to normal style
   - See 02_systems.md §21 for full unlock conditions
-- Center body (Y:54–456): SpreadBody panel, #D7C7A7 background, 2px border #8E6440, rounded 8px
+- Center body (58px from top, 58px above bottom): responsive SpreadBody panel, #D7C7A7 background, 2px border #8E6440, rounded 8px
   - Inner LeftPage panel (12px margins): #CDB896 background, 1px border, rounded 6px
     - LeftTitle label (top-left, 16px from edges)
     - Content area below title
-- Bottom bar (Y:464–506): dark strip (#745038, 0.86 opacity), rounded 4px
+- Bottom bar (bottom-anchored, 16px side margins, 36px height): dark strip (#745038, 0.86 opacity), rounded 4px
   - Right-aligned: coin icon "●" + "灵石 14" label
 ```
 
@@ -99,34 +90,22 @@ Structure:
 **文件**: `BookTabsController.cs` → `BuildCultivationUi()` / `BuildCultivationOverviewText()`
 
 ```
-Design the "修炼概况" (Cultivation Overview) page content, 856×336px inside a parchment panel.
-
-Top section — Status & Actions:
-- CultivationStatusLabel: "境界经验已满，可以尝试突破！" (or "距离突破还需 1234.5 经验")
-  Green when ready, amber when not.
-- Action row (horizontal, 8px gap):
-  - "突破" button (primary action, gold accent when available, gray when not)
-  - "参悟Boss弱点" button (requires 副本精通Lv4, grayed with tooltip if locked)
-  - Alchemy recipe dropdown + "开始炼丹" button
-- Gathering row (horizontal, 8px gap):
-  - Garden: dropdown "灵花种植" + "开始种植" button
-  - Mining: dropdown "寒铁矿脉" + "开始采矿" button
-  - Fishing: dropdown "灵鱼塘" + "开始垂钓" button
-
-Middle section — Mastery Overview:
-- RichText area showing 12 subsystem mastery levels in compact format:
-  "副本 Lv2 → 精英率+5% | 修炼 Lv1 | 炼丹 Lv2 → 可炼聚灵散 | ..."
-- 4 mastery unlock buttons in a row:
-  Each button: "[系统名] Lv{next}" with cost "悟性 80" below.
-  Enabled (gold border) when affordable, disabled (gray) when not.
-  Systems: 副本精通, 修炼精通, 炼丹精通, 炼器精通
-
-Bottom section — Scrollable RichText:
-- "当前状态": 主行为 副本探索, 当前重心 全自动刷怪
-- "成长状态": 炼气3层, 经验 450/1000 (45%), 突破状态, 悟性储备 156.0
-- "战斗准备": 当前区域强度, 装备情况, 丹药库存
-- "资源判断": 灵气收支, 灵石余额
-- "当前判断": AI recommendation text
+Design the 修炼 home page as a vertically scrollable stack of warm parchment cards.
+First card — Realm & Resources:
+- Realm level and XP percentage, breakthrough button, slim XP progress.
+- 灵气 / 悟性 / 灵石 balances, readable breakthrough requirements.
+Second card — Current Activity:
+- Unlocked activity picker; show only controls for that selected activity.
+- Short current target/status, then relevant recipe/plot/pond and action buttons.
+- Dungeon: boss weakness insight, manual challenge, consumable policy.
+- Gathering and crafting: corresponding selection and start actions.
+Third card — Next Step:
+- Concrete mode-specific instructions and a button to review the event feed.
+Below cards — "展开精通与详细状态" toggle, collapsed by default.
+Expanded detail includes 11 subsystem mastery progress bars, purchase controls,
+and the existing full status overview. Keep all details in the same scroll area.
+An optional return-settlement card appears above the realm card and can be dismissed.
+Use dark-brown body text, 14px body / 18px page title, consistent 12px card spacing.
 ```
 
 ---
@@ -188,7 +167,7 @@ Font: 12-13px for entries, 11px for timestamps and status.
 Design the "装备情况" (Equipment) page, 856×336px, parchment background.
 
 Top — Action Row:
-- 3 equip buttons: "装备背包武器" "装备背包护具" "装备背包饰品" (small, compact)
+- "前往背包换装" button; choose a specific owned item in the backpack
 - Smithing controls: target equipment dropdown + "开始强化" button
 - Hint text (small, italic): "新装备先进入背包，需手动穿戴。"
 
@@ -226,15 +205,15 @@ Design the "背包" (Backpack) grid inventory page, 856×336px, parchment backgr
 Scrollable if content overflows.
 
 Top — Action Row:
-- 3 compact buttons: "装备背包武器" "装备背包护具" "装备背包饰品"
+- Brief hint: "点击装备穿戴，悬停查看属性与差值。"
 
 Section 1 — "材料与掉落":
 - Section header: small dark-brown label, 13px
-- Grid of 64×64 cells, 4px gap, auto-wrap to fill width (~12 columns).
+- Grid of 64×64 cells, 4px gap, recompute columns from scroll viewport width on first open, reopen and resize.
   Cell style: muted green (#6B9461, 0.85 opacity), 1px dark border (#735234),
   rounded 3px corners.
   Content: 2-3 character name centered ("灵草", "寒铁", "灵玉", "灵墨"),
-  font 13px warm white. Bottom-right: quantity "x5" in 11px pale yellow.
+  font 13px dark brown. Bottom-right: quantity "x5" in 11px dark brown.
   Hover: gold border highlight + floating tooltip above cell showing
   "灵草 x5" in dark popup (#1E1A14, 0.94 opacity, gold border, rounded 4px).
 
@@ -581,3 +560,5 @@ Purchase also writes to 动态 Tab: "坊市：购入 {item_name} ×{qty}，花�
 2. 截图导入 **Figma** 做精细调整（间距、字号、圆角）
 3. 记下最终确定的尺寸/颜色/间距数值，回 Godot 对照修改 C# 代码中的常量
 4. 颜色值和尺寸均从项目实际代码中提取，可直接复用
+
+坊市扩容货架：背包扩容标记「预留」、购买按钮禁用；已满6格的田位扩容也禁用。鱼塘许可明确说明购买和精通共同解锁，不显示仅记录状态的占位说明。

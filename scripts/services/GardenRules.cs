@@ -7,6 +7,7 @@ namespace Xiuxian.Scripts.Services
     {
         public const int BasePlotCount = 2;
         public const int MaxPlotCount = 6;
+        public const int PlantingSpiritStones = 5;
         public const int BaseRareSeedChancePercent = 5;
         public const int EnhancedRareSeedChancePercent = 10;
 
@@ -58,9 +59,10 @@ namespace Xiuxian.Scripts.Services
             return TryGetCrop(recipeId, out CropSpec crop) && masteryLevel >= crop.RequiredMasteryLevel;
         }
 
-        public static int GetUnlockedPlotCount(int purchasedExpansionCount = 0)
+        public static int GetUnlockedPlotCount(int purchasedExpansionCount = 0, int masteryLevel = 1)
         {
-            return Math.Clamp(BasePlotCount + Math.Max(0, purchasedExpansionCount), BasePlotCount, MaxPlotCount);
+            int masteryPlots = masteryLevel >= 4 ? 4 : masteryLevel >= 3 ? 2 : masteryLevel >= 2 ? 1 : 0;
+            return Math.Clamp(BasePlotCount + Math.Max(0, purchasedExpansionCount) + masteryPlots, BasePlotCount, MaxPlotCount);
         }
 
         public static int GetEffectiveGrowthSeconds(string recipeId, int masteryLevel = 1)

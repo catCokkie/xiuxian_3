@@ -18,6 +18,7 @@ namespace Xiuxian.Scripts.Services
         Boss,
         Exchange,
         FirstClear,
+        Fishing,
     }
 
     public readonly record struct EquipmentSubStatData(

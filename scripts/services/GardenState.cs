@@ -70,10 +70,34 @@ namespace Xiuxian.Scripts.Services
             EmitGardenChanged();
         }
 
+        private readonly Godot.Collections.Dictionary<string, Variant> _breedingLevels = new();
+        private readonly Godot.Collections.Dictionary<string, Variant> _breedingRemainders = new();
+        public bool TryResearchSelectedCrop()
+        {
+            if (!GardenRules.TryGetCrop(SelectedRecipeId, out var crop)) return false;
+            int level = _breedingLevels.ContainsKey(crop.RecipeId) ? _breedingLevels[crop.RecipeId].AsInt32() : 0;
+            if (level >= 10 || ServiceLocator.Instance?.BackpackState?.RemoveItem(crop.SeedItemId, 5) != true) return false;
+            _breedingLevels[crop.RecipeId] = level + 1;
+            ServiceLocator.Instance?.EventLogState?.AddEvent(EventLogState.CategoryCraft, $"{crop.DisplayName}育种 Lv{level + 1}，产量 +{(level + 1) * 5}%");
+            EmitGardenChanged();
+            return true;
+        }
+        private int ApplyBreedingYield(string outputId, int count)
+        {
+            string id = "";
+            foreach (var crop in GardenRules.GetCrops()) if (crop.OutputItemId == outputId) id = crop.RecipeId;
+            int level = _breedingLevels.ContainsKey(id) ? _breedingLevels[id].AsInt32() : 0;
+            double prior = _breedingRemainders.ContainsKey(id) ? _breedingRemainders[id].AsDouble() : 0;
+            double bonus = count * level * .05 + prior;
+            int extra = (int)Math.Floor(bonus + 1e-9);
+            _breedingRemainders[id] = Math.Max(0, bonus - extra);
+            return count + extra;
+        }
+
         public int GetUnlockedPlotCount()
         {
             int purchasedPlotCount = ServiceLocator.Instance?.ShopState?.GardenPlotUnlockCount ?? 0;
-            return GardenRules.GetUnlockedPlotCount(purchasedPlotCount);
+            return GardenRules.GetUnlockedPlotCount(purchasedPlotCount, GetGardenMasteryLevel());
         }
 
         public PlotStatus GetSelectedPlotStatus()
@@ -149,6 +173,11 @@ namespace Xiuxian.Scripts.Services
                 reason = $"{UiText.BackpackItemName(crop.SeedItemId)}不足";
                 return false;
             }
+            if ((ServiceLocator.Instance?.ResourceWalletState?.SpiritStones ?? 0) < GardenRules.PlantingSpiritStones)
+            {
+                reason = $"播种需 {GardenRules.PlantingSpiritStones} 灵石";
+                return false;
+            }
 
             return true;
         }
@@ -168,6 +197,11 @@ namespace Xiuxian.Scripts.Services
                 return false;
             }
 
+            if (ServiceLocator.Instance?.ResourceWalletState?.SpendSpiritStones(GardenRules.PlantingSpiritStones) != true)
+            {
+                backpackState.AddItem(crop.SeedItemId, 1);
+                return false;
+            }
             _plots[SelectedPlotIndex] = new GardenPersistenceRules.GardenPlotSnapshot(
                 crop.RecipeId,
                 GetNowUnix(),
@@ -352,14 +386,20 @@ namespace Xiuxian.Scripts.Services
                 plots[i] = _plots[i];
             }
 
-            return GardenPersistenceRules.ToDictionary(new GardenPersistenceRules.GardenSnapshot(
+            var data = GardenPersistenceRules.ToDictionary(new GardenPersistenceRules.GardenSnapshot(
                 SelectedRecipeId,
                 SelectedPlotIndex,
                 plots));
+            data["breeding_level"] = _breedingLevels.Duplicate();
+            data["breeding_remainders"] = _breedingRemainders.Duplicate();
+            return data;
         }
 
         public void FromDictionary(Godot.Collections.Dictionary<string, Variant> data)
         {
+            _breedingLevels.Clear(); _breedingRemainders.Clear();
+            if (data.ContainsKey("breeding_level")) foreach (var pair in (Godot.Collections.Dictionary<string, Variant>)data["breeding_level"]) _breedingLevels[pair.Key] = Math.Clamp(pair.Value.AsInt32(), 0, 10);
+            if (data.ContainsKey("breeding_remainders")) foreach (var pair in (Godot.Collections.Dictionary<string, Variant>)data["breeding_remainders"]) _breedingRemainders[pair.Key] = Math.Clamp(pair.Value.AsDouble(), 0, .999999);
             GardenPersistenceRules.GardenSnapshot snapshot = GardenPersistenceRules.FromDictionary(data);
             SelectedRecipeId = snapshot.SelectedRecipeId;
             SelectedPlotIndex = Math.Clamp(snapshot.SelectedPlotIndex, 0, GardenRules.MaxPlotCount - 1);
@@ -460,6 +500,12 @@ namespace Xiuxian.Scripts.Services
                     return true;
                 }
 
+                if (ServiceLocator.Instance?.ResourceWalletState?.SpendSpiritStones(GardenRules.PlantingSpiritStones) != true)
+                {
+                    backpackState.AddItem(crop.SeedItemId, 1);
+                    _plots[plotIndex] = default;
+                    return true;
+                }
                 plantedAtUnix = readyAtUnix;
             }
 
@@ -474,7 +520,9 @@ namespace Xiuxian.Scripts.Services
                 : 1;
             if (!string.IsNullOrEmpty(harvest.ItemId) && harvest.ItemCount > 0)
             {
-                backpackState.AddItem(harvest.ItemId, harvest.ItemCount * outputMultiplier);
+                int total = ApplyBreedingYield(harvest.ItemId, harvest.ItemCount * outputMultiplier);
+                backpackState.AddItem(harvest.ItemId, total);
+                ServiceLocator.Instance?.EventLogState?.AddEvent(EventLogState.CategoryCraft, $"灵田收获：{UiText.BackpackItemName(harvest.ItemId)} x{total}");
             }
 
             if (!string.IsNullOrEmpty(harvest.BonusSeedItemId) && harvest.BonusSeedCount > 0)

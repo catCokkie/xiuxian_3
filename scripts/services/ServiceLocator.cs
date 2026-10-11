@@ -17,7 +17,7 @@ namespace Xiuxian.Scripts.Services
         public MiningState? MiningState { get; private set; }
         public FishingState? FishingState { get; private set; }
         public RecipeProgressState? TalismanState { get; private set; }
-        public RecipeProgressState? CookingState { get; private set; }
+        public CookingState? CookingState { get; private set; }
         public FormationState? FormationState { get; private set; }
         public RecipeProgressState? BodyCultivationState { get; private set; }
         public ResourceWalletState? ResourceWalletState { get; private set; }
@@ -26,6 +26,7 @@ namespace Xiuxian.Scripts.Services
         public CultivationRhythmState? CultivationRhythmState { get; private set; }
         public ShopState? ShopState { get; private set; }
         public EventLogState? EventLogState { get; private set; }
+        public GuideState? GuideState { get; private set; }
         public PlayerActionState? PlayerActionState { get; private set; }
         public EquippedItemsState? EquippedItemsState { get; private set; }
         public SubsystemMasteryState? SubsystemMasteryState { get; private set; }
@@ -64,7 +65,7 @@ namespace Xiuxian.Scripts.Services
             MiningState = GetNodeOrNull<MiningState>("/root/MiningState");
             FishingState = GetNodeOrNull<FishingState>("/root/FishingState");
             TalismanState = GetNodeOrNull<RecipeProgressState>("/root/TalismanState");
-            CookingState = GetNodeOrNull<RecipeProgressState>("/root/CookingState");
+            CookingState = GetNodeOrNull<CookingState>("/root/CookingState");
             FormationState = GetNodeOrNull<FormationState>("/root/FormationState");
             BodyCultivationState = GetNodeOrNull<RecipeProgressState>("/root/BodyCultivationState");
             ResourceWalletState = GetNodeOrNull<ResourceWalletState>("/root/ResourceWalletState");
@@ -73,6 +74,7 @@ namespace Xiuxian.Scripts.Services
             CultivationRhythmState = GetNodeOrNull<CultivationRhythmState>("/root/CultivationRhythmState");
             ShopState = GetNodeOrNull<ShopState>("/root/ShopState");
             EventLogState = GetNodeOrNull<EventLogState>("/root/EventLogState");
+            GuideState = GetNodeOrNull<GuideState>("/root/GuideState");
             PlayerActionState = GetNodeOrNull<PlayerActionState>("/root/PlayerActionState");
             EquippedItemsState = GetNodeOrNull<EquippedItemsState>("/root/EquippedItemsState");
             SubsystemMasteryState = GetNodeOrNull<SubsystemMasteryState>("/root/SubsystemMasteryState");

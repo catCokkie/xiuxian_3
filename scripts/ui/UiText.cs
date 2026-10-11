@@ -5,10 +5,35 @@ public static class UiText
 {
     public const string DragHandle = "↕";
     public const string ResizeHandle = "↔";
-    public const string BookButton = "📖";
+    public const string BookButton = "书卷";
     public const string SpiritStoneLabelPrefix = "灵石";
     public const string DefaultZoneName = "幽泉洞窟";
+    public static string ZoneName(string levelId, string fallback) => levelId switch
+    {
+        "lv_qi_001" => "幽泉洞窟·外层",
+        "lv_qi_002" => "幽泉洞窟·内层",
+        "lv_qi_003" => "阴潮裂隙",
+        "lv_qi_004" => "深渊菌坑",
+        "lv_qi_005" => "幽骨殿",
+        _ => fallback
+    };
     public const string DefaultMonsterName = "妖物";
+    private static readonly (string English, string Chinese)[] GameNames =
+    {
+        ("Cave Spider Queen", "洞穴蛛后"), ("Shadow Bat Overlord", "影蝠领主"),
+        ("Yin Tide Serpentling", "阴潮幼蛇"), ("Yin Tide Serpent", "阴潮蛇王"),
+        ("Abyss Fungus Titan", "深渊菌巨人"), ("Nether Bone King", "幽骨王"),
+        ("Moss Slime", "苔藓史莱姆"), ("Shadow Bat", "影蝠"),
+        ("Cave Brood Spider", "洞穴蛛"), ("Abyss Sporeling", "深渊孢怪"), ("Nether Bone Servant", "幽骨侍从"),
+        ("Youquan Cave Outer", "幽泉洞窟·外层"), ("Youquan Cave Inner", "幽泉洞窟·内层"),
+        ("Yin Tide Rift", "阴潮裂隙"), ("Abyss Fungus Pit", "深渊菌坑"), ("Nether Bone Hall", "幽骨殿")
+    };
+
+    public static string LocalizeGameNames(string text)
+    {
+        foreach (var name in GameNames) text = text.Replace(name.English, name.Chinese, System.StringComparison.Ordinal);
+        return text;
+    }
     public const string SettingsTitle = "设置";
     public const string RealmFallback = "炼气一层";
 
@@ -109,7 +134,7 @@ public static class UiText
     public const string NextLevelQuickButton = "下一副本";
 
     public static string SpiritStone(int amount) => $"{SpiritStoneLabelPrefix} {amount}";
-    public static string RealmStage(int realmLevel, double percent) => $"炼气{realmLevel}层 {percent:0}%";
+    public static string RealmStage(int realmLevel, double percent) => $"{RealmBreakthroughRules.DisplayName(realmLevel)} {percent:0}%";
     public static string BatchInputAndAp(int inputEvents, double apFinal) => $"本批输入 {inputEvents} | 本批AP(资源) {apFinal:0.0}";
     public static string MasterySystemName(string systemId) => systemId switch
     {
@@ -119,6 +144,11 @@ public static class UiText
         PlayerActionState.ModeSmithing => "炼器",
         PlayerActionState.ModeTalisman => "符箓",
         PlayerActionState.ModeBodyCultivation => "体修",
+        PlayerActionState.ModeGarden => "灵田",
+        PlayerActionState.ModeMining => "矿脉",
+        PlayerActionState.ModeFishing => "灵渔",
+        PlayerActionState.ModeCooking => "烹饪",
+        PlayerActionState.ModeFormation => "阵法",
         _ => systemId,
     };
 
@@ -153,14 +183,29 @@ public static class UiText
         SubsystemMasteryRules.BodyCultivationSecondTechniqueUnlockEffectId => "解锁灵肤术",
         SubsystemMasteryRules.BodyCultivationMaterialDiscountEffectId => $"体修材料 -{effectValue * 100:0}%",
         SubsystemMasteryRules.BodyCultivationExtraCapEffectId => $"体修上限 +{effectValue:0}",
+        SubsystemMasteryRules.GardenGrowthSpeedBonusEffectId => $"生长速度 +{effectValue * 100:0}%；田位增至 3",
+        SubsystemMasteryRules.GardenRareSpawnBonusEffectId => $"稀有产物概率 +{effectValue * 100:0}%；田位增至 4",
+        SubsystemMasteryRules.GardenOfflineFullEffectId => "离线生长全效率；田位增至 6",
+        SubsystemMasteryRules.MiningDurabilityBonusEffectId => $"矿脉耐久 +{effectValue * 100:0}%",
+        SubsystemMasteryRules.MiningRareSpawnBonusEffectId => $"开采输入需求 -15%；稀有矿概率 +{effectValue * 100:0}%",
+        SubsystemMasteryRules.MiningDoubleOutputEffectId => $"双倍采矿概率 {effectValue * 100:0}%",
+        "fishing_youtan_unlock" => "解锁幽潭（需购买许可）",
+        SubsystemMasteryRules.FishingSpeedBonusEffectId => $"垂钓输入需求 -{effectValue * 100:0}%；解锁龙涎渊（需许可）",
+        "fishing_rare_capacity_bonus" => "独有稀有掉率翻倍、鱼塘容量 +10；解锁化龙泊（需许可）",
+        "cooking_second_meal_unlock" => "解锁化灵鱼脍",
+        SubsystemMasteryRules.CookingDurationBonusEffectId => $"灵膳有效时长 +{effectValue * 100:0}%",
+        SubsystemMasteryRules.CookingExtraEffectId => "解锁凝神鱼羹、铁壁鱼膳",
+        SubsystemMasteryRules.FormationEffectBonusEffectId => $"阵法效果 +{effectValue * 100:0}%",
+        SubsystemMasteryRules.FormationDualSlotEffectId => "解锁副阵槽（效果 50%）",
+        SubsystemMasteryRules.FormationSelfRepairEffectId => "阵盘自修复",
         _ => effectId,
     };
     public static string ExploreFrame(int frame) => $"探索中 | 帧 {frame}";
     public static string ExploreProgress(float progress) => $"进度 {progress:0.0}%";
-    public static string Encounter(string monsterName) => $"遭遇{monsterName}，输入推进战斗回合";
-    public static string BattleRound(int round, string monsterName, int hp) => $"Round {round} | {monsterName} HP {hp}";
-    public static string BattleInProgress(string monsterName) => $"战斗中.. {monsterName}";
-    public static string BattleVictory(string monsterName) => $"战斗胜利，结算{monsterName}战利品";
+    public static string Encounter(string monsterName) => $"遭遇{LocalizeGameNames(monsterName)}，输入推进战斗回合";
+    public static string BattleRound(int round, string monsterName, int hp) => $"第 {round} 回合 · {LocalizeGameNames(monsterName)} · 气血 {hp}";
+    public static string BattleInProgress(string monsterName) => $"战斗中 · {LocalizeGameNames(monsterName)}";
+    public static string BattleVictory(string monsterName) => $"战斗胜利，结算{LocalizeGameNames(monsterName)}战利品";
 
     public const string ExploreIdle = "探索待命";
     public const string WaitingInput = "等待输入...";
@@ -177,7 +222,7 @@ public static class UiText
     {
         return
             $"{LeftTabCultivation}\n" +
-            $"- 当前境界: 炼气{realmLevel}层\n" +
+            $"- 当前境界: {RealmBreakthroughRules.DisplayName(realmLevel)}\n" +
             $"- 境界经验: {realmExp:0.0}/{realmExpRequired:0.0} ({expPercent:0}%)\n" +
             $"- 灵气: {lingqi:0.0}\n" +
             $"- 悟性: {insight:0.0}\n" +
@@ -263,7 +308,7 @@ public static class UiText
             $"{LeftTabStats}\n\n" +
             $"【总览】\n" +
             $"● 当前主行为：{data.CurrentActionName}\n" +
-            $"● 当前境界：炼气 {data.RealmLevel} 层\n" +
+            $"● 当前境界：{RealmBreakthroughRules.DisplayName(data.RealmLevel)}\n" +
             $"● 当前境界经验：{data.RealmExp:0.0}\n" +
             $"● 当前境界停留：{data.CurrentRealmDays:0.0} 天\n" +
             $"● 累计总输入：{data.TotalInputs:N0}\n" +
@@ -369,7 +414,7 @@ public static class UiText
             "cold_iron_ore" => "寒铁矿",
             "spirit_jade" => "灵玉",
             "mithril" => "秘银",
-            "spirit_fish" => "灵鱼",
+            "spirit_fish" => "灵鲤",
             "spirit_pearl" => "灵珠",
             "dragon_saliva" => "龙涎",
             "ripening_elixir" => "催熟灵液",
@@ -382,6 +427,17 @@ public static class UiText
             "beast_bone" => "兽骨",
             "talisman_fire_charm" => "火符",
             "talisman_shield_charm" => "盾符",
+            "food_clear_fish_soup" => "清心鱼汤",
+            "food_spirit_fish_slices" => "化灵鱼脍",
+            "food_focus_fish_stew" => "凝神鱼羹",
+            "food_iron_fish_meal" => "铁壁鱼膳",
+            "cold_scale_fish" => "寒鳞鱼",
+            "deep_abyss_fish" => "幽渊鱼",
+            "armored_fish" => "玄甲鱼",
+            "spirit_spring_water" => "灵泉水",
+            "water_spirit_amber" => "水灵珀",
+            "sunk_jade_box" => "沉水玉匣",
+            "sunk_equipment_fragment" => "沉水装备残片",
             "food_spirit_porridge" => "灵鱼粥",
             "food_fruit_jelly" => "灵果蜜饯",
             "food_dragon_soup" => "龙涎鱼汤",
@@ -429,6 +485,7 @@ public static class UiText
             EquipmentSourceStage.Boss => "Boss掉落",
             EquipmentSourceStage.Exchange => "兑换",
             EquipmentSourceStage.FirstClear => "首通奖励",
+            EquipmentSourceStage.Fishing => "垂钓捞获",
             _ => "来源未知",
         };
     }

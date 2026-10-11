@@ -9,5 +9,6 @@ namespace Xiuxian.Scripts.Services
 
         void SelectRecipe(string recipeId);
         bool AdvanceProgress(int inputEvents);
+        void CompleteBatch();
     }
 }

@@ -54,6 +54,22 @@ namespace Xiuxian.Scripts.UI
         public int QueueMoveInputPending { get; private set; }
         public bool HasMarkers => _monsterMarkers.Count > 0;
 
+        public void SetStageVisible(bool visible)
+        {
+            _playerMarker.Visible = false;
+            _playerHpLabel.Visible = visible;
+            if (_playerSlotTexture != null) _playerSlotTexture.Visible = visible;
+            if (_playerSlotLabel != null) _playerSlotLabel.Visible = visible;
+            foreach (var marker in _monsterMarkers) marker.Visible = false;
+            foreach (var slot in _monsterSlots) slot.Visible = visible;
+            if (!visible)
+            {
+                _enemyHpLabel.Hide();
+                _enemySlotTexture?.Hide();
+                _enemySlotLabel?.Hide();
+            }
+        }
+
         public void Bind(
             Node host,
             NodePath playerMarkerPath,
@@ -86,6 +102,9 @@ namespace Xiuxian.Scripts.UI
 
             CacheMonsterMarkers(host, playerMarkerPath);
             CacheMonsterSlots(host, playerMarkerPath);
+            foreach (var slot in _monsterSlots) PrepareSprite(slot);
+            if (_playerSlotTexture != null) PrepareSprite(_playerSlotTexture);
+            if (_enemySlotTexture != null) PrepareSprite(_enemySlotTexture);
         }
 
         public FrontMonsterInfo GetFrontMonsterInfo()
@@ -254,13 +273,13 @@ namespace Xiuxian.Scripts.UI
             FrontMonsterInfo front = GetFrontMonsterInfo();
             if (front.Index < 0 || front.Index >= _monsterMoveInputThreshold.Count || front.Index >= _monsterMoveInputPending.Count)
             {
-                return "move idle";
+                return "等待探索";
             }
 
             int threshold = Math.Max(1, _monsterMoveInputThreshold[front.Index]);
             int pending = Math.Clamp(_monsterMoveInputPending[front.Index], 0, threshold);
             int remaining = Math.Max(0, threshold - pending);
-            return $"move remain {remaining} ({pending}/{threshold})";
+            return $"下次推进还需 {remaining} 次操作";
         }
 
         public string BuildMoveDebugStatus()
@@ -387,15 +406,15 @@ namespace Xiuxian.Scripts.UI
 
         private void UpdateHpLabels(ExploreGameLogic logic)
         {
-            _playerHpLabel.Text = $"HP {logic.PlayerHp}/{logic.PlayerMaxHp}";
-            _playerHpLabel.Position = new Vector2(_playerMarker.Position.X - 20.0f, _playerMarker.Position.Y + 22.0f);
+            _playerHpLabel.Text = $"气血 {logic.PlayerHp}/{logic.PlayerMaxHp}";
+            _playerHpLabel.Position = new Vector2(_playerMarker.Position.X - 24.0f, _playerMarker.Position.Y + 70.0f);
 
             if (logic.InBattle && logic.BattleMonsterIndex >= 0 && logic.BattleMonsterIndex < _monsterMarkers.Count)
             {
                 Label target = _monsterMarkers[logic.BattleMonsterIndex];
                 _enemyHpLabel.Visible = true;
-                _enemyHpLabel.Text = $"HP {logic.EnemyHp}/{logic.EnemyMaxHp}";
-                _enemyHpLabel.Position = new Vector2(target.Position.X - 24.0f, target.Position.Y + 22.0f);
+                _enemyHpLabel.Text = $"气血 {logic.EnemyHp}/{logic.EnemyMaxHp}";
+                _enemyHpLabel.Position = new Vector2(target.Position.X - 24.0f, target.Position.Y + 70.0f);
             }
             else
             {
@@ -407,12 +426,13 @@ namespace Xiuxian.Scripts.UI
         {
             if (_playerSlotTexture != null)
             {
-                _playerSlotTexture.Position = new Vector2(_playerMarker.Position.X - 16.0f, _playerMarker.Position.Y - 26.0f);
+                _playerSlotTexture.Position = new Vector2(_playerMarker.Position.X - 24.0f, _playerMarker.Position.Y - 14.0f);
             }
             if (_playerSlotLabel != null)
             {
                 _playerSlotLabel.Text = "主角";
-                _playerSlotLabel.Position = new Vector2(_playerMarker.Position.X - 12.0f, _playerMarker.Position.Y - 24.0f);
+                _playerSlotLabel.Position = new Vector2(_playerMarker.Position.X - 24.0f, _playerMarker.Position.Y - 36.0f);
+                _playerSlotLabel.Size = new Vector2(80, 20);
             }
 
             if (_enemySlotTexture == null || _enemySlotLabel == null)
@@ -421,7 +441,7 @@ namespace Xiuxian.Scripts.UI
             }
 
             int focusIndex = logic.InBattle ? logic.BattleMonsterIndex : GetFrontMonsterInfo().Index;
-            RefreshMonsterSlots(focusIndex);
+            RefreshMonsterSlots(focusIndex, levelConfigLoader);
             if (focusIndex < 0 || focusIndex >= _monsterMarkers.Count)
             {
                 _enemySlotTexture.Visible = false;
@@ -431,18 +451,21 @@ namespace Xiuxian.Scripts.UI
             }
 
             Label focus = _monsterMarkers[focusIndex];
+            focus.Visible = false;
             _enemySlotTexture.Visible = true;
             _enemySlotLabel.Visible = true;
-            _enemySlotBasePosition = new Vector2(focus.Position.X - 16.0f, focus.Position.Y - 26.0f);
+            _enemySlotBasePosition = new Vector2(focus.Position.X - 24.0f, focus.Position.Y - 14.0f);
             _enemySlotTexture.Position = _enemySlotBasePosition;
-            _enemySlotLabel.Position = new Vector2(focus.Position.X - 12.0f, focus.Position.Y - 24.0f);
-            _enemySlotLabel.Text = logic.InBattle ? logic.BattleMonsterName : "敌人";
+            _enemySlotLabel.Position = new Vector2(focus.Position.X - 24.0f, focus.Position.Y - 36.0f);
+            _enemySlotLabel.Text = logic.InBattle ? UiText.LocalizeGameNames(logic.BattleMonsterName) : MonsterLabel(_monsterMarkerIds[focusIndex], levelConfigLoader);
+            _enemySlotLabel.ClipText = true;
+            _enemySlotLabel.Size = new Vector2(96, 24);
 
             string focusMonsterId = logic.InBattle ? logic.BattleMonsterId : _monsterMarkerIds[focusIndex];
             ApplyEnemyVisualConfig(focusMonsterId, levelConfigLoader);
         }
 
-        private void RefreshMonsterSlots(int focusIndex)
+        private void RefreshMonsterSlots(int focusIndex, LevelConfigLoader? loader)
         {
             if (_monsterSlots.Count == 0)
             {
@@ -454,9 +477,16 @@ namespace Xiuxian.Scripts.UI
             {
                 TextureRect slot = _monsterSlots[i];
                 Label marker = _monsterMarkers[i];
-                slot.Position = new Vector2(marker.Position.X - 16.0f, marker.Position.Y - 26.0f);
+                slot.Position = new Vector2(marker.Position.X - 24.0f, marker.Position.Y - 14.0f);
                 slot.Visible = i != focusIndex;
-                slot.Modulate = GetMarkerTint(_monsterMarkerIds[i]);
+                marker.Visible = false;
+                slot.Texture = _enemySlotDefaultTexture;
+                slot.Modulate = Colors.White;
+                if (loader != null && loader.TryGetMonsterVisualConfig(_monsterMarkerIds[i], out string path, out _, out _, out _, out Color tint))
+                {
+                    slot.Texture = GameArtCatalog.LoadTexture(path) ?? _enemySlotDefaultTexture;
+                    slot.Modulate = tint;
+                }
             }
         }
 
@@ -499,7 +529,7 @@ namespace Xiuxian.Scripts.UI
 
             if (!string.IsNullOrEmpty(portraitPath))
             {
-                Texture2D? loaded = GD.Load<Texture2D>(portraitPath);
+                Texture2D? loaded = GameArtCatalog.LoadTexture(portraitPath);
                 if (loaded != null)
                 {
                     _enemySlotTexture.Texture = loaded;
@@ -553,25 +583,24 @@ namespace Xiuxian.Scripts.UI
 
         private static void ApplyMarkerVisual(Label marker, string monsterId)
         {
-            marker.Modulate = GetMarkerTint(monsterId);
-            marker.Text = monsterId switch
-            {
-                "monster_slime_moss" => "SL",
-                "monster_bat_shadow" => "BT",
-                "monster_spider_cave" => "SP",
-                _ => "MO",
-            };
+            // Markers carry queue positions; artwork and labels come from the content configuration.
+            marker.Visible = false;
+            marker.Text = UiText.DefaultMonsterName;
         }
 
-        private static Color GetMarkerTint(string monsterId)
+        private static string MonsterLabel(string id, LevelConfigLoader? loader)
         {
-            return monsterId switch
-            {
-                "monster_slime_moss" => new Color(0.66f, 0.92f, 0.52f, 1.0f),
-                "monster_bat_shadow" => new Color(0.75f, 0.75f, 0.92f, 1.0f),
-                "monster_spider_cave" => new Color(0.95f, 0.56f, 0.56f, 1.0f),
-                _ => new Color(0.9f, 0.9f, 0.9f, 0.92f),
-            };
+            return loader != null && loader.TryGetMonsterCombatParams(id, out string name, out _, out _, out _)
+                ? UiText.LocalizeGameNames(name) : UiText.DefaultMonsterName;
+        }
+
+        private static void PrepareSprite(TextureRect slot)
+        {
+            slot.ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize;
+            slot.StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered;
+            slot.TextureFilter = CanvasItem.TextureFilterEnum.Nearest;
+            slot.Size = new Vector2(80, 80);
+            slot.PivotOffset = slot.Size * .5f;
         }
     }
 }

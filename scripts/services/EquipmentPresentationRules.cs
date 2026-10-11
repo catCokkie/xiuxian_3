@@ -101,10 +101,12 @@ namespace Xiuxian.Scripts.Services
             }
 
             EquipmentStatProfile candidate = EquipmentInstanceRules.ToStatProfile(instance);
-            double currentScore = ScoreModifier(equipped.Modifier);
-            double candidateScore = ScoreModifier(candidate.Modifier);
+            CharacterStatModifier currentModifier = equipped.ToModifier();
+            CharacterStatModifier candidateModifier = (candidate with { IsEquipped = true }).ToModifier();
+            double currentScore = ScoreModifier(currentModifier);
+            double candidateScore = ScoreModifier(candidateModifier);
             double delta = candidateScore - currentScore;
-            string breakdown = BuildModifierDeltaBreakdown(candidate.Modifier, equipped.Modifier);
+            string breakdown = BuildModifierDeltaBreakdown(candidateModifier, currentModifier);
             if (delta > 0.25)
             {
                 return string.IsNullOrEmpty(breakdown)
@@ -209,9 +211,9 @@ namespace Xiuxian.Scripts.Services
         {
             return slot switch
             {
-                EquipmentSlotType.Weapon => "⚔",
-                EquipmentSlotType.Armor => "🛡",
-                EquipmentSlotType.Accessory => "💎",
+                EquipmentSlotType.Weapon => "武",
+                EquipmentSlotType.Armor => "甲",
+                EquipmentSlotType.Accessory => "饰",
                 _ => "●"
             };
         }

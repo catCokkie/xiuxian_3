@@ -3,16 +3,17 @@ using Godot;
 namespace Xiuxian.Scripts.Services
 {
     /// <summary>
-    /// Converts AP to resources on a fixed interval.
+    /// Converts AP to resources immediately for each accepted activity batch.
     /// </summary>
     public partial class ActivityConversionService : Node
     {
         [Signal]
         public delegate void SettlementAppliedEventHandler(
-            double apFinal10s,
+            double apFinal,
             double lingqiGain,
             double insightGain,
-            double realmExpGain);
+            double realmExpGain,
+            double activeSeconds);
 
         [Export] public NodePath ActivityStatePath = "/root/InputActivityState";
         [Export] public NodePath WalletStatePath = "/root/ResourceWalletState";
@@ -20,7 +21,6 @@ namespace Xiuxian.Scripts.Services
         [Export] public NodePath RhythmStatePath = "/root/CultivationRhythmState";
         [Export] public NodePath ActionStatePath = "/root/PlayerActionState";
 
-        [Export] public double SettlementIntervalSeconds = 10.0;
         [Export] public double LingqiFactor = GameBalanceConstants.ResourceConversion.LingqiFactor;
         [Export] public double InsightFactor = GameBalanceConstants.ResourceConversion.InsightFactor;
         [Export] public double RealmExpFromLingqiRate = GameBalanceConstants.ResourceConversion.RealmExpFromLingqiRate;
@@ -32,9 +32,6 @@ namespace Xiuxian.Scripts.Services
         private PlayerProgressState _progressState = null!;
         private CultivationRhythmState? _rhythmState;
         private PlayerActionState _actionState = null!;
-
-        private double _timer;
-        private double _apFinalBucket;
 
         public override void _Ready()
         {
@@ -51,7 +48,7 @@ namespace Xiuxian.Scripts.Services
             }
 
             _activityState.ActivityTick += OnActivityTick;
-            _activityState.InputBatchTick += OnInputBatchTick;
+
         }
 
         public override void _ExitTree()
@@ -59,83 +56,59 @@ namespace Xiuxian.Scripts.Services
             if (_activityState != null)
             {
                 _activityState.ActivityTick -= OnActivityTick;
-                _activityState.InputBatchTick -= OnInputBatchTick;
+
             }
         }
 
         public override void _Process(double delta)
         {
-            if (_activityState == null || _walletState == null || _progressState == null)
-            {
-                return;
-            }
-
-            _timer += delta;
-            if (_timer < SettlementIntervalSeconds)
-            {
-                return;
-            }
-
-            _timer %= SettlementIntervalSeconds;
-            ApplySettlement();
+            if (_walletState == null || _activityState == null || _rhythmState?.InRest != true
+                || _activityState.SecondsSinceLastInput <= 5.0) return;
+            // Rest is real time recovery and does not create input experience or an active cycle.
+            _walletState.AddLingqi(System.Math.Max(0, delta) * GameBalanceConstants.ResourceConversion.PassiveLingqiPerMinute / 60.0 * _rhythmState.RestLingqiMultiplier);
         }
 
-        private void OnActivityTick(double apThisSecond, double apFinal)
+        private void OnActivityTick(double apThisSecond, double apFinal, double activeSecondsThisBatch)
         {
             if (!PlayerActionCapabilityRules.HasCapability(_actionState, PlayerActionCapability.ConsumesApSettlement))
             {
                 return;
             }
 
-            _apFinalBucket += apFinal;
+            ApplySettlement(apFinal, activeSecondsThisBatch);
         }
 
-        private void OnInputBatchTick(int inputEvents, double apFinal)
+        private void ApplySettlement(double apFinal, double activeSeconds)
         {
-            if (!CultivationInputExpEnabled || inputEvents <= 0 || _progressState == null)
-            {
-                return;
-            }
-
+            if (activeSeconds <= 0.0) return;
+            _progressState.AddRealmActiveSeconds(activeSeconds);
+            var services = ServiceLocator.Instance;
+            var result = ResourceConversionRules.Calculate(
+                _actionState?.ActionId ?? PlayerActionState.ActionDungeon,
+                apFinal, _activityState.InputEventsThisSecond, activeSeconds,
+                _progressState.GetRealmMultiplier(),
+                services?.SubsystemMasteryState?.GetLevel(PlayerActionState.ModeCultivation) ?? 1,
+                ActivityEffectRules.CollectFormationLingqiRate(
+                    services?.FormationState?.ActivePrimaryId ?? string.Empty,
+                    services?.FormationState?.ActiveSecondaryId ?? string.Empty,
+                    services?.BackpackState?.GetItemEntries() ?? new System.Collections.Generic.Dictionary<string, int>(),
+                    services?.SubsystemMasteryState?.GetLevel(PlayerActionState.ModeFormation) ?? 1),
+                _rhythmState?.RestLingqiMultiplier ?? 1.0, CultivationInputExpEnabled,
+                LingqiFactor, InsightFactor, RealmExpFromLingqiRate, CultivationExpPerInput);
+            double lingqiGain = result.Lingqi;
+            double insightGain = result.Insight;
+            var meal = services?.CookingState?.ActiveMeal ?? default;
+            lingqiGain *= 1 + meal.LingqiRate;
+            insightGain *= 1 + meal.InsightRate;
+            double realmExpGain = result.RealmExp;
             if (!PlayerActionCapabilityRules.HasCapability(_actionState, PlayerActionCapability.GrantsCultivationInputExp))
-            {
-                return;
-            }
-
-            double gain = inputEvents * CultivationExpPerInput;
-            if (gain > 0.0)
-            {
-                _progressState.AddRealmExp(gain);
-            }
-        }
-
-        private void ApplySettlement()
-        {
-            double apFinal10s = _apFinalBucket;
-            _apFinalBucket = 0.0;
-
-            if (apFinal10s <= 0.0)
-            {
-                return;
-            }
-
-            _progressState.AddRealmActiveSeconds(SettlementIntervalSeconds);
-
-            double moodMul = 1.0;
-            double realmMul = _progressState.GetRealmMultiplier();
-
-            double lingqiMultiplier = _rhythmState?.RestLingqiMultiplier ?? 1.0;
-            double lingqiGain = apFinal10s * LingqiFactor * moodMul * realmMul * lingqiMultiplier;
-            double insightGain = apFinal10s * InsightFactor;
-            bool inputExpActive = CultivationInputExpEnabled
-                && PlayerActionCapabilityRules.HasCapability(_actionState, PlayerActionCapability.GrantsCultivationInputExp);
-            double realmExpGain = inputExpActive ? 0.0 : lingqiGain * RealmExpFromLingqiRate;
-
+                realmExpGain = lingqiGain * RealmExpFromLingqiRate;
             _walletState.AddLingqi(lingqiGain);
             _walletState.AddInsight(insightGain);
             _progressState.AddRealmExp(realmExpGain);
 
-            EmitSignal(SignalName.SettlementApplied, apFinal10s, lingqiGain, insightGain, realmExpGain);
+            EmitSignal(SignalName.SettlementApplied, apFinal, lingqiGain, insightGain, realmExpGain, activeSeconds);
+            services?.CookingState?.AdvanceMeal(activeSeconds);
         }
     }
 }

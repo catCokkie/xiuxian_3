@@ -9,7 +9,7 @@ public sealed class FishingRulesTests
     {
         Assert.True(FishingRules.CanFishPond("fishing_spirit_fish", masteryLevel: 1));
         Assert.False(FishingRules.CanFishPond("fishing_deep_pond", masteryLevel: 1));
-        Assert.True(FishingRules.CanFishPond("fishing_deep_pond", masteryLevel: 2));
+        Assert.True(FishingRules.CanFishPond("fishing_deep_pond", masteryLevel: 3));
     }
 
     [Fact]
@@ -21,35 +21,35 @@ public sealed class FishingRulesTests
         Assert.False(partial.CompletedBatch);
         Assert.Equal(90.0f, partial.NextProgress);
         Assert.True(completed.CompletedBatch);
-        Assert.Equal(0.0f, completed.NextProgress);
+        Assert.Equal(130.0f, completed.NextProgress);
     }
 
     [Fact]
-    public void CatchFish_FishingMasteryLevel4AddsBonusYield()
+    public void CatchFish_UsesPondTableAndReturnsOneCatch()
     {
         FishingRules.CatchResult normal = FishingRules.CatchFish("fishing_spirit_fish", masteryLevel: 1);
         FishingRules.CatchResult boosted = FishingRules.CatchFish("fishing_spirit_fish", masteryLevel: 4);
 
         Assert.Equal("spirit_fish", normal.ItemId);
-        Assert.Equal(2, normal.ItemCount);
-        Assert.Equal(3, boosted.ItemCount);
+        Assert.Equal(1, normal.ItemCount);
+        Assert.Equal(1, boosted.ItemCount);
     }
 
     [Fact]
-    public void AdvanceProgress_MasteryLevel2ReducesThreshold()
+    public void AdvanceProgress_MasteryLevel3ReducesThreshold()
     {
-        FishingRules.FishingProgressDecision atLv1 = FishingRules.AdvanceProgress(90.0f, 12, 120, masteryLevel: 1);
-        FishingRules.FishingProgressDecision atLv2 = FishingRules.AdvanceProgress(90.0f, 12, 120, masteryLevel: 2);
+        FishingRules.FishingProgressDecision atLv1 = FishingRules.AdvanceProgress(90.0f, 27, 120, masteryLevel: 1);
+        FishingRules.FishingProgressDecision atLv2 = FishingRules.AdvanceProgress(90.0f, 27, 120, masteryLevel: 3);
 
         Assert.False(atLv1.CompletedBatch);
         Assert.True(atLv2.CompletedBatch);
     }
 
     [Fact]
-    public void GetDoubleOutputChance_ZeroAtLevel1_EightPercentAtLevel4()
+    public void GetDoubleOutputChance_RetiredInFavorOfExclusiveRareBonus()
     {
         Assert.Equal(0.0, FishingRules.GetDoubleOutputChance(1));
-        Assert.Equal(0.08, FishingRules.GetDoubleOutputChance(4));
+        Assert.Equal(0.0, FishingRules.GetDoubleOutputChance(4));
     }
 
     [Fact]

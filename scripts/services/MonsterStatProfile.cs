@@ -6,7 +6,9 @@ namespace Xiuxian.Scripts.Services
         CharacterStatBlock BaseStats,
         int InputsPerRound,
         string MoveCategory = "normal",
-        bool IsBoss = false)
+        bool IsBoss = false,
+        string StrategyTag = "",
+        int HealPerRound = 0)
     {
         public CharacterStatBlock ToStatBlock()
         {

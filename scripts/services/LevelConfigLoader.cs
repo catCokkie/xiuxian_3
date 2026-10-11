@@ -62,7 +62,14 @@ namespace Xiuxian.Scripts.Services
                 return false;
             }
 
-            return LoadConfigFromText(file.GetAsText());
+            string text = file.GetAsText();
+            if (ConfigPath == "res://docs/design/09_level_monster_drop_sample.json")
+            {
+                using FileAccess? equipment = FileAccess.Open("res://docs/design/12_equipment_sample_qi_refining.json", FileAccess.ModeFlags.Read);
+                if (equipment == null) { GD.PushWarning("LevelConfigLoader: equipment configuration is missing."); return false; }
+                text = EquipmentConfigMergeRules.Merge(text, equipment.GetAsText());
+            }
+            return LoadConfigFromText(text);
         }
 
         public bool LoadConfigFromText(string text)
@@ -89,7 +96,17 @@ namespace Xiuxian.Scripts.Services
         public bool TrySetNextUnlockedLevelAsActive() => SwitchLevel(_activeLevelManager.TrySetNextUnlockedLevelAsActive());
         public bool TryGetMonster(string monsterId, out Godot.Collections.Dictionary<string, Variant> monsterData) => _provider.TryGetMonster(monsterId, out monsterData);
         public bool TryGetDropTable(string dropTableId, out Godot.Collections.Dictionary<string, Variant> dropTableData) => _provider.TryGetDropTable(dropTableId, out dropTableData);
-        public string RollSpawnMonsterId() => _activeLevelManager.RollSpawnMonsterId(_rng);
+        public string RollSpawnMonsterId()
+        {
+            string rolled = _activeLevelManager.RollSpawnMonsterId(_rng);
+            double bonus = SubsystemMasteryRules.GetEffectValue(PlayerActionState.ModeDungeon,
+                ServiceLocator.Instance?.SubsystemMasteryState?.GetLevel(PlayerActionState.ModeDungeon) ?? 1, "dungeon_elite_rate_bonus");
+            if (bonus <= 0 || _rng.Randf() >= bonus || (TryGetMonsterStatProfile(rolled, out var current) && current.MoveCategory == "elite")) return rolled;
+            var elites = new List<string>();
+            foreach (string id in GetSpawnMonsterIds())
+                if (TryGetMonsterStatProfile(id, out var profile) && profile.MoveCategory == "elite") elites.Add(id);
+            return elites.Count > 0 ? elites[_rng.RandiRange(0, elites.Count - 1)] : rolled;
+        }
         public bool TryGetMonsterCombatParams(string monsterId, out string monsterName, out int hp, out int inputsPerRound, out int attack) => _monsterConfigService.TryGetMonsterCombatParams(monsterId, out monsterName, out hp, out inputsPerRound, out attack);
         public bool TryGetMonsterStatProfile(string monsterId, out MonsterStatProfile profile) => _monsterConfigService.TryGetMonsterStatProfile(monsterId, out profile);
         public Godot.Collections.Array<string> GetBossDefeatedLevelIds() => _activeLevelManager.GetBossClearedLevelIds();

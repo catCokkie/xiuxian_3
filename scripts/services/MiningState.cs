@@ -20,14 +20,14 @@ namespace Xiuxian.Scripts.Services
                 SelectedRecipeId = string.Empty;
                 CurrentProgress = 0.0f;
                 RequiredProgress = 180.0f;
-                CurrentDurability = MiningRules.DefaultNodeDurability;
+                CurrentDurability = MiningRules.GetEffectiveMaxDurability(ServiceLocator.Instance?.SubsystemMasteryState?.GetLevel(PlayerActionState.ModeMining) ?? 1);
             }
             else
             {
                 SelectedRecipeId = node.RecipeId;
                 CurrentProgress = 0.0f;
                 RequiredProgress = node.RequiredInputs;
-                CurrentDurability = MiningRules.DefaultNodeDurability;
+                CurrentDurability = MiningRules.GetEffectiveMaxDurability(ServiceLocator.Instance?.SubsystemMasteryState?.GetLevel(PlayerActionState.ModeMining) ?? 1);
             }
 
             EmitSignal(SignalName.MiningChanged, SelectedRecipeId, CurrentProgress, RequiredProgress, CurrentDurability);
@@ -35,16 +35,20 @@ namespace Xiuxian.Scripts.Services
 
         public bool AdvanceProgress(int inputEvents)
         {
-            if (!HasSelectedNode)
-            {
-                return false;
-            }
-
-            MiningRules.MiningProgressDecision decision = MiningRules.AdvanceProgress(CurrentProgress, inputEvents, Mathf.RoundToInt(RequiredProgress), CurrentDurability);
-            CurrentProgress = decision.NextProgress;
-            CurrentDurability = decision.NextDurability;
+            if (!HasSelectedNode) return false;
+            double inputRate = 1.0 / (1 - MiningRules.GetSpeedBonus(ServiceLocator.Instance?.SubsystemMasteryState?.GetLevel(PlayerActionState.ModeMining) ?? 1));
+            CurrentProgress = BatchProgressRules.Advance(CurrentProgress, inputEvents, RequiredProgress, inputRate);
             EmitSignal(SignalName.MiningChanged, SelectedRecipeId, CurrentProgress, RequiredProgress, CurrentDurability);
-            return decision.CompletedBatch;
+            return CurrentProgress >= RequiredProgress;
+        }
+
+        public void CompleteBatch()
+        {
+            if (CurrentProgress < RequiredProgress) return;
+            CurrentProgress = BatchProgressRules.Consume(CurrentProgress, RequiredProgress);
+            int mastery = ServiceLocator.Instance?.SubsystemMasteryState?.GetLevel(PlayerActionState.ModeMining) ?? 1;
+            CurrentDurability = CurrentDurability <= 1 ? MiningRules.GetEffectiveMaxDurability(mastery) : CurrentDurability - 1;
+            EmitSignal(SignalName.MiningChanged, SelectedRecipeId, CurrentProgress, RequiredProgress, CurrentDurability);
         }
 
         public void RefreshCurrentNode()
@@ -54,7 +58,7 @@ namespace Xiuxian.Scripts.Services
                 return;
             }
 
-            CurrentDurability = MiningRules.DefaultNodeDurability;
+            CurrentDurability = MiningRules.GetEffectiveMaxDurability(ServiceLocator.Instance?.SubsystemMasteryState?.GetLevel(PlayerActionState.ModeMining) ?? 1);
             EmitSignal(SignalName.MiningChanged, SelectedRecipeId, CurrentProgress, RequiredProgress, CurrentDurability);
         }
 

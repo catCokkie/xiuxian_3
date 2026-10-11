@@ -14,6 +14,7 @@ namespace Xiuxian.Scripts.Services
             public const double InsightFactor = 0.08;
             public const double RealmExpFromLingqiRate = 0.25;
             public const double CultivationExpPerInput = 0.35;
+            public const double PassiveLingqiPerMinute = 5.0;
         }
 
         public static class EquipmentGeneration

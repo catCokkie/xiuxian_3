@@ -47,6 +47,18 @@ namespace Xiuxian.Scripts.Services
         public string ActionId => _actionId;
         public string ActionTargetId => _actionTargetId;
         public string ActionVariant => _actionVariant;
+        public string ConsumablePolicy { get; private set; } = "boss_only";
+        public bool WorkMode { get; private set; }
+        public void SetWorkMode(bool work)
+        {
+            WorkMode = work;
+            EmitSignal(SignalName.ActionChanged, _actionId, _actionTargetId, _actionVariant);
+        }
+        public void SetConsumablePolicy(string policy)
+        {
+            ConsumablePolicy = policy == "all" || policy == "none" ? policy : "boss_only";
+            EmitSignal(SignalName.ActionChanged, _actionId, _actionTargetId, _actionVariant);
+        }
         public bool IsDungeonMode => _actionId == ActionDungeon;
         public bool IsCultivationMode => _actionId == ActionCultivation;
         public bool IsAlchemyMode => _actionId == ActionAlchemy;
@@ -105,11 +117,15 @@ namespace Xiuxian.Scripts.Services
                 ["action_id"] = _actionId,
                 ["action_target_id"] = _actionTargetId,
                 ["action_variant"] = _actionVariant,
+                ["consumable_policy"] = ConsumablePolicy,
+                ["work_mode"] = WorkMode,
             };
         }
 
         public void FromDictionary(Godot.Collections.Dictionary<string, Variant> data)
         {
+            WorkMode = data.ContainsKey("work_mode") && data["work_mode"].AsBool();
+            SetConsumablePolicy(data.ContainsKey("consumable_policy") ? data["consumable_policy"].AsString() : "boss_only");
             PlayerActionStateRules.PlayerActionStateData next = PlayerActionStateRules.FromDictionary(data);
             _actionId = next.ActionId;
             _actionTargetId = next.ActionTargetId;

@@ -113,9 +113,9 @@ public sealed class SubsystemMasteryRulesTests
     }
 
     [Fact]
-    public void GetEffectValue_ReturnsFishingSpeedBonusAtLevel2()
+    public void GetEffectValue_ReturnsFishingSpeedBonusAtLevel3()
     {
-        double effect = SubsystemMasteryRules.GetEffectValue(PlayerActionState.ModeFishing, 2, SubsystemMasteryRules.FishingSpeedBonusEffectId);
+        double effect = SubsystemMasteryRules.GetEffectValue(PlayerActionState.ModeFishing, 3, SubsystemMasteryRules.FishingSpeedBonusEffectId);
 
         Assert.Equal(0.15, effect);
     }
@@ -129,11 +129,11 @@ public sealed class SubsystemMasteryRulesTests
     }
 
     [Fact]
-    public void GetEffectValue_ReturnsCookingDurationBonusAtLevel2()
+    public void GetEffectValue_ReturnsCookingDurationBonusAtLevel3()
     {
-        double effect = SubsystemMasteryRules.GetEffectValue(PlayerActionState.ModeCooking, 2, SubsystemMasteryRules.CookingDurationBonusEffectId);
+        double effect = SubsystemMasteryRules.GetEffectValue(PlayerActionState.ModeCooking, 3, SubsystemMasteryRules.CookingDurationBonusEffectId);
 
-        Assert.Equal(1.0, effect);
+        Assert.Equal(0.33, effect);
     }
 
     [Fact]

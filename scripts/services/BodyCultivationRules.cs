@@ -33,7 +33,7 @@ namespace Xiuxian.Scripts.Services
                 260,
                 1,
                 IronBoneMaxCount,
-                new CharacterStatModifier(MaxHpFlat: IronBoneMaxHpFlat)),
+                new CharacterStatModifier(MaxHpRate: .03)),
             new(
                 "body_cultivation_boneforge",
                 "灵肤术",
@@ -42,7 +42,7 @@ namespace Xiuxian.Scripts.Services
                 300,
                 2,
                 SpiritSkinMaxCount,
-                new CharacterStatModifier(DefenseFlat: SpiritSkinDefenseFlat)),
+                new CharacterStatModifier(DefenseRate: .02)),
             new(
                 "body_cultivation_bloodflow",
                 "活血诀",
@@ -51,7 +51,7 @@ namespace Xiuxian.Scripts.Services
                 320,
                 4,
                 BloodflowMaxCount,
-                new CharacterStatModifier(AttackFlat: BloodflowAttackFlat),
+                default,
                 BloodflowHealRate),
         };
 
@@ -111,8 +111,11 @@ namespace Xiuxian.Scripts.Services
 
         public static bool CanApply(string recipeId, int currentCount, int masteryLevel = 1)
         {
-            return currentCount < GetEffectiveCap(recipeId, masteryLevel);
+            return TryGetTechnique(recipeId, out var technique) && masteryLevel >= technique.RequiredMasteryLevel && currentCount < GetEffectiveCap(recipeId, masteryLevel);
         }
+
+        public static int GetMaterialCount(int baseCount, int completedCount, int mastery)
+            => System.Math.Max(1, (int)System.Math.Ceiling((baseCount + System.Math.Max(0, completedCount)) * (1 - GetMaterialDiscount(mastery))));
 
         public static CharacterStatModifier GetRateModifier(string recipeId, int masteryLevel = 1)
         {

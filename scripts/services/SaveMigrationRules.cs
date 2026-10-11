@@ -11,7 +11,7 @@ namespace Xiuxian.Scripts.Services
     /// </summary>
     public static class SaveMigrationRules
     {
-        public const int LatestVersion = 14;
+        public const int LatestVersion = 15;
 
         private const string DefaultLeftTab = "CultivationTab";
         private const string DefaultRightTab = "BugTab";
@@ -177,6 +177,10 @@ namespace Xiuxian.Scripts.Services
                         case 13:
                             MigrateV13ToV14(cfg);
                             version = 14;
+                            break;
+                        case 14:
+                            MigrateV14ToV15(cfg);
+                            version = 15;
                             break;
                         default:
                             version = LatestVersion;
@@ -574,6 +578,35 @@ namespace Xiuxian.Scripts.Services
             Dictionary<string, object> stats = EnsureDictionaryValue(cfg, "stats", "player");
             PlayerStatsPersistenceRules.PlayerStatsSnapshot snapshot = PlayerStatsPersistenceRules.FromPlainDictionary(stats);
             cfg.SetValue("stats", "player", PlayerStatsPersistenceRules.ToPlainDictionary(snapshot));
+        }
+
+        private static void MigrateV14ToV15(IMigrationStore cfg)
+        {
+            var action = EnsureDictionaryValue(cfg, "action", "mode");
+            action.TryAdd("consumable_policy", "boss_only"); action.TryAdd("work_mode", false);
+            cfg.SetValue("action", "mode", action);
+            var guide = EnsureDictionaryValue(cfg, "guide", "state");
+            guide.TryAdd("steps_completed", new List<object>());
+            cfg.SetValue("guide", "state", guide);
+            var cooking = EnsureDictionaryValue(cfg, "cooking", "state");
+            cooking.TryAdd("active_meal_id", ""); cooking.TryAdd("active_meal_remaining_seconds", 0.0);
+            cooking.TryAdd("returned_meal_durations", new Dictionary<string, object>());
+            cfg.SetValue("cooking", "state", cooking);
+            var items = EnsureDictionaryValue(cfg, "backpack", "items");
+            foreach (string oldId in new[] { "food_spirit_porridge", "food_fruit_jelly", "food_dragon_soup" })
+                if (items.TryGetValue(oldId, out object oldValue))
+                {
+                    string nextId = MealRules.NormalizeId(oldId);
+                    items[nextId] = ReadInt(oldValue, 0) + (items.TryGetValue(nextId, out object nextValue) ? ReadInt(nextValue, 0) : 0);
+                    items.Remove(oldId);
+                }
+            cfg.SetValue("backpack", "items", items);
+            var player = EnsureDictionaryValue(cfg, "progress", "player");
+            player.TryAdd("body_cultivation_max_hp_rate", 0.0); player.TryAdd("body_cultivation_defense_rate", 0.0);
+            cfg.SetValue("progress", "player", player);
+            var garden = EnsureDictionaryValue(cfg, "garden", "state");
+            garden.TryAdd("breeding_level", new Dictionary<string, object>()); garden.TryAdd("breeding_remainders", new Dictionary<string, object>());
+            cfg.SetValue("garden", "state", garden);
         }
 
         private static Dictionary<string, object> BuildGenericState()

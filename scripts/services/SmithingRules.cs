@@ -6,14 +6,15 @@ namespace Xiuxian.Scripts.Services
 
     public static class SmithingRules
     {
-        public static int GetMaxEnhanceLevel(int masteryLevel)
+        public static int GetMaxEnhanceLevel(int masteryLevel, int rarity = 3)
         {
-            return masteryLevel switch
+            int masteryCap = masteryLevel switch
             {
                 >= 4 => 9,
                 >= 2 => 6,
                 _ => 3,
             };
+            return Math.Min(masteryCap, Math.Clamp(rarity, 1, 4) * 3);
         }
 
         public static SmithingCost GetCost(int currentLevel, int masteryLevel = 1)
@@ -40,7 +41,7 @@ namespace Xiuxian.Scripts.Services
 
         public static bool CanEnhance(EquipmentStatProfile equipment, BackpackState backpack, ResourceWalletState wallet, int masteryLevel = 1)
         {
-            int maxLevel = GetMaxEnhanceLevel(masteryLevel);
+            int maxLevel = GetMaxEnhanceLevel(masteryLevel, equipment.Rarity);
             if (equipment.EnhanceLevel >= maxLevel)
             {
                 return false;

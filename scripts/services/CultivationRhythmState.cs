@@ -19,6 +19,7 @@ namespace Xiuxian.Scripts.Services
         private ResourceWalletState? _resourceWalletState;
         private PlayerProgressState? _playerProgressState;
         private readonly Random _random = new();
+        private double _cycleLingqi, _cycleInsight, _cycleExp;
 
         public bool Enabled { get; private set; } = true;
         public string Strength { get; private set; } = CultivationRhythmRules.StrengthWeak;
@@ -55,6 +56,7 @@ namespace Xiuxian.Scripts.Services
                 return;
             }
 
+            if (IsGrandRest && (ServiceLocator.Instance?.InputActivityState?.SecondsSinceLastInput ?? 0) <= 5) return;
             double next = Math.Max(0.0, RestRemainingSeconds - delta);
             if (Math.Abs(next - RestRemainingSeconds) < 0.001)
             {
@@ -64,6 +66,7 @@ namespace Xiuxian.Scripts.Services
             RestRemainingSeconds = next;
             if (!InRest)
             {
+                if (IsGrandRest) CompleteGrandRest();
                 IsGrandRest = false;
             }
 
@@ -122,6 +125,7 @@ namespace Xiuxian.Scripts.Services
             RestRemainingSeconds = Math.Max(0.0, RestRemainingSeconds - offlineSeconds);
             if (!InRest)
             {
+                if (IsGrandRest) CompleteGrandRest();
                 IsGrandRest = false;
             }
 
@@ -166,11 +170,16 @@ namespace Xiuxian.Scripts.Services
                 IsGrandRest,
                 TotalRestCount,
                 TotalMeditationInsights);
-            return SaveValueConversionRules.ToVariantDictionary(CultivationRhythmPersistenceRules.ToPlainDictionary(snapshot));
+            var data = SaveValueConversionRules.ToVariantDictionary(CultivationRhythmPersistenceRules.ToPlainDictionary(snapshot));
+            data["cycle_lingqi"] = _cycleLingqi; data["cycle_insight"] = _cycleInsight; data["cycle_exp"] = _cycleExp;
+            return data;
         }
 
         public void FromDictionary(Godot.Collections.Dictionary<string, Variant> data)
         {
+            _cycleLingqi = data.ContainsKey("cycle_lingqi") ? Math.Max(0, data["cycle_lingqi"].AsDouble()) : 0;
+            _cycleInsight = data.ContainsKey("cycle_insight") ? Math.Max(0, data["cycle_insight"].AsDouble()) : 0;
+            _cycleExp = data.ContainsKey("cycle_exp") ? Math.Max(0, data["cycle_exp"].AsDouble()) : 0;
             CultivationRhythmPersistenceRules.RhythmSnapshot snapshot = CultivationRhythmPersistenceRules.FromPlainDictionary(
                 SaveValueConversionRules.ToPlainDictionary(data));
             Enabled = snapshot.Enabled;
@@ -199,26 +208,22 @@ namespace Xiuxian.Scripts.Services
             }
         }
 
-        private void OnSettlementApplied(double apFinal10s, double lingqiGain, double insightGain, double realmExpGain)
+        private void OnSettlementApplied(double apFinal, double lingqiGain, double insightGain, double realmExpGain, double activeSeconds)
         {
-            if (!Enabled || apFinal10s <= 0.0)
+            if (!Enabled || activeSeconds <= 0.0)
             {
                 return;
             }
 
-            if (InRest)
-            {
-                RestRemainingSeconds = 0.0;
-                IsGrandRest = false;
-            }
-
-            CurrentCycleActiveSeconds += _activityConversionService?.SettlementIntervalSeconds ?? 10.0;
+            _cycleLingqi += lingqiGain; _cycleInsight += insightGain; _cycleExp += realmExpGain;
+            CurrentCycleActiveSeconds += activeSeconds;
             double requiredSeconds = CultivationRhythmRules.GetCycleDurationSeconds(CycleMinutes);
 
             while (CurrentCycleActiveSeconds >= requiredSeconds)
             {
                 CurrentCycleActiveSeconds -= requiredSeconds;
-                CompleteSmallCycle(lingqiGain, insightGain, realmExpGain);
+                CompleteSmallCycle(_cycleLingqi, _cycleInsight, _cycleExp);
+                _cycleLingqi = _cycleInsight = _cycleExp = 0;
             }
 
             EmitSignal(SignalName.RhythmChanged);
@@ -235,7 +240,6 @@ namespace Xiuxian.Scripts.Services
 
             bool isGrandCycle = SmallCycleCount >= CultivationRhythmRules.GrandCycleSmallCycleCount;
             int spiritStoneReward = 0;
-            string meditationReward = string.Empty;
             if (isGrandCycle)
             {
                 SmallCycleCount = 0;
@@ -243,41 +247,32 @@ namespace Xiuxian.Scripts.Services
                 spiritStoneReward = CultivationRhythmRules.GetGrandCycleSpiritStoneReward(_random.Next());
                 _resourceWalletState?.AddSpiritStones(spiritStoneReward);
 
-                if (CultivationRhythmRules.ShouldGrantMeditationBonus(_random.Next()))
-                {
-                    string bonusType = CultivationRhythmRules.GetMeditationBonusType(_random.Next());
-                    if (_playerProgressState != null
-                        && _playerProgressState.TryApplyZhouTianMeditationBonus(
-                            bonusType,
-                            CultivationRhythmRules.MeditationBonusRate,
-                            out string rewardText))
-                    {
-                        TotalMeditationInsights++;
-                        meditationReward = rewardText;
-                    }
-                }
             }
 
-            RestRemainingSeconds = CultivationRhythmRules.RestDurationSeconds;
+            RestRemainingSeconds = isGrandCycle ? 15 * 60 : CultivationRhythmRules.RestDurationSeconds;
             IsGrandRest = isGrandCycle;
 
-            if (Strength != CultivationRhythmRules.StrengthNone)
+            // Always emit for the history; presentation decides whether to notify.
+            string title = isGrandCycle ? $"大周天圆满（累计 {TotalGrandCycles} 次）" : $"小周天·第 {SmallCycleCount} 轮";
+            string rewardSummary = $"本周天：灵气 +{lingqiGain:0.0}｜悟性 +{insightGain:0.0}｜境界经验 +{realmExpGain:0.0}｜周天奖励 +{insightReward} 悟性";
+            if (spiritStoneReward > 0)
             {
-                string title = isGrandCycle ? $"大周天圆满（累计 {TotalGrandCycles} 次）" : $"小周天·第 {SmallCycleCount} 轮";
-                string rewardSummary = $"+{insightReward} 悟性";
-                if (spiritStoneReward > 0)
-                {
-                    rewardSummary += $"｜+{spiritStoneReward} 灵石";
-                }
-                if (!string.IsNullOrEmpty(meditationReward))
-                {
-                    rewardSummary += $"｜{meditationReward}";
-                }
+                rewardSummary += $"｜+{spiritStoneReward} 灵石";
+            }
+            string suggestion = isGrandCycle
+                ? "四周天圆满，可入定休憩"
+                : "运功一周天，建议起身调息片刻";
+            EmitSignal(SignalName.RhythmSummaryReady, title, rewardSummary, suggestion, Strength == CultivationRhythmRules.StrengthStrong);
+        }
 
-                string suggestion = isGrandCycle
-                    ? "四周天圆满，可入定休憩"
-                    : "运功一周天，建议起身调息片刻";
-                EmitSignal(SignalName.RhythmSummaryReady, title, rewardSummary, suggestion, Strength == CultivationRhythmRules.StrengthStrong);
+        private void CompleteGrandRest()
+        {
+            if (!CultivationRhythmRules.ShouldGrantMeditationBonus(_random.Next())) return;
+            string bonus = CultivationRhythmRules.GetMeditationBonusType(_random.Next());
+            if (_playerProgressState?.TryApplyZhouTianMeditationBonus(bonus, CultivationRhythmRules.MeditationBonusRate, out string text) == true)
+            {
+                TotalMeditationInsights++;
+                EmitSignal(SignalName.RhythmSummaryReady, "入定领悟", text, "长调息完成", Strength == CultivationRhythmRules.StrengthStrong);
             }
         }
 

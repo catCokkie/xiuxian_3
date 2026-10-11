@@ -39,7 +39,7 @@ public sealed class AlchemyRulesTests
         Assert.False(partial.CompletedBatch);
         Assert.Equal(110.0f, partial.NextProgress);
         Assert.True(complete.CompletedBatch);
-        Assert.Equal(0.0f, complete.NextProgress);
+        Assert.Equal(210.0f, complete.NextProgress);
     }
 
     [Fact]

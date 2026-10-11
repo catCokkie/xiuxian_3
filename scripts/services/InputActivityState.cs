@@ -11,7 +11,7 @@ namespace Xiuxian.Scripts.Services
     public partial class InputActivityState : Node, IDictionaryPersistable
     {
         [Signal]
-        public delegate void ActivityTickEventHandler(double apThisBatch, double apFinal);
+        public delegate void ActivityTickEventHandler(double apThisBatch, double apFinal, double activeSecondsThisBatch);
 
         [Signal]
         public delegate void InputBatchTickEventHandler(int inputEventsThisBatch, double apFinal);
@@ -51,10 +51,8 @@ namespace Xiuxian.Scripts.Services
         [Export] public int MaxInputPerMinute { get; set; } = GameBalanceConstants.InputAntiAbuse.MaxInputPerMinute;
         [Export] public double AccumulatorDrainPerSecond { get; set; } = 0.6;
 
-        private const int MaxRollingQueueSize = 10000;
-
         private readonly object _pendingLock = new();
-        private readonly Queue<(double time, int acceptedInputCount)> _acceptedInputWindow = new();
+        private readonly Queue<(double time, int acceptedInputCount, double ap)> _acceptedInputWindow = new();
 
         private int _pendingKeyDown;
         private int _pendingMouseClick;
@@ -65,6 +63,8 @@ namespace Xiuxian.Scripts.Services
 
         private int _acceptedInputCountInWindow;
         private double _runtimeSeconds;
+        private double _acceptedApInWindow;
+        private double _activeUntilSeconds;
         private double _pendingIdleSecondsBeforeBatch;
         private bool _hasPendingIdleSnapshot;
 
@@ -88,10 +88,6 @@ namespace Xiuxian.Scripts.Services
                 scrollBatch,
                 joypadButtonBatch,
                 joypadAxisBatch);
-            if (rawDiscreteBatch.TotalCount <= 0 && moveBatch <= 0.0)
-            {
-                return;
-            }
 
             int remainingAllowance = InputActivityRules.CalculateRemainingWindowAllowance(
                 _acceptedInputCountInWindow,
@@ -109,10 +105,11 @@ namespace Xiuxian.Scripts.Services
                 MovePxDivider,
                 JoypadButtonWeight,
                 JoypadAxisWeight);
-            if (acceptedInputCount <= 0 && acceptedAp <= 0.0)
-            {
-                return;
-            }
+            double maxWeight = System.Math.Max(1.0, System.Math.Max(ScrollStepWeight, System.Math.Max(KeyDownWeight, System.Math.Max(MouseClickWeight, System.Math.Max(JoypadButtonWeight, JoypadAxisWeight)))));
+            double apCap = MaxInputPerMinute > 0 ? MaxInputPerMinute * maxWeight : double.PositiveInfinity;
+            acceptedAp = InputActivityRules.ClampAp(acceptedAp, _acceptedApInWindow, apCap);
+            if (rawDiscreteBatch.TotalCount > 0 || moveBatch > 0) _activeUntilSeconds = _runtimeSeconds + 5.0;
+            double activeSeconds = InputActivityRules.MeasureActiveSeconds(delta, _runtimeSeconds, _activeUntilSeconds);
 
             KeyDownCount = acceptedDiscreteBatch.KeyDownCount;
             MouseClickCount = acceptedDiscreteBatch.MouseClickCount;
@@ -124,16 +121,20 @@ namespace Xiuxian.Scripts.Services
             SecondsSinceLastInputBeforeLatestBatch = rawDiscreteBatch.TotalCount > 0 || moveBatch > 0.0
                 ? _pendingIdleSecondsBeforeBatch
                 : SecondsSinceLastInput;
-            TotalActiveSeconds += delta;
+            TotalActiveSeconds += activeSeconds;
 
-            PushAcceptedInputWindow(acceptedInputCount);
+            PushAcceptedInputWindow(acceptedInputCount, acceptedAp);
 
             ApThisSecond = acceptedAp;
             ApFinal = acceptedAp;
             ApAccumulator = InputActivityRules.CalculateAccumulator(ApAccumulator, ApFinal, AccumulatorDrainPerSecond, delta);
 
-            EmitSignal(SignalName.ActivityTick, ApThisSecond, ApFinal);
-            EmitSignal(SignalName.InputBatchTick, InputEventsThisSecond, ApFinal);
+            if (activeSeconds > 0.0) EmitSignal(SignalName.ActivityTick, ApThisSecond, ApFinal, activeSeconds);
+            if (acceptedInputCount > 0 || acceptedAp > 0) ServiceLocator.Instance?.GuideState?.Complete("first_input");
+            if (acceptedInputCount > 0)
+            {
+                EmitSignal(SignalName.InputBatchTick, InputEventsThisSecond, ApFinal);
+            }
         }
 
         public void RegisterKeyDown()
@@ -245,14 +246,15 @@ namespace Xiuxian.Scripts.Services
             SecondsSinceLastInput = 0.0;
         }
 
-        private void PushAcceptedInputWindow(int acceptedInputCount)
+        private void PushAcceptedInputWindow(int acceptedInputCount, double ap)
         {
-            if (acceptedInputCount <= 0)
+            if (acceptedInputCount <= 0 && ap <= 0.0)
             {
                 return;
             }
 
-            _acceptedInputWindow.Enqueue((_runtimeSeconds, acceptedInputCount));
+            _acceptedInputWindow.Enqueue((_runtimeSeconds, acceptedInputCount, ap));
+            _acceptedApInWindow += ap;
             _acceptedInputCountInWindow += acceptedInputCount;
         }
 
@@ -263,12 +265,7 @@ namespace Xiuxian.Scripts.Services
             {
                 var ev = _acceptedInputWindow.Dequeue();
                 _acceptedInputCountInWindow -= ev.acceptedInputCount;
-            }
-
-            if (_acceptedInputWindow.Count > MaxRollingQueueSize)
-            {
-                _acceptedInputWindow.Clear();
-                _acceptedInputCountInWindow = 0;
+                _acceptedApInWindow = System.Math.Max(0.0, _acceptedApInWindow - ev.ap);
             }
 
             if (_acceptedInputCountInWindow < 0)

@@ -11,6 +11,7 @@ public partial class SubmenuWindowController : Control
     private Tween? _activeTween;
     private bool _isDragging;
     private Vector2 _dragOffset;
+    private Vector2 _lastViewportSize;
 
     public override void _Ready()
     {
@@ -20,6 +21,22 @@ public partial class SubmenuWindowController : Control
         }
 
         PivotOffset = Size / 2.0f;
+        FitToViewport();
+    }
+
+    public override void _Process(double delta)
+    {
+        if (_lastViewportSize != GetViewportRect().Size) FitToViewport();
+    }
+
+    public void FitToViewport()
+    {
+        _lastViewportSize = GetViewportRect().Size;
+        Vector2 available = _lastViewportSize - new Vector2(32, 116);
+        Size = new Vector2(Mathf.Min(960, Mathf.Max(320, available.X)), Mathf.Min(720, Mathf.Max(240, available.Y)));
+        Position = new Vector2(Mathf.Clamp(Position.X, 16, Mathf.Max(16, _lastViewportSize.X - Size.X - 16)),
+            Mathf.Clamp(Position.Y, 16, Mathf.Max(16, _lastViewportSize.Y - Size.Y - 100)));
+        PivotOffset = Size / 2;
     }
 
     public override void _Input(InputEvent @event)
@@ -77,6 +94,7 @@ public partial class SubmenuWindowController : Control
     private void AnimateOpen()
     {
         StopActiveTween();
+        FitToViewport();
         Visible = true;
         Scale = new Vector2(0.94f, 1.0f);
         Modulate = new Color(1, 1, 1, 0.0f);

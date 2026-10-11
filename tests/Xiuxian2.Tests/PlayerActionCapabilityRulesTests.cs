@@ -18,7 +18,7 @@ public sealed class PlayerActionCapabilityRulesTests
         Assert.True(PlayerActionCapabilityRules.HasCapability(PlayerActionState.ActionDungeon, PlayerActionCapability.AdvancesDungeon));
         Assert.True(PlayerActionCapabilityRules.HasCapability(PlayerActionState.ActionDungeon, PlayerActionCapability.RunsBattle));
         Assert.True(PlayerActionCapabilityRules.HasCapability(PlayerActionState.ActionDungeon, PlayerActionCapability.GeneratesLoot));
-        Assert.False(PlayerActionCapabilityRules.HasCapability(PlayerActionState.ActionDungeon, PlayerActionCapability.ConsumesApSettlement));
+        Assert.True(PlayerActionCapabilityRules.HasCapability(PlayerActionState.ActionDungeon, PlayerActionCapability.ConsumesApSettlement));
     }
 
     [Fact]

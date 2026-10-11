@@ -208,9 +208,9 @@ namespace Xiuxian.Scripts.Services
                 Def(PlayerActionState.ModeMining, 4, 95, 3, MiningDoubleOutputEffectId, "矿脉精通 Lv4", 0.10),
 
                 Def(PlayerActionState.ModeFishing, 1, 0, 1, "fishing_base", "灵渔精通 Lv1", 0.0),
-                Def(PlayerActionState.ModeFishing, 2, 25, 1, FishingSpeedBonusEffectId, "灵渔精通 Lv2", 0.15),
-                Def(PlayerActionState.ModeFishing, 3, 55, 2, FishingRarePondUnlockEffectId, "灵渔精通 Lv3", 1.0),
-                Def(PlayerActionState.ModeFishing, 4, 90, 3, FishingDoubleOutputEffectId, "灵渔精通 Lv4", 0.08),
+                Def(PlayerActionState.ModeFishing, 2, 25, 1, "fishing_youtan_unlock", "灵渔精通 Lv2", 1.0),
+                Def(PlayerActionState.ModeFishing, 3, 55, 2, FishingSpeedBonusEffectId, "灵渔精通 Lv3", .15),
+                Def(PlayerActionState.ModeFishing, 4, 90, 3, "fishing_rare_capacity_bonus", "灵渔精通 Lv4", 1.0),
 
                 Def(PlayerActionState.ModeTalisman, 1, 0, 1, "talisman_base", "符箓精通 Lv1", 0.0),
                 Def(PlayerActionState.ModeTalisman, 2, 30, 1, TalismanSecondRecipeUnlockEffectId, "符箓精通 Lv2", 1.0),
@@ -218,8 +218,8 @@ namespace Xiuxian.Scripts.Services
                 Def(PlayerActionState.ModeTalisman, 4, 95, 3, TalismanExtraBattleUseEffectId, "符箓精通 Lv4", 2.0),
 
                 Def(PlayerActionState.ModeCooking, 1, 0, 1, "cooking_base", "烹饪精通 Lv1", 0.0),
-                Def(PlayerActionState.ModeCooking, 2, 25, 1, CookingDurationBonusEffectId, "烹饪精通 Lv2", 1.0),
-                Def(PlayerActionState.ModeCooking, 3, 55, 2, CookingDoubleOutputEffectId, "烹饪精通 Lv3", 0.15),
+                Def(PlayerActionState.ModeCooking, 2, 25, 1, "cooking_second_meal_unlock", "烹饪精通 Lv2", 1.0),
+                Def(PlayerActionState.ModeCooking, 3, 55, 2, CookingDurationBonusEffectId, "烹饪精通 Lv3", .33),
                 Def(PlayerActionState.ModeCooking, 4, 90, 3, CookingExtraEffectId, "烹饪精通 Lv4", 1.0),
 
                 Def(PlayerActionState.ModeFormation, 1, 0, 1, "formation_base", "阵法精通 Lv1", 0.0),

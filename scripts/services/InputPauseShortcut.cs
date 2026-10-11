@@ -16,6 +16,7 @@ namespace Xiuxian.Scripts.Services
         {
             _hookService = GetNode<InputHookService>(HookServicePath);
             ProcessMode = ProcessModeEnum.Always; // 即使暂停也处理
+            SetProcessInput(true);
         }
 
         public override void _Input(InputEvent @event)

@@ -9,23 +9,23 @@ public sealed class BodyCultivationRulesTests
     {
         Assert.True(BodyCultivationRules.CanApply("body_cultivation_temper", 19));
         Assert.False(BodyCultivationRules.CanApply("body_cultivation_temper", 20));
-        Assert.Equal(6, BodyCultivationRules.GetRateModifier("body_cultivation_temper").MaxHpFlat);
+        Assert.Equal(.03, BodyCultivationRules.GetRateModifier("body_cultivation_temper").MaxHpRate);
     }
 
     [Fact]
     public void Boneforge_HasFifteenCapAndFlatDefenseReward()
     {
-        Assert.True(BodyCultivationRules.CanApply("body_cultivation_boneforge", 14));
-        Assert.False(BodyCultivationRules.CanApply("body_cultivation_boneforge", 15));
-        Assert.Equal(2, BodyCultivationRules.GetRateModifier("body_cultivation_boneforge").DefenseFlat);
+        Assert.True(BodyCultivationRules.CanApply("body_cultivation_boneforge", 14, masteryLevel: 2));
+        Assert.False(BodyCultivationRules.CanApply("body_cultivation_boneforge", 15, masteryLevel: 2));
+        Assert.Equal(.02, BodyCultivationRules.GetRateModifier("body_cultivation_boneforge").DefenseRate);
     }
 
     [Fact]
     public void Bloodflow_HasTenCapAndPostBattleHealRate()
     {
-        Assert.True(BodyCultivationRules.CanApply("body_cultivation_bloodflow", 9));
-        Assert.False(BodyCultivationRules.CanApply("body_cultivation_bloodflow", 10));
-        Assert.Equal(2, BodyCultivationRules.GetRateModifier("body_cultivation_bloodflow").AttackFlat);
+        Assert.True(BodyCultivationRules.CanApply("body_cultivation_bloodflow", 9, masteryLevel: 4));
+        Assert.False(BodyCultivationRules.CanApply("body_cultivation_bloodflow", 15, masteryLevel: 4));
+        Assert.Equal(0, BodyCultivationRules.GetRateModifier("body_cultivation_bloodflow").AttackFlat);
         Assert.Equal(0.02, BodyCultivationRules.GetPostBattleHealRate("body_cultivation_bloodflow"), 6);
     }
 

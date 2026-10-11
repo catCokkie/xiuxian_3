@@ -168,6 +168,7 @@ public partial class BookTabsController : Control
     public string ActiveLeftTabName { get; private set; } = "CultivationTab";
     public string ActiveRightTabName { get; private set; } = "BugTab";
     private bool _isShowingRightTab;
+    public string ActivePageName { get; private set; } = "CultivationTab";
 
     private string _activeSettingsSection = "system";
     private bool _isApplyingSettingsUi;
@@ -325,6 +326,8 @@ public partial class BookTabsController : Control
         ApplyStaticTexts();
 
         BuildSettingsUi();
+        BuildResponsiveLayout();
+        if (_playerActionState != null) _playerActionState.ActionChanged += OnHomeActionChanged;
         ApplySettingsRuntime();
         UpdateSettingsControlsFromState();
         UpdateSettingsUiVisibility();
@@ -351,16 +354,13 @@ public partial class BookTabsController : Control
         }
 
         _livePanelRefreshAccumulator = 0.0;
-        if (_isShowingRightTab)
-        {
-            return;
-        }
-
-        if (ActiveRightTabName == "SettingsTab" && _activeSettingsSection == "privacy")
+        if (ActivePageName == "SettingsTab" && _activeSettingsSection == "privacy")
         {
             UpdatePrivacySectionState();
             return;
         }
+
+        if (_isShowingRightTab) return;
 
         if (ActiveLeftTabName == "CultivationTab" || ActiveLeftTabName == "ShopTab")
         {
@@ -370,6 +370,7 @@ public partial class BookTabsController : Control
 
     public override void _ExitTree()
     {
+        if (_playerActionState != null) _playerActionState.ActionChanged -= OnHomeActionChanged;
         if (_activityState != null)
         {
             _activityState.ActivityTick -= OnActivityTick;
@@ -464,7 +465,8 @@ public partial class BookTabsController : Control
 
         ActiveLeftTabName = leftTabName;
         ActiveRightTabName = rightTabName;
-        _isShowingRightTab = false;
+        ActivePageName = rightTabName == "SettingsTab" ? rightTabName : leftTabName;
+        _isShowingRightTab = ActivePageName == "SettingsTab";
         if (ActiveLeftTabName == "BattleLogTab")
         {
             _eventLogState?.MarkAllRead();
@@ -477,6 +479,16 @@ public partial class BookTabsController : Control
     public Godot.Collections.Dictionary<string, Variant> ToSystemSettingsDictionary()
     {
         return new Godot.Collections.Dictionary<string, Variant>(_settings);
+    }
+
+    public void RestoreActivePage(string page)
+    {
+        if (_leftTabContentMap.ContainsKey(page)) { ActiveLeftTabName = page; _isShowingRightTab = false; }
+        else if (_rightTabContentMap.ContainsKey(page)) { ActiveRightTabName = page; _isShowingRightTab = true; }
+        else return;
+        ActivePageName = page;
+        RefreshUnlockedTabs(emitIfActiveTabChanged: false);
+        RefreshCurrentPageContent();
     }
 
     public void FromSystemSettingsDictionary(Godot.Collections.Dictionary<string, Variant> data)
@@ -545,6 +557,7 @@ public partial class BookTabsController : Control
         }
 
         ActiveLeftTabName = tabName;
+        ActivePageName = tabName;
         _isShowingRightTab = false;
         if (ActiveLeftTabName == "BattleLogTab")
         {
@@ -555,7 +568,7 @@ public partial class BookTabsController : Control
         EmitSignal(SignalName.ActiveTabsChanged, ActiveLeftTabName, ActiveRightTabName);
     }
 
-    private void OnActivityTick(double apThisSecond, double apFinal)
+    private void OnActivityTick(double apThisSecond, double apFinal, double activeSecondsThisBatch)
     {
         RefreshDynamicTabContent();
         UpdatePrivacySectionState();
@@ -656,7 +669,7 @@ public partial class BookTabsController : Control
     {
         RefreshUnlockedTabs();
 
-        if (ActiveRightTabName == "SettingsTab")
+        if (ActivePageName == "SettingsTab")
         {
             return;
         }
@@ -694,7 +707,7 @@ public partial class BookTabsController : Control
 
     private string GetLeftTabContent(string tabName)
     {
-        return tabName switch
+        return UiText.LocalizeGameNames(tabName switch
         {
             "CultivationTab" => BuildCultivationOverviewText(),
             "BattleLogTab" => BuildBattleLogText(),
@@ -704,7 +717,7 @@ public partial class BookTabsController : Control
             "StatsTab" => BuildStatsOverviewText(),
             "ValidationTab" => BuildValidationOverviewText(),
             _ => _leftTabContentMap[tabName]
-        };
+        });
     }
 
     private string BuildEquipmentOverviewText()
@@ -912,6 +925,8 @@ public partial class BookTabsController : Control
         }
 
         StringBuilder sb = new();
+        var activeMeal = ServiceLocator.Instance?.CookingState;
+        if (activeMeal?.ActiveMealRemainingSeconds > 0) sb.AppendLine($"灵膳：{activeMeal.ActiveMeal.Name} 剩余 {activeMeal.ActiveMealRemainingSeconds / 60:0.0} 活跃分钟");
         sb.AppendLine(UiText.MasterySectionTitle);
         sb.AppendLine($"当前悟性: {_resourceWalletState?.Insight ?? 0.0:0.0}");
         foreach (string systemId in GetTrackedMasterySystems())
@@ -955,6 +970,12 @@ public partial class BookTabsController : Control
             PlayerActionState.ActionAlchemy => BuildAlchemyFocusSummary(),
             PlayerActionState.ActionSmithing => BuildSmithingFocusSummary(),
             PlayerActionState.ActionGarden => _gardenState?.BuildSelectedPlotSummary() ?? "灵田待命（请选择田位与作物）",
+            PlayerActionState.ActionMining => _miningState != null && MiningRules.TryGetNode(_miningState.SelectedRecipeId, out var node) ? node.DisplayName : "请选择矿脉，积累炼器材料",
+            PlayerActionState.ActionFishing => _fishingState != null && FishingRules.TryGetPond(_fishingState.SelectedRecipeId, out var pond) ? $"{pond.DisplayName}垂钓，鱼群容量 {_fishingState.RemainingCapacity}" : "请选择鱼塘，收集灵鱼与稀有水产",
+            PlayerActionState.ActionTalisman => "制作战斗符箓，按消耗策略自动使用",
+            PlayerActionState.ActionCooking => "制作灵膳，选择用餐后按活跃时间生效",
+            PlayerActionState.ActionFormation => "制作阵盘，激活主阵或副阵增益",
+            PlayerActionState.ActionBodyCultivation => "消耗材料修习功法，积累永久属性",
             _ => $"刷取 {BuildActiveZoneName()} 的材料、装备与过区进度",
         };
     }
@@ -1142,10 +1163,10 @@ public partial class BookTabsController : Control
         string actionTargetId = _playerActionState?.ActionTargetId ?? string.Empty;
         if (!string.IsNullOrEmpty(actionTargetId))
         {
-            return _levelConfigLoader.GetLevelName(actionTargetId);
+            return UiText.ZoneName(actionTargetId, _levelConfigLoader.GetLevelName(actionTargetId));
         }
 
-        return _levelConfigLoader.ActiveLevelName;
+        return UiText.ZoneName(_levelConfigLoader.ActiveLevelId, _levelConfigLoader.ActiveLevelName);
     }
 
     private void RefreshCultivationPanelContent()
@@ -1222,6 +1243,7 @@ public partial class BookTabsController : Control
         RefreshGatheringControls();
         RefreshFormationControls();
         RefreshBodyCultivationControls();
+        RefreshHomeLayout();
     }
 
     private void RefreshMasteryControls()
@@ -1240,6 +1262,7 @@ public partial class BookTabsController : Control
             }
 
             int currentLevel = GetMasteryLevel(systemId);
+            if (_masteryProgressBars.TryGetValue(systemId, out var masteryBar)) { masteryBar.Value = currentLevel; masteryBar.TooltipText = $"{UiText.MasterySystemName(systemId)} Lv{currentLevel}/4"; }
             int nextLevel = currentLevel + 1;
             if (!SubsystemMasteryRules.TryGetDefinition(systemId, nextLevel, out var nextDefinition))
             {
@@ -1735,6 +1758,7 @@ public partial class BookTabsController : Control
                 }
             }
         }
+        else { _cultivationAlchemyRecipeOption.Select(-1); _cultivationAlchemyRecipeOption.Text = "选择丹方"; }
 
         bool canStart = _alchemyState != null
             && _alchemyState.HasSelectedRecipe
@@ -1848,7 +1872,7 @@ public partial class BookTabsController : Control
             _cultivationGardenStartButton.Text = "播种";
             _cultivationGardenStartButton.Disabled = !canPlant;
             _cultivationGardenStartButton.TooltipText = canPlant
-                ? "消耗 1 粒种子开始真实时间生长。"
+                ? "消耗 1 粒种子和 5 灵石开始真实时间生长。"
                 : plantReason;
         }
         else
@@ -1887,6 +1911,7 @@ public partial class BookTabsController : Control
         }
 
         SelectCurrentOption(_cultivationMiningOption, _miningState.SelectedRecipeId);
+        if (!_miningState.HasSelectedNode) { _cultivationMiningOption.Select(-1); _cultivationMiningOption.Text = "选择矿脉"; }
         bool canStart = _miningState.HasSelectedNode;
         _cultivationMiningOption.Disabled = false;
         _cultivationMiningStartButton.Disabled = !canStart;
@@ -1912,7 +1937,10 @@ public partial class BookTabsController : Control
         }
 
         SelectCurrentOption(_cultivationFishingOption, _fishingState.SelectedRecipeId);
-        bool canStart = _fishingState.HasSelectedPond;
+        if (!_fishingState.HasSelectedPond) { _cultivationFishingOption.Select(-1); _cultivationFishingOption.Text = "选择鱼塘"; }
+        for (int i = 0; i < _cultivationFishingOption.ItemCount; i++) _cultivationFishingOption.SetItemDisabled(i, !_fishingState.CanSelectPond(_cultivationFishingOption.GetItemMetadata(i).AsString()));
+        bool canStart = _fishingState.HasSelectedPond && _fishingState.CanSelectPond(_fishingState.SelectedRecipeId);
+        _cultivationFishingStartButton.TooltipText = "高级鱼塘需要对应精通和坊市许可；鱼群耗尽后 30 分钟刷新。";
         _cultivationFishingOption.Disabled = false;
         _cultivationFishingStartButton.Disabled = !canStart;
     }
@@ -2158,6 +2186,11 @@ public partial class BookTabsController : Control
             PlayerActionState.ModeSmithing,
             PlayerActionState.ModeTalisman,
             PlayerActionState.ModeBodyCultivation,
+            PlayerActionState.ModeGarden,
+            PlayerActionState.ModeMining,
+            PlayerActionState.ModeFishing,
+            PlayerActionState.ModeCooking,
+            PlayerActionState.ModeFormation,
         };
     }
 
@@ -2562,7 +2595,8 @@ public partial class BookTabsController : Control
         }
 
         ActiveRightTabName = tabName;
-        _isShowingRightTab = tabName != "SettingsTab";
+        ActivePageName = tabName;
+        _isShowingRightTab = true;
         RefreshUnlockedTabs(emitIfActiveTabChanged: false);
         RefreshCurrentPageContent();
         EmitSignal(SignalName.ActiveTabsChanged, ActiveLeftTabName, ActiveRightTabName);
@@ -2635,13 +2669,21 @@ public partial class BookTabsController : Control
         _cultivationRoot.OffsetRight = -20.0f;
         _cultivationRoot.OffsetBottom = -18.0f;
         _cultivationRoot.AddThemeConstantOverride("separation", 10);
-        _leftPage.AddChild(_cultivationRoot);
+        _cultivationScroll = new ScrollContainer { Name = "CultivationScroll", Visible = false };
+        _cultivationScroll.SetAnchorsPreset(LayoutPreset.FullRect);
+        _cultivationScroll.OffsetTop = 42;
+        _cultivationScroll.OffsetBottom = -18;
+        _cultivationScroll.OffsetLeft = 20;
+        _cultivationScroll.OffsetRight = -20;
+        _leftPage.AddChild(_cultivationScroll);
+        _cultivationRoot.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+        _cultivationScroll.AddChild(_cultivationRoot);
 
         _cultivationStatusLabel = new Label();
         _cultivationStatusLabel.AutowrapMode = TextServer.AutowrapMode.WordSmart;
         _cultivationRoot.AddChild(_cultivationStatusLabel);
 
-        HBoxContainer actionRow = new();
+        HFlowContainer actionRow = new();
         actionRow.AddThemeConstantOverride("separation", 8);
         _cultivationRoot.AddChild(actionRow);
 
@@ -2669,11 +2711,17 @@ public partial class BookTabsController : Control
         actionRow.AddChild(_cultivationTalismanOption);
 
         _cultivationTalismanStartButton = new Button();
-        _cultivationTalismanStartButton.Text = "寮€濮嬪埗绗?";
+        _cultivationTalismanStartButton.Text = "开始制符";
         _cultivationTalismanStartButton.Pressed += OnTalismanStartPressed;
         actionRow.AddChild(_cultivationTalismanStartButton);
 
-        HBoxContainer gatheringRow = new();
+        OptionButton policyOption = new();
+        policyOption.AddItem("消耗品：仅 Boss"); policyOption.AddItem("所有战斗"); policyOption.AddItem("不自动消耗");
+        policyOption.Select((_playerActionState?.ConsumablePolicy ?? "boss_only") switch { "all" => 1, "none" => 2, _ => 0 });
+        policyOption.ItemSelected += index => _playerActionState?.SetConsumablePolicy(index == 1 ? "all" : index == 2 ? "none" : "boss_only");
+        actionRow.AddChild(policyOption);
+
+        HFlowContainer gatheringRow = new();
         gatheringRow.AddThemeConstantOverride("separation", 8);
         _cultivationRoot.AddChild(gatheringRow);
 
@@ -2691,6 +2739,9 @@ public partial class BookTabsController : Control
         gatheringRow.AddChild(_cultivationGardenStartButton);
 
         _cultivationGardenBoostButton = new Button();
+        Button breeding = new() { Text = "育种研究", TooltipText = "消耗同类种子 ×5，产量永久 +5%，最多 10 次。" };
+        breeding.Pressed += () => _gardenState?.TryResearchSelectedCrop();
+        gatheringRow.AddChild(breeding);
         _cultivationGardenBoostButton.Text = "用催熟";
         _cultivationGardenBoostButton.Pressed += OnUseRipeningElixirPressed;
         gatheringRow.AddChild(_cultivationGardenBoostButton);
@@ -2718,7 +2769,7 @@ public partial class BookTabsController : Control
         _cultivationFishingStartButton.Pressed += OnFishingStartPressed;
         gatheringRow.AddChild(_cultivationFishingStartButton);
 
-        HBoxContainer formationRow = new();
+        HFlowContainer formationRow = new();
         formationRow.AddThemeConstantOverride("separation", 8);
         _cultivationRoot.AddChild(formationRow);
 
@@ -2740,7 +2791,7 @@ public partial class BookTabsController : Control
         _cultivationFormationSecondaryActivateButton.Pressed += OnFormationSecondaryActivatePressed;
         formationRow.AddChild(_cultivationFormationSecondaryActivateButton);
 
-        HBoxContainer bodyRow = new();
+        HFlowContainer bodyRow = new();
         bodyRow.AddThemeConstantOverride("separation", 8);
         _cultivationRoot.AddChild(bodyRow);
 
@@ -2749,30 +2800,52 @@ public partial class BookTabsController : Control
         bodyRow.AddChild(_cultivationBodyCultivationOption);
 
         _cultivationBodyCultivationStartButton = new Button();
-        _cultivationBodyCultivationStartButton.Text = "寮€濮嬩綋淇?";
+        _cultivationBodyCultivationStartButton.Text = "开始体修";
         _cultivationBodyCultivationStartButton.Pressed += OnBodyCultivationStartPressed;
         bodyRow.AddChild(_cultivationBodyCultivationStartButton);
+
+        HFlowContainer mealRow = new();
+        _cultivationRoot.AddChild(mealRow);
+        OptionButton cookingRecipe = new();
+        var cookingRecipes = ActivityRegistry.GetBySystem(PlayerActionState.ModeCooking)!.GetRecipes();
+        foreach (var recipe in cookingRecipes) cookingRecipe.AddItem(recipe.DisplayName);
+        cookingRecipe.ItemSelected += index => ServiceLocator.Instance?.CookingState?.SelectRecipe(cookingRecipes[(int)index].RecipeId);
+        mealRow.AddChild(cookingRecipe);
+        Button cookButton = new() { Text = "开始烹饪" };
+        cookButton.Pressed += () => { ServiceLocator.Instance?.CookingState?.SelectRecipe(cookingRecipes[Math.Max(0, cookingRecipe.Selected)].RecipeId); _playerActionState?.SetAction(PlayerActionState.ModeCooking); };
+        mealRow.AddChild(cookButton);
+        OptionButton mealChoice = new();
+        foreach (var meal in MealRules.Meals) mealChoice.AddItem(meal.Name);
+        mealRow.AddChild(mealChoice);
+        Button activateMeal = new() { Text = "用餐", TooltipText = "同时激活一种灵膳，按活跃输入时间计时；到期自动续杯。" };
+        activateMeal.Pressed += () => ServiceLocator.Instance?.CookingState?.TryActivateMeal(MealRules.Meals[Math.Max(0, mealChoice.Selected)].Id);
+        mealRow.AddChild(activateMeal);
 
         _cultivationMasteryLabel = new RichTextLabel();
         _cultivationMasteryLabel.FitContent = true;
         _cultivationMasteryLabel.ScrollActive = false;
         _cultivationRoot.AddChild(_cultivationMasteryLabel);
 
-        HBoxContainer masteryRow = new();
+        HFlowContainer masteryRow = new();
         masteryRow.AddThemeConstantOverride("separation", 8);
         _cultivationRoot.AddChild(masteryRow);
         foreach (string systemId in GetTrackedMasterySystems())
         {
             Button button = new();
             button.Pressed += () => OnMasteryUnlockPressed(systemId);
-            masteryRow.AddChild(button);
+            VBoxContainer masteryCell = new() { CustomMinimumSize = new Vector2(130, 40) };
+            ProgressBar progress = new() { MinValue = 1, MaxValue = 4, Value = GetMasteryLevel(systemId), ShowPercentage = false, CustomMinimumSize = new Vector2(130, 12) };
+            masteryCell.AddChild(progress);
+            masteryCell.AddChild(button);
+            masteryRow.AddChild(masteryCell);
+            _masteryProgressBars[systemId] = progress;
             _cultivationMasteryButtons[systemId] = button;
         }
 
         _cultivationContentLabel = new RichTextLabel();
-        _cultivationContentLabel.FitContent = false;
-        _cultivationContentLabel.ScrollActive = true;
-        _cultivationContentLabel.SizeFlagsVertical = Control.SizeFlags.ExpandFill;
+        _cultivationContentLabel.FitContent = true;
+        _cultivationContentLabel.ScrollActive = false;
+        _cultivationContentLabel.SizeFlagsVertical = Control.SizeFlags.ShrinkBegin;
         _cultivationRoot.AddChild(_cultivationContentLabel);
     }
 
@@ -2793,20 +2866,9 @@ public partial class BookTabsController : Control
         actionRow.AddThemeConstantOverride("separation", 8);
         _equipmentRoot.AddChild(actionRow);
 
-        Button equipWeaponButton = new();
-        equipWeaponButton.Pressed += () => EquipFromBackpack(EquipmentSlotType.Weapon);
-        equipWeaponButton.Text = UiText.BackpackEquipWeapon;
-        actionRow.AddChild(equipWeaponButton);
-
-        Button equipArmorButton = new();
-        equipArmorButton.Pressed += () => EquipFromBackpack(EquipmentSlotType.Armor);
-        equipArmorButton.Text = UiText.BackpackEquipArmor;
-        actionRow.AddChild(equipArmorButton);
-
-        Button equipAccessoryButton = new();
-        equipAccessoryButton.Text = UiText.BackpackEquipAccessory;
-        equipAccessoryButton.Pressed += () => EquipFromBackpack(EquipmentSlotType.Accessory);
-        actionRow.AddChild(equipAccessoryButton);
+        Button backpackButton = new() { Text = "前往背包换装" };
+        backpackButton.Pressed += () => SetActiveLeftTab("BackpackTab");
+        actionRow.AddChild(backpackButton);
 
         _equipmentSmithingTargetOption = new OptionButton();
         _equipmentSmithingTargetOption.ItemSelected += OnSmithingTargetSelected;
@@ -3029,7 +3091,7 @@ public partial class BookTabsController : Control
 
             Label detail = new();
             detail.AutowrapMode = TextServer.AutowrapMode.WordSmart;
-            detail.AddThemeColorOverride("font_color", new Color("8B7355"));
+            detail.AddThemeColorOverride("font_color", new Color("6A5339"));
             detail.AddThemeFontSizeOverride("font_size", 12);
             detail.Text = BuildShopItemDetail(item);
             textColumn.AddChild(detail);
@@ -3660,17 +3722,19 @@ public partial class BookTabsController : Control
         _settingsDisplayBtn.ButtonPressed = sectionId == "display";
         _settingsProgressBtn.ButtonPressed = sectionId == "progress";
         _settingsPrivacyBtn.ButtonPressed = sectionId == "privacy";
+        if (_settingsScroll != null) _settingsScroll.ScrollVertical = 0;
     }
 
     private void UpdateSettingsUiVisibility()
     {
-        bool isSettings = ActiveRightTabName == "SettingsTab";
-        bool isBug = _isShowingRightTab && ActiveRightTabName == "BugTab";
-        bool isCultivation = !_isShowingRightTab && ActiveLeftTabName == "CultivationTab";
-        bool isEquipment = !_isShowingRightTab && ActiveLeftTabName == "EquipmentTab";
-        bool isBackpack = !_isShowingRightTab && ActiveLeftTabName == "BackpackTab";
-        bool isShop = !_isShowingRightTab && ActiveLeftTabName == "ShopTab";
-        bool isValidation = !_isShowingRightTab && ActiveLeftTabName == "ValidationTab";
+        bool isSettings = ActivePageName == "SettingsTab";
+        bool isBug = ActivePageName == "BugTab";
+        bool isCultivation = ActivePageName == "CultivationTab";
+        bool isEquipment = ActivePageName == "EquipmentTab";
+        bool isBackpack = ActivePageName == "BackpackTab";
+        bool isShop = ActivePageName == "ShopTab";
+        bool isValidation = ActivePageName == "ValidationTab";
+        if (_settingsRoot != null) _settingsRoot.Visible = isSettings;
         _settingsNavRoot.Visible = isSettings;
         _settingsActionRoot.Visible = isSettings;
         _settingsSystemRoot.Visible = isSettings && _activeSettingsSection == "system";
@@ -3679,6 +3743,7 @@ public partial class BookTabsController : Control
         _settingsPrivacyRoot.Visible = isSettings && _activeSettingsSection == "privacy";
         _bugFeedbackRoot.Visible = isBug;
         _cultivationRoot.Visible = isCultivation;
+        if (_cultivationScroll != null) _cultivationScroll.Visible = isCultivation;
         _equipmentRoot.Visible = isEquipment;
         _backpackRoot.Visible = isBackpack;
         _shopRoot.Visible = isShop;
@@ -4059,7 +4124,7 @@ public partial class BookTabsController : Control
 
     private void RefreshCurrentPageContent()
     {
-        if (ActiveRightTabName == "SettingsTab")
+        if (ActivePageName == "SettingsTab")
         {
             _leftTitleLabel.Text = UiText.SettingsTitle;
             UpdateSettingsControlsFromState();
@@ -4137,11 +4202,12 @@ public partial class BookTabsController : Control
         if (!unlockedSet.Contains(ActiveLeftTabName))
         {
             ActiveLeftTabName = unlockedTabs.Count > 0 ? unlockedTabs[0] : "CultivationTab";
+            if (!_isShowingRightTab) ActivePageName = ActiveLeftTabName;
             activeTabChanged = true;
         }
 
-        SyncButtons("TopStrip/LeftTabs", _leftTabContentMap.Keys, ActiveLeftTabName);
-        SyncButtons("TopStrip/RightTabs", _rightTabContentMap.Keys, ActiveRightTabName);
+        SyncButtons("TopStrip/LeftTabs", _leftTabContentMap.Keys, ActivePageName);
+        SyncButtons("TopStrip/RightTabs", _rightTabContentMap.Keys, ActivePageName);
 
         if (activeTabChanged && emitIfActiveTabChanged)
         {

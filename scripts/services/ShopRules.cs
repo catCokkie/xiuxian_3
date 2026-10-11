@@ -53,7 +53,8 @@ namespace Xiuxian.Scripts.Services
             int DailyLimit = 0,
             int LifetimeLimit = 0,
             string RequiredMasterySystemId = "",
-            int RequiredMasteryLevel = 0);
+            int RequiredMasteryLevel = 0,
+            bool IsAvailable = true);
 
         private static readonly ShopItemDefinition[] Items =
         {
@@ -65,18 +66,18 @@ namespace Xiuxian.Scripts.Services
             new(ItemMiningRefreshToken, CategoryConsumables, "矿脉刷新令", "可在修炼页重置当前矿脉耐久。", 30, GrantBackpackItem, "mining_refresh_token", 1),
             new(ItemFishingBait, CategoryConsumables, "灵鱼饵 ×10", "接下来 10 次钓鱼会自动消耗鱼饵，提高额外掉落概率。", 50, GrantBackpackItem, "fishing_bait", 10),
 
-            new(ItemGardenPlot3, CategoryExpansion, "灵田田位 +1（第 3 格）", "记录灵田扩容许可；灵田多格重构后生效。", 200, GrantPermanent, LifetimeLimit: 1),
-            new(ItemGardenPlot4, CategoryExpansion, "灵田田位 +1（第 4 格）", "记录灵田扩容许可；灵田多格重构后生效。", 400, GrantPermanent, LifetimeLimit: 1),
-            new(ItemGardenPlot5, CategoryExpansion, "灵田田位 +1（第 5 格）", "记录灵田扩容许可；灵田多格重构后生效。", 600, GrantPermanent, LifetimeLimit: 1),
-            new(ItemGardenPlot6, CategoryExpansion, "灵田田位 +1（第 6 格）", "记录灵田扩容许可；灵田多格重构后生效。", 800, GrantPermanent, LifetimeLimit: 1),
-            new(ItemBackpackExpand1, CategoryExpansion, "背包扩容 +10 格（第 1 次）", "记录背包扩容许可，当前会显示扩容进度。", 300, GrantPermanent, LifetimeLimit: 1),
-            new(ItemBackpackExpand2, CategoryExpansion, "背包扩容 +10 格（第 2 次）", "记录背包扩容许可，当前会显示扩容进度。", 600, GrantPermanent, LifetimeLimit: 1),
-            new(ItemBackpackExpand3, CategoryExpansion, "背包扩容 +10 格（第 3 次）", "记录背包扩容许可，当前会显示扩容进度。", 1000, GrantPermanent, LifetimeLimit: 1),
-            new(ItemFishingPermitYoutan, CategoryExpansion, "鱼塘许可·幽潭", "记录鱼塘许可购买状态。", 150, GrantPermanent, LifetimeLimit: 1, RequiredMasterySystemId: PlayerActionState.ModeFishing, RequiredMasteryLevel: 2),
-            new(ItemFishingPermitLongxianyuan, CategoryExpansion, "鱼塘许可·龙涎渊", "记录鱼塘许可购买状态。", 300, GrantPermanent, LifetimeLimit: 1, RequiredMasterySystemId: PlayerActionState.ModeFishing, RequiredMasteryLevel: 3),
-            new(ItemFishingPermitHualongpo, CategoryExpansion, "鱼塘许可·化龙泊", "记录鱼塘许可购买状态。", 500, GrantPermanent, LifetimeLimit: 1, RequiredMasterySystemId: PlayerActionState.ModeFishing, RequiredMasteryLevel: 4),
+            new(ItemGardenPlot3, CategoryExpansion, "灵田田位 +1（第 3 格）", "立即增加一个可用田位，与精通田位叠加，上限6格。", 200, GrantPermanent, LifetimeLimit: 1),
+            new(ItemGardenPlot4, CategoryExpansion, "灵田田位 +1（第 4 格）", "立即增加一个可用田位，与精通田位叠加，上限6格。", 400, GrantPermanent, LifetimeLimit: 1),
+            new(ItemGardenPlot5, CategoryExpansion, "灵田田位 +1（第 5 格）", "立即增加一个可用田位，与精通田位叠加，上限6格。", 600, GrantPermanent, LifetimeLimit: 1),
+            new(ItemGardenPlot6, CategoryExpansion, "灵田田位 +1（第 6 格）", "立即增加一个可用田位，与精通田位叠加，上限6格。", 800, GrantPermanent, LifetimeLimit: 1),
+            new(ItemBackpackExpand1, CategoryExpansion, "背包扩容 +10 格（预留 I）", "容量功能暂未开放，此商品不可购买。", 300, GrantPermanent, LifetimeLimit: 1, IsAvailable: false),
+            new(ItemBackpackExpand2, CategoryExpansion, "背包扩容 +10 格（预留 II）", "容量功能暂未开放，此商品不可购买。", 600, GrantPermanent, LifetimeLimit: 1, IsAvailable: false),
+            new(ItemBackpackExpand3, CategoryExpansion, "背包扩容 +10 格（预留 III）", "容量功能暂未开放，此商品不可购买。", 1000, GrantPermanent, LifetimeLimit: 1, IsAvailable: false),
+            new(ItemFishingPermitYoutan, CategoryExpansion, "鱼塘许可·幽潭", "购买后解锁对应鱼塘，仍需满足精通等级。", 150, GrantPermanent, LifetimeLimit: 1, RequiredMasterySystemId: PlayerActionState.ModeFishing, RequiredMasteryLevel: 2),
+            new(ItemFishingPermitLongxianyuan, CategoryExpansion, "鱼塘许可·龙涎渊", "购买后解锁对应鱼塘，仍需满足精通等级。", 300, GrantPermanent, LifetimeLimit: 1, RequiredMasterySystemId: PlayerActionState.ModeFishing, RequiredMasteryLevel: 3),
+            new(ItemFishingPermitHualongpo, CategoryExpansion, "鱼塘许可·化龙泊", "购买后解锁对应鱼塘，仍需满足精通等级。", 500, GrantPermanent, LifetimeLimit: 1, RequiredMasterySystemId: PlayerActionState.ModeFishing, RequiredMasteryLevel: 4),
 
-            new(ItemAutoHarvest, CategoryUtility, "自动收获符", "灵田成熟后自动收获并重播；灵田重构后生效。", 500, GrantPermanent, LifetimeLimit: 1),
+            new(ItemAutoHarvest, CategoryUtility, "自动收获符", "灵田成熟后自动收获；种子和播种灵石充足时自动重播。", 500, GrantPermanent, LifetimeLimit: 1),
             new(ItemDoubleYield, CategoryUtility, "双倍产出符（1h 活跃时间）", "所有采集/加工产出 ×2。", 100, GrantActiveBuff, LifetimeLimit: 0, DailyLimit: 3),
 
             new(ItemBreakthroughPill, CategoryRare, "突破丹（筑基用）", "永久降低突破经验需求 10%。", 2000, GrantPermanent, LifetimeLimit: 1),

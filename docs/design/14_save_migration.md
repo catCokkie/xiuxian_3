@@ -6,9 +6,9 @@
 - 为后续装备、统计、设置扩展提供可追加的升级链。
 
 ## 当前版本
-- 最新存档版本：`v14`
+- 最新存档版本：`v15`
 - 统一迁移入口：`scripts/services/SaveMigrationRules.cs`
-- 当前升级链：`v1 → v2 → v3 → v4 → v5 → v6 → v7 → v8 → v9 → v10 → v11 → v12 → v13 → v14`
+- 当前升级链：`v1 → v2 → v3 → v4 → v5 → v6 → v7 → v8 → v9 → v10 → v11 → v12 → v13 → v14 → v15`
 
 ## 迁移原则
 - 迁移必须幂等：同一版本补丁重复执行不应破坏数据。
@@ -50,6 +50,7 @@
 | `v11 -> v12` | 将灵田旧结构归一化到多田位真实时间快照 |
 | `v12 -> v13` | 接入统计概览 `stats.player` 容器 |
 | `v13 -> v14` | 归一化统计字段，补齐资源消耗与战斗/灵田长期统计默认值 |
+| `v14 -> v15` | 补齐消耗策略/工作模式、引导、灵膳激活与退回时长、体修百分比、育种字段；将旧食物库存合并到新 ID，保留旧体修固定属性 |
 
 ## 已实现迁移：v5 -> v6（Melvor 扩展）
 
@@ -190,3 +191,6 @@
 - `tests/Xiuxian2.Tests/SaveMigrationRulesTests.cs` 已覆盖 `v8 -> v9` 阵法专用状态升级。
 - `tests/Xiuxian2.Tests/SaveMigrationRulesTests.cs` 已覆盖副本迁移成功不污染源配置、失败保留源配置原样的 fail-closed 行为。
 - `tests/Xiuxian2.Tests/SaveRoundTripTests.cs` 已覆盖阵法、灵田与统计等关键状态的 round-trip。
+
+
+灵渔容量和刷新时间、推进小数余量由各状态读取器对缺失字段使用默认值；兼容旧档，不补发历史奖励。

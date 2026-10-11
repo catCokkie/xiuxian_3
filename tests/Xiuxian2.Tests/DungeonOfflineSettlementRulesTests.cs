@@ -22,12 +22,12 @@ public sealed class DungeonOfflineSettlementRulesTests
         var monsters = new[]
         {
             new DungeonOfflineSettlementRules.WeightedMonsterProfile(new MonsterStatProfile("m1", "弱怪", new CharacterStatBlock(30, 4, 1, 80, 0.0, 1.5), 10), 80),
-            new DungeonOfflineSettlementRules.WeightedMonsterProfile(new MonsterStatProfile("m2", "强怪", new CharacterStatBlock(100, 14, 4, 80, 0.0, 1.5), 10), 20)
+            new DungeonOfflineSettlementRules.WeightedMonsterProfile(new MonsterStatProfile("m2", "强怪", new CharacterStatBlock(100, 1000, 4, 120, 0.0, 1.5), 10), 20)
         };
 
         double factor = DungeonOfflineSettlementRules.CalculateWeightedVictoryFactor(player, monsters);
 
-        Assert.InRange(factor, 0.7, 0.95);
+        Assert.Equal(0.8, factor);
     }
 
     [Fact]
@@ -52,7 +52,12 @@ public sealed class DungeonOfflineSettlementRulesTests
             remainingDailyRolls: int.MaxValue,
             averageDropRollsPerVictory: 1.0,
             equipmentDropCap: 2,
-            estimatedEquipmentDropsPerVictory: 0.8);
+            estimatedEquipmentDropsPerVictory: 0.8,
+            createEquipment: index => EquipmentGenerationRules.GenerateFromSpec(
+                new("test_sword", "测试剑", EquipmentSlotType.Weapon, "test", EquipmentRarityTier.Artifact,
+                    new[] { new EquipmentGenerationRules.EquipmentStatRollDefinition("attack", 1, 2, 3) },
+                    Array.Empty<EquipmentGenerationRules.EquipmentStatRollDefinition>(), 2, 3),
+                "lv_qi_001", EquipmentSourceStage.Normal, uniqueSuffix: index.ToString()));
 
         Assert.Equal(PlayerActionState.ActionDungeon, result.ActionId);
         Assert.True(result.ExploreProgressGain > 0.0);
@@ -60,7 +65,9 @@ public sealed class DungeonOfflineSettlementRulesTests
         Assert.True(result.LingqiGain > 0.0);
         Assert.True(result.InsightGain > 0.0);
         Assert.True(result.ItemDrops.ContainsKey("lingqi_shard"));
-        Assert.True(result.EquipmentDrops.Count <= 2);
+        Assert.Equal(2, result.EquipmentDrops.Count);
+        Assert.Equal(100, result.ExploreProgressGain);
+        Assert.NotEqual(result.EquipmentDrops[0].EquipmentId, result.EquipmentDrops[1].EquipmentId);
     }
 
     [Fact]
@@ -87,7 +94,7 @@ public sealed class DungeonOfflineSettlementRulesTests
             equipmentDropCap: 5,
             estimatedEquipmentDropsPerVictory: 1.0);
 
-        Assert.Equal(1, result.ItemDrops["lingqi_shard"]);
+        Assert.Equal(2, result.ItemDrops["lingqi_shard"]);
         Assert.Empty(result.EquipmentDrops);
         Assert.True(result.LingqiGain > 10.0);
         Assert.True(result.BattleRoundsAdvanced > 0);

@@ -1,7 +1,9 @@
-[gd_scene load_steps=5 format=3 uid="uid://djdifvjpvqykn"]
+[gd_scene load_steps=6 format=3 uid="uid://djdifvjpvqykn"]
 
 [ext_resource type="Script" uid="uid://c7vcdhutyfon" path="res://scripts/ui/MainBarLayoutController.cs" id="1"]
-[ext_resource type="Texture2D" uid="uid://cr20ls4t1oe0g" path="res://assets/ui/actor_placeholder.svg" id="2"]
+[ext_resource type="Texture2D" path="res://assets/ui/icons/dungeon_v1.svg" id="2"]
+
+[ext_resource type="Texture2D" path="res://assets/characters/player/cultivator_idle_v1.png" id="3"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_1"]
 bg_color = Color(0.596078, 0.384314, 0.266667, 0.970588)
@@ -161,11 +163,13 @@ text = "Waiting..."
 
 [node name="PlayerSlotTexture" type="TextureRect" parent="Chrome/BattleTrack"]
 layout_mode = 0
-offset_left = 16.0
-offset_top = 24.0
-offset_right = 80.0
-offset_bottom = 88.0
-texture = ExtResource("2")
+offset_left = 8.0
+offset_top = 30.0
+offset_right = 88.0
+offset_bottom = 110.0
+texture = ExtResource("3")
+expand_mode = 1
+texture_filter = 1
 stretch_mode = 5
 
 [node name="PlayerSlotLabel" type="Label" parent="Chrome/BattleTrack"]
@@ -185,6 +189,8 @@ offset_top = 24.0
 offset_right = 584.0
 offset_bottom = 88.0
 texture = ExtResource("2")
+expand_mode = 1
+texture_filter = 1
 stretch_mode = 5
 
 [node name="EnemySlotLabel" type="Label" parent="Chrome/BattleTrack"]
@@ -221,6 +227,8 @@ offset_top = 24.0
 offset_right = 564.0
 offset_bottom = 88.0
 texture = ExtResource("2")
+expand_mode = 1
+texture_filter = 1
 stretch_mode = 5
 
 [node name="MonsterSlot02" type="TextureRect" parent="Chrome/BattleTrack"]
@@ -230,6 +238,8 @@ offset_top = 24.0
 offset_right = 684.0
 offset_bottom = 88.0
 texture = ExtResource("2")
+expand_mode = 1
+texture_filter = 1
 stretch_mode = 5
 
 [node name="MonsterSlot03" type="TextureRect" parent="Chrome/BattleTrack"]
@@ -239,6 +249,8 @@ offset_top = 24.0
 offset_right = 804.0
 offset_bottom = 88.0
 texture = ExtResource("2")
+expand_mode = 1
+texture_filter = 1
 stretch_mode = 5
 
 [node name="MonsterSlot04" type="TextureRect" parent="Chrome/BattleTrack"]
@@ -248,6 +260,8 @@ offset_top = 24.0
 offset_right = 924.0
 offset_bottom = 88.0
 texture = ExtResource("2")
+expand_mode = 1
+texture_filter = 1
 stretch_mode = 5
 
 [node name="MonsterMarker01" type="Label" parent="Chrome/BattleTrack"]
@@ -289,6 +303,8 @@ offset_top = 24.0
 offset_right = 1044.0
 offset_bottom = 88.0
 texture = ExtResource("2")
+expand_mode = 1
+texture_filter = 1
 stretch_mode = 5
 
 [node name="MonsterMarker05" type="Label" parent="Chrome/BattleTrack"]

@@ -5,6 +5,20 @@ namespace Xiuxian.Tests;
 public sealed class UiTextStatsTests
 {
     [Fact]
+    public void GameNamePresentation_LocalizesLongNamesBeforeTheirPrefixes()
+    {
+        Assert.Equal("阴潮幼蛇 / 阴潮蛇王 / 影蝠领主 / 影蝠", UiText.LocalizeGameNames("Yin Tide Serpentling / Yin Tide Serpent / Shadow Bat Overlord / Shadow Bat"));
+        Assert.Equal("custom_level", UiText.ZoneName("custom", "custom_level"));
+        Assert.Equal("未知妖物", UiText.LocalizeGameNames("未知妖物"));
+    }
+
+    [Fact]
+    public void BattleRoundPresentation_ShowsChineseRoundAndHealth()
+    {
+        Assert.Equal("第 3 回合 · 洞穴蛛后 · 气血 42", UiText.BattleRound(3, "Cave Spider Queen", 42));
+    }
+
+    [Fact]
     public void StatsOverview_FormatsExpandedMetrics()
     {
         string text = UiText.StatsOverview(new UiText.StatsOverviewData(
@@ -67,7 +81,7 @@ public sealed class UiTextStatsTests
             SelectedPlotSummary: "1号田：灵花已成熟，可立即收获"));
 
         Assert.Contains("累计在线时长", text);
-        Assert.Contains("当前境界：炼气 3 层", text);
+        Assert.Contains("当前境界：炼气3层", text);
         Assert.Contains("战斗胜率：", text);
         Assert.Contains("累计获得灵石：40", text);
         Assert.Contains("累计消耗灵气：120", text);

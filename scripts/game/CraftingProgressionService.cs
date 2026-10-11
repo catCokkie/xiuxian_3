@@ -55,7 +55,7 @@ namespace Xiuxian.Scripts.Game
 
             ServiceLocator.Instance?.PlayerStatsState?.RecordLingqiSpend(result.LingqiCost);
 
-            int finalPotionCount = result.PotionCount * System.Math.Max(1, outputMultiplier);
+            int finalPotionCount = result.PotionCount * System.Math.Max(1, outputMultiplier) + (ServiceLocator.Instance?.CookingState?.ActiveMeal.ExtraOutput ?? 0);
             potionInventoryState.AddPotion(result.PotionItemId, finalPotionCount);
             rewardText = $"炼丹完成，获得 {UiText.BackpackItemName(result.PotionItemId)} x{finalPotionCount}";
             return true;
@@ -133,7 +133,8 @@ namespace Xiuxian.Scripts.Game
                 return false;
             }
 
-            smithingState.SelectTarget(enhancedProfile.EquipmentId, enhancedProfile.EnhanceLevel);
+            smithingState.CompleteBatch();
+            smithingState.RefreshRequiredProgress(enhancedProfile.EnhanceLevel);
             rewardText = $"强化完成，{enhancedProfile.DisplayName} +{enhancedProfile.EnhanceLevel}";
             return true;
         }
@@ -154,7 +155,7 @@ namespace Xiuxian.Scripts.Game
             float next = Math.Max(0f, currentProgress) + Math.Max(0, inputEvents);
             float threshold = Math.Max(1, recipe.RequiredInputEvents);
             bool completed = next >= threshold;
-            float percent = completed ? 100f : next / threshold * 100f;
+            float percent = next / threshold * 100f;
             return new GenericProgressResult(percent, completed);
         }
 
@@ -217,7 +218,7 @@ namespace Xiuxian.Scripts.Game
 
             foreach (MaterialOutput output in recipe.Outputs)
             {
-                backpackState.AddItem(output.ItemId, output.Count * System.Math.Max(1, outputMultiplier));
+                backpackState.AddItem(output.ItemId, output.Count * System.Math.Max(1, outputMultiplier) + (ServiceLocator.Instance?.CookingState?.ActiveMeal.ExtraOutput ?? 0));
             }
 
             rewardText = recipe.Outputs.Count > 0
@@ -271,6 +272,9 @@ namespace Xiuxian.Scripts.Game
                 int count = discount > 0.0
                     ? Math.Max(0, (int)Math.Floor(input.Count * (1.0 - discount)))
                     : input.Count;
+                if (recipe.SystemId == PlayerActionState.ModeBodyCultivation)
+                    count = BodyCultivationRules.GetMaterialCount(input.Count,
+                        ServiceLocator.Instance?.PlayerProgressState?.GetBodyCultivationCount(recipe.RecipeId) ?? 0, masteryLevel);
                 effectiveInputs[i] = new MaterialCost(input.ItemId, count);
             }
 

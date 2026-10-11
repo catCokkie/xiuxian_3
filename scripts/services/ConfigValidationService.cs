@@ -142,6 +142,31 @@ namespace Xiuxian.Scripts.Services
             {
                 AddValidationIssue("equipment", "series", "equipment_series", "no equipment series indexed", severity: "warning");
             }
+            foreach (var level in _provider.Levels)
+            {
+                string levelId = LevelConfigProvider.GetString(level, "level_id", "");
+                if (!LevelConfigProvider.TryGetChildDictionary(level, "rewards", out var rewards)
+                    || !LevelConfigProvider.TryGetChildDictionary(rewards, "first_clear", out var first)
+                    || !first.ContainsKey("equipment_templates")) continue;
+                foreach (Variant entry in (Godot.Collections.Array<Variant>)first["equipment_templates"])
+                {
+                    if (entry.VariantType != Variant.Type.Dictionary) continue;
+                    var data = (Godot.Collections.Dictionary<string, Variant>)entry;
+                    string id = LevelConfigProvider.GetString(data, "equipment_template_id", "");
+                    if (!_provider.TryGetEquipmentTemplate(id, out var template))
+                    { AddValidationIssue("level", levelId, "first_clear.equipment_templates", $"equipment '{id}' not found", levelId: levelId); continue; }
+                    string rarity = LevelConfigProvider.GetString(data, "rarity_tier", LevelConfigProvider.GetString(template, "rarity_tier", ""));
+                    if (rarity != "artifact" && rarity != "spirit" && rarity != "treasure")
+                        AddValidationIssue("level", levelId, "first_clear.equipment_templates.rarity_tier", "first clear requires at least artifact rarity", levelId: levelId);
+                }
+            }
+            foreach (var pair in _provider.DropTableById)
+            {
+                if (!pair.Value.ContainsKey("entries")) continue;
+                foreach (var entry in DropEconomyService.BuildDropEntrySpecs((Godot.Collections.Array<Variant>)pair.Value["entries"]))
+                    if (entry.EntryType == "equipment_template" && !_provider.EquipmentTemplateById.ContainsKey(entry.EquipmentTemplateId))
+                        AddValidationIssue("drop_table", pair.Key, "entries.equipment_template_id", $"equipment '{entry.EquipmentTemplateId}' not found", dropTableId: pair.Key);
+            }
         }
 
         private void ValidateLevelSpawnTable(Godot.Collections.Dictionary<string, Variant> level, string levelId)

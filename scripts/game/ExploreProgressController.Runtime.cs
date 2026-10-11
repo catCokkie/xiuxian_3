@@ -1,4 +1,4 @@
-﻿using Godot;
+using Godot;
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -71,6 +71,7 @@ namespace Xiuxian.Scripts.Game
         private ProgressBar _progressBar = null!;
         private ProgressBar? _cultivationProgressBar;
         private Button? _breakthroughButton;
+        private Button? _bossChallengeButton;
         private Label? _cultivationLabel;
         private Label _zoneLabel = null!;
         private Label _activityRateLabel = null!;
@@ -146,6 +147,7 @@ namespace Xiuxian.Scripts.Game
         private bool _usedHealPotionThisBattle;
         private bool _hasLingqiDropBuffThisBattle;
         private readonly List<string> _consumedPotionsThisBattle = new();
+        private readonly List<string> _battleTalismans = new();
         private int _totalBattleCount;
         private int _totalBattleWinCount;
         private double _gardenPresentationTimer;
@@ -205,6 +207,12 @@ namespace Xiuxian.Scripts.Game
             _realmStageLabel = GetNode<Label>(RealmStageLabelPath);
             _battleInfoLabel = GetNode<Label>(BattleInfoLabelPath);
             _roundInfoLabel = GetNode<Label>(RoundInfoLabelPath);
+            _bossChallengeButton = new Button { Name = "BossChallengeButton", Text = "挑战 Boss", Position = new Vector2(440, 4), Size = new Vector2(110, 28), Visible = false };
+            _battleInfoLabel.GetParent().AddChild(_bossChallengeButton);
+            _bossChallengeButton.SetAnchorsPreset(Control.LayoutPreset.BottomRight);
+            _bossChallengeButton.OffsetLeft = -244; _bossChallengeButton.OffsetRight = -134;
+            _bossChallengeButton.OffsetTop = -36; _bossChallengeButton.OffsetBottom = -8;
+            _bossChallengeButton.Pressed += () => { TryStartBossChallenge(); RefreshBossChallengeButton(); };
             _validationPanel = GetNodeOrNull<Panel>(ValidationPanelPath);
             _validationTitleLabel = GetNodeOrNull<Label>(ValidationTitleLabelPath);
             _validationBodyLabel = GetNodeOrNull<Label>(ValidationBodyLabelPath);
@@ -269,6 +277,7 @@ namespace Xiuxian.Scripts.Game
                 _breakthroughButton.Pressed += OnBreakthroughPressed;
             }
             ConfigureActionModeOptionButton();
+            CreateCompanionControls();
             ConfigureLevelOptionButton();
             _simulationLevelFilterId = _levelConfigLoader?.ActiveLevelId ?? "";
             UpdateRealmStageLabel();
@@ -303,6 +312,7 @@ namespace Xiuxian.Scripts.Game
 
         public override void _ExitTree()
         {
+            if (_playerProgressState != null) _playerProgressState.RealmLevelUp -= OnRealmMilestone;
             if (_activityState != null)
             {
                 _activityState.InputBatchTick -= OnInputBatchTick;
@@ -412,18 +422,17 @@ namespace Xiuxian.Scripts.Game
 
         public override void _Process(double delta)
         {
-            _battleTrackVisualizer.AdvanceEnemyVisual(delta);
-
+            RefreshBossChallengeButton();
             _gardenPresentationTimer += delta;
-            if (_gardenPresentationTimer < 1.0
-                || _actionState?.ActionId != PlayerActionState.ActionGarden
-                || HasDungeonCapability())
+            if (_gardenPresentationTimer >= 1.0
+                && _actionState?.ActionId == PlayerActionState.ActionGarden
+                && !HasDungeonCapability())
             {
-                return;
+                _gardenPresentationTimer = 0.0;
+                RefreshGardenModePresentation();
             }
-
-            _gardenPresentationTimer = 0.0;
-            RefreshGardenModePresentation();
+            AdvanceCompanionPresentation(delta);
+            _battleTrackVisualizer.AdvanceEnemyVisual(delta);
         }
 
         private string RunSimulationWithFilters(int battleCount)
@@ -656,7 +665,7 @@ namespace Xiuxian.Scripts.Game
             for (int i = 0; i < unlocked.Count; i++)
             {
                 string levelId = unlocked[i];
-                string levelName = _levelConfigLoader.GetLevelName(levelId);
+                string levelName = UiText.ZoneName(levelId, _levelConfigLoader.GetLevelName(levelId));
                 string text = string.IsNullOrEmpty(levelName) ? levelId : levelName;
                 _levelOptionButton.AddItem(text, i);
                 _levelOptionButton.SetItemMetadata(i, levelId);
@@ -790,7 +799,11 @@ namespace Xiuxian.Scripts.Game
                 }
                 else
                 {
-                    _progressBar.Value = 0.0f;
+                    double parallel = SubsystemMasteryRules.GetEffectValue(PlayerActionState.ModeCultivation,
+                        _subsystemMasteryState?.GetLevel(PlayerActionState.ModeCultivation) ?? 1, "cultivation_parallel_explore_factor");
+                    if (_actionState?.ActionId == PlayerActionState.ActionCultivation && parallel > 0 && !_inBattle)
+                        ApplyOfflineExploreProgress(inputEvents * ProgressPerInput * parallel);
+                    _progressBar.Value = parallel > 0 ? _exploreProgress : 0;
                 }
                 return;
             }
@@ -811,6 +824,11 @@ namespace Xiuxian.Scripts.Game
 
         private bool AdvanceExploreByInput(int inputEvents)
         {
+            if (_exploreProgress >= MaxProgress)
+            {
+                RefreshBossChallengeButton();
+                return false;
+            }
             SyncLogicFromControllerState();
             ExploreGameLogic.ExploreAdvanceResult result = _logic.AdvanceExploreByInput(inputEvents, (float)ProgressPerInput, MaxProgress);
             _progressBar.Value = _exploreProgress;
@@ -826,13 +844,10 @@ namespace Xiuxian.Scripts.Game
 
             if (result.CompletedLevel)
             {
-                if (TryStartBossChallenge())
-                {
-                    return true;
-                }
-
-                _battleInfoLabel.Text = UiText.ZoneComplete;
+                _battleInfoLabel.Text = "探索完成，准备后点击挑战 Boss";
                 _battleInfoLabel.Visible = true;
+                RefreshBossChallengeButton();
+                return false;
             }
 
             UpdateHpLabels();
@@ -911,10 +926,7 @@ namespace Xiuxian.Scripts.Game
 
         private void TryStartBattle()
         {
-            if (TryStartBossChallenge())
-            {
-                return;
-            }
+            if (_exploreProgress >= MaxProgress) return;
 
             BattleTrackVisualizer.FrontMonsterInfo front = _battleTrackVisualizer.GetFrontMonsterInfo();
             MonsterStatProfile? profile = null;
@@ -947,9 +959,11 @@ namespace Xiuxian.Scripts.Game
             _hasLingqiDropBuffThisBattle = false;
             _battleConsumableModifier = default;
             _consumedPotionsThisBattle.Clear();
+            _battleTalismans.Clear();
             ApplyAutoConsumables(isBattleStart: true);
             SyncLogicFromControllerState();
             _battleInfoLabel.Text = UiText.Encounter(_battleMonsterName);
+            ServiceLocator.Instance?.GuideState?.Complete("first_encounter");
             _battleInfoLabel.Visible = true;
             _roundInfoLabel.Text = UiText.BattleRound(0, _battleMonsterName, _enemyMaxHp);
             UpdateHpLabels();
@@ -986,10 +1000,12 @@ namespace Xiuxian.Scripts.Game
             _battleMonsterIndex = _battleTrackVisualizer.ResolveBattleMonsterIndex(_battleMonsterIndex);
             _usedHealPotionThisBattle = false;
             _hasLingqiDropBuffThisBattle = false;
+            _battleConsumableModifier = default;
             _consumedPotionsThisBattle.Clear();
+            _battleTalismans.Clear();
             ApplyAutoConsumables(isBattleStart: true);
             SyncLogicFromControllerState();
-            _battleInfoLabel.Text = $"{UiText.ZoneComplete} | Boss 挑战";
+            _battleInfoLabel.Text = $"Boss 挑战 · {UiText.ZoneName(_levelConfigLoader.ActiveLevelId, _currentZone)}";
             _battleInfoLabel.Visible = true;
             _roundInfoLabel.Text = UiText.BattleRound(0, _battleMonsterName, _enemyMaxHp);
             UpdateHpLabels();
@@ -1004,6 +1020,17 @@ namespace Xiuxian.Scripts.Game
             return _battleTrackVisualizer.GetFrontMonsterInfo().Index;
         }
 
+        private MonsterStatProfile? ResolveCurrentMonsterProfile()
+        {
+            if (_levelConfigLoader == null || !_levelConfigLoader.TryGetMonsterStatProfile(_battleMonsterId, out MonsterStatProfile profile)) return null;
+            foreach (string id in _battleTalismans)
+            {
+                var effect = TalismanRules.GetBattleEffect(id, profile.StrategyTag);
+                profile = profile with { BaseStats = profile.BaseStats with { Defense = (int)Math.Round(profile.BaseStats.Defense * (1 - effect.DefenseReduction)) } };
+            }
+            return profile;
+        }
+
         private void AdvanceBattleByInput(int inputEvents)
         {
             SyncLogicFromControllerState();
@@ -1012,6 +1039,8 @@ namespace Xiuxian.Scripts.Game
                 _levelConfigLoader?.PlayerBaseHp ?? _playerMaxHp,
                 _levelConfigLoader?.PlayerAttackPerRound ?? _playerAttackPerRoundRuntime);
             playerBaseStats = CharacterStatRules.BuildFinalStats(playerBaseStats, BuildNonEquipmentModifiers());
+            var activeMeal = ServiceLocator.Instance?.CookingState?.ActiveMeal ?? default;
+            playerBaseStats = CharacterStatRules.BuildFinalStats(playerBaseStats, new[] { new CharacterStatModifier(DefenseRate: activeMeal.DefenseRate) });
             ExploreGameLogic.BattleAdvanceResult progress = _logic.AdvanceBattleByInput(
                 inputEvents,
                 playerBaseStats,
@@ -1023,7 +1052,12 @@ namespace Xiuxian.Scripts.Game
                     SyncControllerStateFromLogic();
                     ApplyAutoConsumables(isBattleStart: false);
                     SyncLogicFromControllerState();
-                });
+                },
+                monsterProfile: ResolveCurrentMonsterProfile(),
+                criticalRoll: Random.Shared.NextDouble,
+                suppressMonsterHealing: _hasLingqiDropBuffThisBattle,
+                healPerRound: activeMeal.HealPerRound,
+                incomingDamageReduction: activeMeal.Id == "food_iron_fish_meal" && IsBossChallengeBattle() ? .15 : 0);
             SyncControllerStateFromLogic();
             if (progress.RoundsResolved <= 0)
             {
@@ -1086,8 +1120,8 @@ namespace Xiuxian.Scripts.Game
                 _battleMonsterId = string.Empty;
                 ResetTrackVisual();
                 _battleInfoLabel.Text = _lastBattleEndedByBossTimeout
-                    ? "Boss 超时败退，本轮副本重新开始"
-                    : "Boss 战败，本轮副本重新开始";
+                    ? "Boss 超时败退，探索保留 100%，可调整后重试"
+                    : "Boss 战败，探索保留 100%，可调整后重试";
             }
             else
             {
@@ -1108,6 +1142,7 @@ namespace Xiuxian.Scripts.Game
             _usedHealPotionThisBattle = false;
             _hasLingqiDropBuffThisBattle = false;
             _consumedPotionsThisBattle.Clear();
+            _battleTalismans.Clear();
             SyncLogicFromControllerState();
         }
 
@@ -1145,14 +1180,17 @@ namespace Xiuxian.Scripts.Game
             SyncControllerStateFromLogic();
             _roundInfoLabel.Text = UiText.BattleRound(_battleRoundCounter, _battleMonsterName, 0);
             _battleInfoLabel.Text = UiText.BattleVictory(_battleMonsterName);
+            ServiceLocator.Instance?.GuideState?.Complete("first_victory");
             _battleInfoLabel.Visible = true;
             _playerStatsState?.RecordBattle(won: true, isBoss: isBossBattle, isElite: IsEliteBattle());
 
+            string nextLevelId = string.Empty;
             if (_levelConfigLoader != null &&
                 victory.ShouldTryBossUnlock &&
                 _levelConfigLoader.TryMarkBossDefeatedAndUnlockNext(victory.ActiveLevelId, victory.MonsterId, out string unlockedLevelId) &&
                 !string.IsNullOrEmpty(unlockedLevelId))
             {
+                nextLevelId = unlockedLevelId;
                 _battleInfoLabel.Text = $"{UiText.BattleVictory(_battleMonsterName)} | 已解锁 {unlockedLevelId}";
             }
 
@@ -1176,6 +1214,13 @@ namespace Xiuxian.Scripts.Game
 
             if (isBossBattle)
             {
+                if (!string.IsNullOrEmpty(nextLevelId) && _levelConfigLoader!.TrySetActiveLevelIfUnlocked(nextLevelId))
+                {
+                    ApplyLevelConfig();
+                    _zoneLabel.Text = _currentZone;
+                    SyncActionTargetToActiveLevel();
+                    RefreshLevelOptionButton();
+                }
                 ResetTrackVisual();
             }
             else if (defeatedMonsterIndex >= 0)
@@ -1200,6 +1245,34 @@ namespace Xiuxian.Scripts.Game
                 && !string.IsNullOrEmpty(_battleMonsterId)
                 && _levelConfigLoader.IsBossMonsterForLevel(_levelConfigLoader.ActiveLevelId, _battleMonsterId);
         }
+
+        private void RefreshBossChallengeButton()
+        {
+            if (_bossChallengeButton == null) return;
+            _bossChallengeButton.Visible = PlayerActionCapabilityRules.HasCapability(_actionState, PlayerActionCapability.AdvancesDungeon)
+                && !_inBattle && _exploreProgress >= MaxProgress;
+        }
+
+        public bool CanStartBossChallenge => HasDungeonCapability() && !_inBattle && _exploreProgress >= MaxProgress;
+
+        public bool StartBossChallengeFromUi()
+        {
+            if (!CanStartBossChallenge) return false;
+            bool started = TryStartBossChallenge();
+            RefreshBossChallengeButton();
+            return started;
+        }
+
+        public void ApplyOfflineExploreProgress(double gain)
+        {
+            if (gain <= 0) return;
+            _exploreProgress = (float)Math.Min(MaxProgress, _exploreProgress + gain);
+            SyncLogicFromControllerState();
+            _progressBar.Value = _exploreProgress;
+            RefreshBossChallengeButton();
+        }
+
+        public double ExploreProgressValue => _exploreProgress;
 
         private void ResetTrackVisual()
         {
@@ -1467,7 +1540,9 @@ namespace Xiuxian.Scripts.Game
             SyncLogicFromControllerState();
             ExploreGameLogic.RuntimeState logicState = _logic.CaptureRuntimeState();
             BattleTrackVisualizer.RuntimeState trackState = _battleTrackVisualizer.CaptureRuntimeState();
-            string battleState = logicState.InBattle ? "in_battle" : "exploring";
+            string battleState = logicState.InBattle ? "in_battle" : logicState.ExploreProgress >= MaxProgress ? "boss_ready" : "exploring";
+            var rateRemainders = new Godot.Collections.Dictionary<string, Variant>();
+            foreach (var entry in _progressRateByAction) rateRemainders[entry.Key] = entry.Value.Remainder;
             var markerStates = new Godot.Collections.Array<Variant>();
             var recentBattleLogs = new Godot.Collections.Array<Variant>();
             for (int i = 0; i < trackState.MarkerStates.Count; i++)
@@ -1495,6 +1570,10 @@ namespace Xiuxian.Scripts.Game
                 ["zone_name"] = logicState.ZoneName,
                 ["explore_progress"] = logicState.ExploreProgress,
                 ["battle_state"] = battleState,
+                ["battle_talismans"] = new Godot.Collections.Array<string>(_battleTalismans),
+                ["progress_rate_remainders"] = rateRemainders,
+                ["used_heal_potion"] = _usedHealPotionThisBattle,
+                ["has_lingqi_drop_buff"] = _hasLingqiDropBuffThisBattle,
                 ["move_frame_counter"] = logicState.MoveFrameCounter,
                 ["queue_move_input_pending"] = trackState.QueueMoveInputPending,
                 ["player_hp"] = logicState.PlayerHp,
@@ -1520,6 +1599,15 @@ namespace Xiuxian.Scripts.Game
 
         public void FromRuntimeDictionary(Godot.Collections.Dictionary<string, Variant> data)
         {
+            _progressRateByAction.Clear();
+            if (data.ContainsKey("progress_rate_remainders")) foreach (var entry in (Godot.Collections.Dictionary<string, Variant>)data["progress_rate_remainders"])
+                _progressRateByAction[entry.Key] = new ProgressRateAccumulator { Remainder = Math.Clamp(entry.Value.AsDouble(), 0, .999999999) };
+            _usedHealPotionThisBattle = data.ContainsKey("used_heal_potion") && data["used_heal_potion"].AsBool();
+            _hasLingqiDropBuffThisBattle = data.ContainsKey("has_lingqi_drop_buff") && data["has_lingqi_drop_buff"].AsBool();
+            _battleTalismans.Clear();
+            if (data.ContainsKey("battle_talismans")) foreach (string id in (Godot.Collections.Array<string>)data["battle_talismans"]) _battleTalismans.Add(id);
+            _battleConsumableModifier = _battleTalismans.Contains("talisman_shield_charm") ? new CharacterStatModifier(SpeedFlat: 10000) : default;
+
             ExploreGameLogic.RuntimeState logicState = new()
             {
                 ZoneName = data.ContainsKey("zone_name") ? data["zone_name"].AsString() : _currentZone,
@@ -1645,7 +1733,7 @@ namespace Xiuxian.Scripts.Game
             string rhythmStatus = _cultivationRhythmState?.BuildStatusText() ?? "周天未加载";
             _cultivationProgressBar.TooltipText = $"修炼进度 {_playerProgressState.RealmExp:0.0}/{required:0.0}\n{rhythmStatus}";
             _breakthroughButton.Disabled = !_playerProgressState.CanBreakthrough;
-            _breakthroughButton.Text = _playerProgressState.CanBreakthrough ? "突破!" : "突破";
+            _breakthroughButton.Text = !_playerProgressState.HasRequiredBossClear ? "需击败最终 Boss" : _playerProgressState.CanBreakthrough ? "突破!" : "突破";
             _breakthroughButton.TooltipText = _playerProgressState.CanBreakthrough
                 ? "可突破，点击提升境界"
                 : $"进度未满，还需 {Mathf.Max(0.0f, (float)(required - _playerProgressState.RealmExp)):0.0}";
@@ -1781,6 +1869,11 @@ namespace Xiuxian.Scripts.Game
                 return;
             }
 
+            while (_alchemyState.CurrentProgress >= _alchemyState.RequiredProgress && TryCompleteAlchemyBatch()) _alchemyState.CompleteBatch();
+            if (!AlchemyRules.CanStartRecipe(_alchemyState.SelectedRecipeId, _resourceWalletState.Lingqi, _backpackState.GetItemEntries(), _subsystemMasteryState?.GetLevel(PlayerActionState.ModeAlchemy) ?? 1))
+            {
+                _battleInfoLabel.Text = "材料或灵气不足，炼丹暂停并保留进度"; _battleInfoLabel.Show(); return;
+            }
             bool completedBatch = CraftingProgressionService.AdvanceAlchemy(_alchemyState, inputEvents, out float percent);
             _progressBar.Value = percent;
             _roundInfoLabel.Text = BuildAlchemyProgressText();
@@ -1790,7 +1883,8 @@ namespace Xiuxian.Scripts.Game
                 return;
             }
 
-            if (!TryCompleteAlchemyBatch())
+            while (_alchemyState.CurrentProgress >= _alchemyState.RequiredProgress && TryCompleteAlchemyBatch()) _alchemyState.CompleteBatch();
+            if (_alchemyState.CurrentProgress >= _alchemyState.RequiredProgress)
             {
                 _battleInfoLabel.Text = "材料或灵气不足，炼丹已暂停";
                 _battleInfoLabel.Visible = true;
@@ -1809,6 +1903,7 @@ namespace Xiuxian.Scripts.Game
                 out string rewardText);
             if (completed)
             {
+                RecordActivityCompletion(rewardText);
                 _playerStatsState?.RecordAlchemyCraft();
                 _battleInfoLabel.Text = rewardText;
                 _battleInfoLabel.Visible = true;
@@ -1833,6 +1928,12 @@ namespace Xiuxian.Scripts.Game
                 return;
             }
 
+            while (_smithingState.CurrentProgress >= _smithingState.RequiredProgress
+                && _equippedItemsState.TryGetEquippedProfileById(_smithingState.TargetEquipmentId, out targetProfile)
+                && TryCompleteSmithingBatch(targetProfile)) { }
+            _equippedItemsState.TryGetEquippedProfileById(_smithingState.TargetEquipmentId, out targetProfile);
+            if (!SmithingRules.CanEnhance(targetProfile, _backpackState, _resourceWalletState, _subsystemMasteryState?.GetLevel(PlayerActionState.ModeSmithing) ?? 1))
+            { _battleInfoLabel.Text = "强化已暂停，材料不足或达到上限，保留当前进度"; _battleInfoLabel.Show(); return; }
             bool completed = CraftingProgressionService.AdvanceSmithing(_smithingState, inputEvents, out float percent);
             _progressBar.Value = percent;
             _roundInfoLabel.Text = BuildSmithingProgressText(targetProfile);
@@ -1841,7 +1942,10 @@ namespace Xiuxian.Scripts.Game
                 return;
             }
 
-            if (!TryCompleteSmithingBatch(targetProfile))
+            while (_smithingState.CurrentProgress >= _smithingState.RequiredProgress
+                && _equippedItemsState.TryGetEquippedProfileById(_smithingState.TargetEquipmentId, out targetProfile)
+                && TryCompleteSmithingBatch(targetProfile)) { }
+            if (_smithingState.CurrentProgress >= _smithingState.RequiredProgress)
             {
                 _battleInfoLabel.Text = "材料不足、灵气不足或强化已达上限";
                 _battleInfoLabel.Visible = true;
@@ -1861,6 +1965,7 @@ namespace Xiuxian.Scripts.Game
                 out string rewardText);
             if (completed)
             {
+                RecordActivityCompletion(rewardText);
                 _playerStatsState?.RecordSmithingCraft();
                 _battleInfoLabel.Text = rewardText;
                 _battleInfoLabel.Visible = true;
@@ -1907,9 +2012,10 @@ namespace Xiuxian.Scripts.Game
                 return;
             }
 
-            if (TryCompleteMiningBatch())
+            while (_miningState.CurrentProgress >= _miningState.RequiredProgress && TryCompleteMiningBatch())
             {
-                _progressBar.Value = 0.0f;
+                _miningState.CompleteBatch();
+                _progressBar.Value = _miningState.CurrentProgress / _miningState.RequiredProgress * 100;
                 _roundInfoLabel.Text = BuildMiningProgressText();
             }
         }
@@ -1930,9 +2036,19 @@ namespace Xiuxian.Scripts.Game
             }
 
             int finalCount = result.ItemCount * GetShopOutputMultiplier();
+            double doubleChance = IsMiningMode() ? MiningRules.GetDoubleOutputChance(_subsystemMasteryState?.GetLevel(PlayerActionState.ModeMining) ?? 1)
+                : FishingRules.GetDoubleOutputChance(_subsystemMasteryState?.GetLevel(PlayerActionState.ModeFishing) ?? 1);
+            if (Random.Shared.NextDouble() < doubleChance) finalCount *= 2;
             _backpackState.AddItem(result.ItemId, finalCount);
             _playerStatsState?.RecordMiningCompletion();
             _battleInfoLabel.Text = $"矿脉收获：{result.ItemId} x{finalCount}";
+            var rare = MiningRules.RollRareOre(_miningState.SelectedRecipeId, _subsystemMasteryState?.GetLevel(PlayerActionState.ModeMining) ?? 1, Random.Shared.NextDouble());
+            if (!string.IsNullOrEmpty(rare.ItemId))
+            {
+                _backpackState.AddItem(rare.ItemId, rare.ItemCount);
+                _battleInfoLabel.Text += $"，稀有矿 {rare.ItemId} x{rare.ItemCount}";
+            }
+            RecordActivityCompletion(_battleInfoLabel.Text);
             _battleInfoLabel.Visible = true;
             return true;
         }
@@ -1963,9 +2079,10 @@ namespace Xiuxian.Scripts.Game
                 return;
             }
 
-            if (TryCompleteFishingBatch())
+            while (_fishingState.CurrentProgress >= _fishingState.RequiredProgress && TryCompleteFishingBatch())
             {
-                _progressBar.Value = 0.0f;
+                _fishingState.CompleteBatch();
+                _progressBar.Value = _fishingState.CurrentProgress / _fishingState.RequiredProgress * 100;
                 _roundInfoLabel.Text = BuildFishingProgressText();
             }
         }
@@ -1977,9 +2094,10 @@ namespace Xiuxian.Scripts.Game
                 return false;
             }
 
+            if (_fishingState.RemainingCapacity <= 0) return false;
             FishingRules.CatchResult result = FishingRules.CatchFish(
                 _fishingState.SelectedRecipeId,
-                _subsystemMasteryState?.GetLevel(PlayerActionState.ModeFishing) ?? 1);
+                _subsystemMasteryState?.GetLevel(PlayerActionState.ModeFishing) ?? 1, Random.Shared.Next(100));
             if (string.IsNullOrEmpty(result.ItemId) || result.ItemCount <= 0)
             {
                 return false;
@@ -1987,6 +2105,9 @@ namespace Xiuxian.Scripts.Game
 
             bool baitActive = _backpackState.GetItemCount("fishing_bait") > 0;
             int finalCount = result.ItemCount * GetShopOutputMultiplier();
+            double doubleChance = IsMiningMode() ? MiningRules.GetDoubleOutputChance(_subsystemMasteryState?.GetLevel(PlayerActionState.ModeMining) ?? 1)
+                : FishingRules.GetDoubleOutputChance(_subsystemMasteryState?.GetLevel(PlayerActionState.ModeFishing) ?? 1);
+            if (Random.Shared.NextDouble() < doubleChance) finalCount *= 2;
             _backpackState.AddItem(result.ItemId, finalCount);
             _playerStatsState?.RecordFishingCompletion();
             string summary = $"灵渔收获：{result.ItemId} x{finalCount}";
@@ -1995,13 +2116,27 @@ namespace Xiuxian.Scripts.Game
                 _backpackState.RemoveItem("fishing_bait", 1);
             }
 
-            if (FishingRules.TryRollRareCatch(_fishingState.SelectedRecipeId, Random.Shared.Next(), baitActive, out FishingRules.RareCatchResult rareCatch))
+            if (FishingRules.TryRollRareCatch(_fishingState.SelectedRecipeId, Random.Shared.Next(), baitActive, out FishingRules.RareCatchResult rareCatch, _subsystemMasteryState?.GetLevel(PlayerActionState.ModeFishing) ?? 1))
             {
-                _backpackState.AddItem(rareCatch.ItemId, rareCatch.ItemCount);
-                summary += $" | 稀有掉落 {rareCatch.ItemId} x{rareCatch.ItemCount}";
+                if (rareCatch.ItemId == "sunk_jade_box")
+                {
+                    int stones = Random.Shared.Next(20, 51); _resourceWalletState?.AddSpiritStones(stones);
+                    summary += $" | 沉水玉匣开出灵石 x{stones}";
+                }
+                else if (rareCatch.ItemId == "sunken_equipment")
+                {
+                    var equipment = _levelConfigLoader?.RollSunkenEquipment();
+                    if (equipment != null) { _backpackState.AddEquipmentInstance(equipment); summary += $" | 捞获{equipment.DisplayName}"; }
+                }
+                else
+                {
+                    _backpackState.AddItem(rareCatch.ItemId, rareCatch.ItemCount);
+                    summary += $" | 稀有掉落 {UiText.BackpackItemName(rareCatch.ItemId)} x{rareCatch.ItemCount}";
+                }
             }
 
             _battleInfoLabel.Text = summary;
+            RecordActivityCompletion(summary);
             _battleInfoLabel.Visible = true;
             return true;
         }
@@ -2024,6 +2159,10 @@ namespace Xiuxian.Scripts.Game
                 return;
             }
 
+            while (state.CurrentProgress >= state.RequiredProgress && TryCompleteGenericRecipeBatch(state.SelectedRecipeId)) state.CompleteBatch();
+            if (!CraftingProgressionService.CanAffordGenericRecipe(state.SelectedRecipeId, _backpackState, _resourceWalletState,
+                _subsystemMasteryState?.GetLevel(GetActiveGenericSystemId()) ?? 1))
+            { _battleInfoLabel.Text = "材料或灵气不足，暂停并保留进度"; _battleInfoLabel.Show(); return; }
             bool completedBatch = state.AdvanceProgress(inputEvents);
             _progressBar.Value = state.RequiredProgress > 0.0f ? state.CurrentProgress / state.RequiredProgress * 100.0f : 0.0f;
             _roundInfoLabel.Text = BuildGenericRecipeProgressText();
@@ -2032,9 +2171,10 @@ namespace Xiuxian.Scripts.Game
                 return;
             }
 
-            if (TryCompleteGenericRecipeBatch(state.SelectedRecipeId))
+            while (state.CurrentProgress >= state.RequiredProgress && TryCompleteGenericRecipeBatch(state.SelectedRecipeId))
             {
-                _progressBar.Value = 0.0f;
+                state.CompleteBatch();
+                _progressBar.Value = state.CurrentProgress / state.RequiredProgress * 100;
                 _roundInfoLabel.Text = BuildGenericRecipeProgressText();
             }
         }
@@ -2105,7 +2245,7 @@ namespace Xiuxian.Scripts.Game
 
             if (_formationState != null && recipeId.StartsWith("formation_", StringComparison.Ordinal))
             {
-                _formationState.AddCraftedFormation(recipeId, outputMultiplier);
+                _formationState.AddCraftedFormation(recipeId, outputMultiplier + (ServiceLocator.Instance?.CookingState?.ActiveMeal.ExtraOutput ?? 0));
                 if (string.IsNullOrEmpty(_formationState.ActivePrimaryId))
                 {
                     _formationState.TryActivatePrimary(recipeId);
@@ -2123,6 +2263,7 @@ namespace Xiuxian.Scripts.Game
 
             _battleInfoLabel.Text = rewardText;
             _battleInfoLabel.Visible = true;
+            RecordActivityCompletion(rewardText);
             RecordGenericRecipeStats(recipe.SystemId);
             return true;
         }
@@ -2198,9 +2339,12 @@ namespace Xiuxian.Scripts.Game
             return $" | 阵法:{UiText.BackpackItemName(primaryId)}+{UiText.BackpackItemName(secondaryId)}";
         }
 
-        private static int ApplyProgressRate(int inputEvents, double rate)
+        private readonly Dictionary<string, ProgressRateAccumulator> _progressRateByAction = new();
+        private int ApplyProgressRate(int inputEvents, double rate)
         {
-            return Mathf.Max(1, Mathf.RoundToInt((float)(inputEvents * (1.0 + System.Math.Max(0.0, rate)))));
+            string key = _actionState?.ActionId ?? string.Empty;
+            if (!_progressRateByAction.TryGetValue(key, out var accumulator)) _progressRateByAction[key] = accumulator = new();
+            return accumulator.Apply(inputEvents, 1.0 + Math.Max(0, rate));
         }
 
         private int GetShopOutputMultiplier()
@@ -2440,7 +2584,7 @@ namespace Xiuxian.Scripts.Game
                         _playerProgressState.BodyCultivationPostBattleHealRate,
                         _playerProgressState.ZhouTianMaxHpRate,
                         _playerProgressState.ZhouTianAttackRate,
-                        _playerProgressState.ZhouTianDefenseRate));
+                        _playerProgressState.ZhouTianDefenseRate, _playerProgressState.BodyCultivationMaxHpRate, _playerProgressState.BodyCultivationDefenseRate));
                 if (!permanentModifier.Equals(default(CharacterStatModifier)))
                 {
                     result.Add(permanentModifier);
@@ -2727,6 +2871,9 @@ namespace Xiuxian.Scripts.Game
                 return;
             }
 
+            bool allowConsumables = _actionState?.ConsumablePolicy == "all" || (_actionState?.ConsumablePolicy == "boss_only" && IsBossChallengeBattle());
+            if (!allowConsumables) return;
+
             BattleConsumableState state = new(
                 PlayerCurrentHp: _playerHp,
                 PlayerMaxHp: _playerMaxHp,
@@ -2770,7 +2917,7 @@ namespace Xiuxian.Scripts.Game
             List<BackpackConsumableUsage> backpackUsages = ActivityEffectRules.DetermineAutoUseBackpackConsumables(
                 state,
                 _backpackState.GetItemEntries(),
-                TalismanRules.GetMaxTalismansPerBattle(talismanMasteryLevel));
+                TalismanRules.GetMaxTalismansPerBattle(talismanMasteryLevel), ResolveCurrentMonsterProfile()?.StrategyTag ?? "");
             for (int i = 0; i < backpackUsages.Count; i++)
             {
                 BackpackConsumableUsage usage = backpackUsages[i];
@@ -2781,18 +2928,11 @@ namespace Xiuxian.Scripts.Game
 
                 _playerStatsState?.RecordBattleTalismanConsumption();
 
-                CharacterStatModifier modifier = ActivityEffectRules.GetBackpackConsumableModifier(usage.ItemId);
-                _battleConsumableModifier = new CharacterStatModifier(
-                    MaxHpFlat: _battleConsumableModifier.MaxHpFlat + modifier.MaxHpFlat,
-                    AttackFlat: _battleConsumableModifier.AttackFlat + modifier.AttackFlat,
-                    DefenseFlat: _battleConsumableModifier.DefenseFlat + modifier.DefenseFlat,
-                    SpeedFlat: _battleConsumableModifier.SpeedFlat + modifier.SpeedFlat,
-                    MaxHpRate: _battleConsumableModifier.MaxHpRate + modifier.MaxHpRate,
-                    AttackRate: _battleConsumableModifier.AttackRate + modifier.AttackRate,
-                    DefenseRate: _battleConsumableModifier.DefenseRate + modifier.DefenseRate,
-                    SpeedRate: _battleConsumableModifier.SpeedRate + modifier.SpeedRate,
-                    CritChanceDelta: _battleConsumableModifier.CritChanceDelta + modifier.CritChanceDelta,
-                    CritDamageDelta: _battleConsumableModifier.CritDamageDelta + modifier.CritDamageDelta);
+                _battleTalismans.Add(usage.ItemId);
+                var effect = TalismanRules.GetBattleEffect(usage.ItemId, ResolveCurrentMonsterProfile()?.StrategyTag ?? "");
+                if (effect.ForceFirst) _battleConsumableModifier = new CharacterStatModifier(SpeedFlat: 10000);
+                if (effect.RoundAcceleration > 0) _inputsPerBattleRoundRuntime = Math.Max(1, (int)Math.Ceiling(_inputsPerBattleRoundRuntime * (1 - effect.RoundAcceleration)));
+                if (effect.FirstHitHpRate > 0) _enemyHp = Math.Max(0, _enemyHp - (int)Math.Round(_enemyMaxHp * effect.FirstHitHpRate));
                 _consumedPotionsThisBattle.Add(UiText.BackpackItemName(usage.ItemId));
             }
         }

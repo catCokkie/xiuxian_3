@@ -25,7 +25,7 @@ namespace Xiuxian.Scripts.Services
         {
             return new BattleDefeatDecision(
                 ShouldEndBattle: true,
-                ShouldResetExploreProgress: isBossBattle,
+                ShouldResetExploreProgress: false,
                 ShouldResetLevel: false,
                 ActiveLevelId: activeLevelId);
         }

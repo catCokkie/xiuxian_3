@@ -49,7 +49,7 @@ namespace Xiuxian.Scripts.Services
 
         public static MiningProgressDecision AdvanceProgress(float currentProgress, int inputEvents, int requiredInputs, int currentDurability, int masteryLevel = 1)
         {
-            float next = Math.Max(0.0f, currentProgress) + Math.Max(0, inputEvents);
+            float next = Math.Max(0.0f, currentProgress) + Math.Max(0, inputEvents) / (float)(1 - GetSpeedBonus(masteryLevel));
             float threshold = Math.Max(1, requiredInputs);
             double durabilityBonus = SubsystemMasteryRules.GetEffectValue(PlayerActionState.ModeMining, masteryLevel, SubsystemMasteryRules.MiningDurabilityBonusEffectId);
             int effectiveMaxDurability = (int)(DefaultNodeDurability * (1.0 + durabilityBonus));
@@ -69,7 +69,7 @@ namespace Xiuxian.Scripts.Services
                 refreshed = true;
             }
 
-            return new MiningProgressDecision(0.0f, true, durability, refreshed);
+            return new MiningProgressDecision(next, true, durability, refreshed);
         }
 
         public static GatherResult GatherOre(string recipeId, int masteryLevel = 1)
@@ -86,6 +86,14 @@ namespace Xiuxian.Scripts.Services
         public static double GetDoubleOutputChance(int masteryLevel)
         {
             return SubsystemMasteryRules.GetEffectValue(PlayerActionState.ModeMining, masteryLevel, SubsystemMasteryRules.MiningDoubleOutputEffectId);
+        }
+        public static double GetSpeedBonus(int masteryLevel) => masteryLevel >= 3 ? .15 : 0;
+
+        public static GatherResult RollRareOre(string recipeId, int masteryLevel, double roll)
+        {
+            double chance = SubsystemMasteryRules.GetEffectValue(PlayerActionState.ModeMining, masteryLevel, SubsystemMasteryRules.MiningRareSpawnBonusEffectId);
+            if (chance <= 0 || roll >= chance || !CanMineNode(recipeId, masteryLevel)) return default;
+            return new GatherResult(recipeId == "mining_cold_iron_ore" ? "spirit_jade" : "mithril", 1);
         }
 
         public static int GetEffectiveMaxDurability(int masteryLevel)

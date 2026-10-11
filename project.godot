@@ -13,7 +13,7 @@ config_version=5
 config/name="xiuxian2"
 run/main_scene="res://scenes/PrototypeRoot.tscn"
 config/features=PackedStringArray("4.5", "C#", "Forward Plus")
-config/icon="res://icon.svg"
+config/icon="res://assets/ui/icons/application_v1.svg"
 
 [autoload]
 
@@ -30,7 +30,7 @@ GardenState="*res://scripts/services/GardenState.cs"
 MiningState="*res://scripts/services/MiningState.cs"
 FishingState="*res://scripts/services/FishingState.cs"
 TalismanState="*res://scripts/services/RecipeProgressState.cs"
-CookingState="*res://scripts/services/RecipeProgressState.cs"
+CookingState="*res://scripts/services/CookingState.cs"
 FormationState="*res://scripts/services/FormationState.cs"
 BodyCultivationState="*res://scripts/services/RecipeProgressState.cs"
 ResourceWalletState="*res://scripts/services/ResourceWalletState.cs"
@@ -39,17 +39,17 @@ PlayerProgressState="*res://scripts/services/PlayerProgressState.cs"
 CultivationRhythmState="*res://scripts/services/CultivationRhythmState.cs"
 ShopState="*res://scripts/services/ShopState.cs"
 EventLogState="*res://scripts/services/EventLogState.cs"
+GuideState="*res://scripts/services/GuideState.cs"
 PlayerActionState="*res://scripts/services/PlayerActionState.cs"
 EquippedItemsState="*res://scripts/services/EquippedItemsState.cs"
 SubsystemMasteryState="*res://scripts/services/SubsystemMasteryState.cs"
 ActivityConversionService="*res://scripts/services/ActivityConversionService.cs"
 CloudSaveSyncService="*res://scripts/services/CloudSaveSyncService.cs"
 
-[display]
-
-window/size/viewport_width=1152
-window/size/viewport_height=648
-
 [dotnet]
 
 project/assembly_name="xiuxian2"
+
+[gui]
+
+theme/custom_font="res://assets/fonts/ui_sans_sc_regular.tres"

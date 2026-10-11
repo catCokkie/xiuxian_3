@@ -20,9 +20,10 @@ namespace Xiuxian.Scripts.Services
 
         private static readonly PondSpec[] Ponds =
         {
-            new("fishing_spirit_fish", "垂钓灵鱼", "spirit_fish", 2, 120, 1, false),
-            new("fishing_spirit_pearl", "打捞灵珠", "spirit_pearl", 1, 180, 1, false),
-            new("fishing_deep_pond", "深潭寻珍", "dragon_saliva", 1, 240, 2, true),
+            new("fishing_spirit_fish", "灵泉浅滩", "spirit_fish", 1, 120, 1, false),
+            new("fishing_spirit_pearl", "幽潭", "cold_scale_fish", 1, 150, 2, false),
+            new("fishing_deep_pond", "龙涎渊", "deep_abyss_fish", 1, 180, 3, true),
+            new("fishing_hualong_pond", "化龙泊", "armored_fish", 1, 200, 4, true),
         };
 
         public static IReadOnlyList<PondSpec> GetPonds() => Ponds;
@@ -50,33 +51,34 @@ namespace Xiuxian.Scripts.Services
         public static FishingProgressDecision AdvanceProgress(float currentProgress, int inputEvents, int requiredInputs, int masteryLevel = 1)
         {
             double speedBonus = SubsystemMasteryRules.GetEffectValue(PlayerActionState.ModeFishing, masteryLevel, SubsystemMasteryRules.FishingSpeedBonusEffectId);
-            float effectiveThreshold = (float)(Math.Max(1, requiredInputs) * (1.0 - speedBonus));
-            float next = Math.Max(0.0f, currentProgress) + Math.Max(0, inputEvents);
-            bool completed = next >= effectiveThreshold;
-            return new FishingProgressDecision(completed ? 0.0f : next, completed);
+            float next = BatchProgressRules.Advance(currentProgress, inputEvents, requiredInputs, 1.0 / (1 - speedBonus));
+            bool completed = next >= Math.Max(1, requiredInputs);
+            return new FishingProgressDecision(next, completed);
         }
 
-        public static CatchResult CatchFish(string recipeId, int masteryLevel = 1)
+        public static CatchResult CatchFish(string recipeId, int masteryLevel = 1, int rollPercent = 0)
         {
-            if (!TryGetPond(recipeId, out PondSpec pond))
+            if (!TryGetPond(recipeId, out var pond) || masteryLevel < pond.RequiredMasteryLevel) return default;
+            int roll = Math.Abs(rollPercent % 100);
+            string output = recipeId switch
             {
-                return default;
-            }
-
-            int bonusYield = masteryLevel >= 4 ? 1 : 0;
-            return new CatchResult(pond.OutputItemId, pond.OutputCount + bonusYield);
+                "fishing_spirit_fish" => roll < 80 ? "spirit_fish" : "spirit_pearl",
+                "fishing_spirit_pearl" => roll < 60 ? "cold_scale_fish" : roll < 90 ? "spirit_pearl" : "spirit_fish",
+                "fishing_deep_pond" => roll < 50 ? "deep_abyss_fish" : roll < 80 ? "dragon_saliva" : "spirit_pearl",
+                "fishing_hualong_pond" => roll < 40 ? "armored_fish" : roll < 75 ? "dragon_saliva" : "spirit_pearl",
+                _ => pond.OutputItemId
+            };
+            return new(output, 1);
         }
+        public static double GetDoubleOutputChance(int masteryLevel) => 0; // Lv4 boosts exclusive rare drops instead.
+        public static int Capacity(string id, int mastery = 1)
+            => (id switch { "fishing_spirit_pearl" => 25, "fishing_deep_pond" => 20, "fishing_hualong_pond" => 15, _ => 30 }) + (mastery >= 4 ? 10 : 0);
 
-        public static double GetDoubleOutputChance(int masteryLevel)
-        {
-            return SubsystemMasteryRules.GetEffectValue(PlayerActionState.ModeFishing, masteryLevel, SubsystemMasteryRules.FishingDoubleOutputEffectId);
-        }
-
-        public static bool TryRollRareCatch(string recipeId, int rollPercent, bool baitActive, out RareCatchResult rareCatch)
+        public static bool TryRollRareCatch(string recipeId, int rollPercent, bool baitActive, out RareCatchResult rareCatch, int masteryLevel = 1)
         {
             rareCatch = default;
             int normalizedRoll = Math.Abs(rollPercent % 100);
-            int threshold = baitActive ? 10 : 5;
+            int threshold = (masteryLevel >= 4 ? 10 : 5) + (baitActive ? 5 : 0);
             if (normalizedRoll >= threshold)
             {
                 return false;
@@ -84,9 +86,10 @@ namespace Xiuxian.Scripts.Services
 
             rareCatch = recipeId switch
             {
-                "fishing_spirit_fish" => new RareCatchResult("spirit_pearl", 1),
-                "fishing_spirit_pearl" => new RareCatchResult("spirit_pearl", 2),
-                "fishing_deep_pond" => new RareCatchResult("dragon_saliva", 1),
+                "fishing_spirit_fish" => new RareCatchResult("spirit_spring_water", 1),
+                "fishing_spirit_pearl" => new RareCatchResult("sunk_jade_box", 1),
+                "fishing_deep_pond" => new RareCatchResult("water_spirit_amber", 1),
+                "fishing_hualong_pond" => new RareCatchResult("sunken_equipment", 1),
                 _ => default,
             };
             return !string.IsNullOrEmpty(rareCatch.ItemId) && rareCatch.ItemCount > 0;

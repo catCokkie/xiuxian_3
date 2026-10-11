@@ -18,7 +18,9 @@ namespace Xiuxian.Scripts.Services
             double BodyCultivationPostBattleHealRate = 0.0,
             double ZhouTianMaxHpRate = 0.0,
             double ZhouTianAttackRate = 0.0,
-            double ZhouTianDefenseRate = 0.0);
+            double ZhouTianDefenseRate = 0.0,
+            double BodyCultivationMaxHpRate = 0.0,
+            double BodyCultivationDefenseRate = 0.0);
 
         public static Dictionary<string, object> ToPlainDictionary(PlayerProgressSnapshot snapshot)
         {
@@ -38,6 +40,8 @@ namespace Xiuxian.Scripts.Services
                 ["zhoutian_max_hp_rate"] = snapshot.ZhouTianMaxHpRate,
                 ["zhoutian_attack_rate"] = snapshot.ZhouTianAttackRate,
                 ["zhoutian_defense_rate"] = snapshot.ZhouTianDefenseRate,
+                ["body_cultivation_max_hp_rate"] = snapshot.BodyCultivationMaxHpRate,
+                ["body_cultivation_defense_rate"] = snapshot.BodyCultivationDefenseRate,
             };
         }
 
@@ -57,7 +61,9 @@ namespace Xiuxian.Scripts.Services
                 BodyCultivationPostBattleHealRate: System.Math.Max(0.0, SaveValueConversionRules.GetDouble(data, "body_cultivation_post_battle_heal_rate", 0.0)),
                 ZhouTianMaxHpRate: System.Math.Max(0.0, SaveValueConversionRules.GetDouble(data, "zhoutian_max_hp_rate", 0.0)),
                 ZhouTianAttackRate: System.Math.Max(0.0, SaveValueConversionRules.GetDouble(data, "zhoutian_attack_rate", 0.0)),
-                ZhouTianDefenseRate: System.Math.Max(0.0, SaveValueConversionRules.GetDouble(data, "zhoutian_defense_rate", 0.0)));
+                ZhouTianDefenseRate: System.Math.Max(0.0, SaveValueConversionRules.GetDouble(data, "zhoutian_defense_rate", 0.0)),
+                BodyCultivationMaxHpRate: System.Math.Max(0.0, SaveValueConversionRules.GetDouble(data, "body_cultivation_max_hp_rate", 0.0)),
+                BodyCultivationDefenseRate: System.Math.Max(0.0, SaveValueConversionRules.GetDouble(data, "body_cultivation_defense_rate", 0.0)));
         }
     }
 }

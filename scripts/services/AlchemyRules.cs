@@ -70,7 +70,7 @@ namespace Xiuxian.Scripts.Services
             float next = Math.Max(0.0f, currentProgress) + Math.Max(0, inputEvents);
             float threshold = Math.Max(1, requiredInputs);
             bool completed = next >= threshold;
-            return new AlchemyProgressDecision(completed ? 0.0f : next, completed);
+            return new AlchemyProgressDecision(next, completed);
         }
 
         public static AlchemyCompletionResult CompleteRecipe(string recipeId, int masteryLevel = 1)

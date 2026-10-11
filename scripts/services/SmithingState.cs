@@ -23,20 +23,24 @@ namespace Xiuxian.Scripts.Services
 
         public bool AdvanceProgress(int inputEvents)
         {
-            if (!HasTarget)
-            {
-                return false;
-            }
-
-            CurrentProgress += Mathf.Max(0, inputEvents);
-            bool completed = CurrentProgress >= RequiredProgress;
-            if (completed)
-            {
-                CurrentProgress = 0.0f;
-            }
-
+            if (!HasTarget) return false;
+            double inputRate = 1.0;
+            CurrentProgress = BatchProgressRules.Advance(CurrentProgress, inputEvents, RequiredProgress, inputRate);
             EmitSignal(SignalName.SmithingChanged, TargetEquipmentId, CurrentProgress, RequiredProgress);
-            return completed;
+            return CurrentProgress >= RequiredProgress;
+        }
+
+        public void CompleteBatch()
+        {
+            if (CurrentProgress < RequiredProgress) return;
+            CurrentProgress = BatchProgressRules.Consume(CurrentProgress, RequiredProgress);
+            EmitSignal(SignalName.SmithingChanged, TargetEquipmentId, CurrentProgress, RequiredProgress);
+        }
+
+        public void RefreshRequiredProgress(int enhanceLevel)
+        {
+            RequiredProgress = SmithingRules.GetCost(enhanceLevel).RequiredInputs;
+            EmitSignal(SignalName.SmithingChanged, TargetEquipmentId, CurrentProgress, RequiredProgress);
         }
 
         public Godot.Collections.Dictionary<string, Variant> ToDictionary()

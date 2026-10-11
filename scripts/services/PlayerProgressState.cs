@@ -21,6 +21,8 @@ namespace Xiuxian.Scripts.Services
         public int BodyCultivationMaxHpFlat { get; private set; }
         public int BodyCultivationAttackFlat { get; private set; }
         public int BodyCultivationDefenseFlat { get; private set; }
+        public double BodyCultivationMaxHpRate { get; private set; }
+        public double BodyCultivationDefenseRate { get; private set; }
         public int TemperCount { get; private set; }
         public int BoneforgeCount { get; private set; }
         public int BloodflowCount { get; private set; }
@@ -31,7 +33,9 @@ namespace Xiuxian.Scripts.Services
         [Export] public bool AutoBreakthrough = false;
 
         public double RealmExpRequired => GetExpRequired(RealmLevel, GetRealmExpReductionRate());
-        public bool CanBreakthrough => RealmExp >= RealmExpRequired;
+        public bool CanBreakthrough => RealmExp >= RealmExpRequired && HasRequiredBossClear;
+        public bool HasRequiredBossClear => RealmBreakthroughRules.CanCrossRealm(RealmLevel,
+            ServiceLocator.Instance?.LevelConfigLoader?.GetBossDefeatedLevelIds() ?? new Godot.Collections.Array<string>());
 
         public void AddRealmExp(double amount)
         {
@@ -120,6 +124,8 @@ namespace Xiuxian.Scripts.Services
             BodyCultivationMaxHpFlat += modifier.MaxHpFlat;
             BodyCultivationAttackFlat += modifier.AttackFlat;
             BodyCultivationDefenseFlat += modifier.DefenseFlat;
+            BodyCultivationMaxHpRate += modifier.MaxHpRate;
+            BodyCultivationDefenseRate += modifier.DefenseRate;
             BodyCultivationPostBattleHealRate += BodyCultivationRules.GetPostBattleHealRate(recipeId);
 
             switch (recipeId)
@@ -205,7 +211,7 @@ namespace Xiuxian.Scripts.Services
                 BodyCultivationPostBattleHealRate,
                 ZhouTianMaxHpRate,
                 ZhouTianAttackRate,
-                ZhouTianDefenseRate);
+                ZhouTianDefenseRate, BodyCultivationMaxHpRate, BodyCultivationDefenseRate);
             return SaveValueConversionRules.ToVariantDictionary(PlayerProgressPersistenceRules.ToPlainDictionary(snapshot));
         }
 
@@ -220,6 +226,8 @@ namespace Xiuxian.Scripts.Services
             BodyCultivationMaxHpFlat = snapshot.BodyCultivationMaxHpFlat;
             BodyCultivationAttackFlat = snapshot.BodyCultivationAttackFlat;
             BodyCultivationDefenseFlat = snapshot.BodyCultivationDefenseFlat;
+            BodyCultivationMaxHpRate = snapshot.BodyCultivationMaxHpRate;
+            BodyCultivationDefenseRate = snapshot.BodyCultivationDefenseRate;
             TemperCount = snapshot.TemperCount;
             BoneforgeCount = snapshot.BoneforgeCount;
             BloodflowCount = snapshot.BloodflowCount;
@@ -247,7 +255,8 @@ namespace Xiuxian.Scripts.Services
             }
             else
             {
-                reward += " 完成";
+                reward += modifier.MaxHpRate > 0 ? $" 完成，永久气血 +{modifier.MaxHpRate * 100:0}%"
+                    : modifier.DefenseRate > 0 ? $" 完成，永久防御 +{modifier.DefenseRate * 100:0}%" : " 完成";
             }
 
             if (postBattleHealRate > 0.0)

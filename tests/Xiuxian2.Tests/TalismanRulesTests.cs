@@ -5,25 +5,23 @@ namespace Xiuxian.Tests;
 public sealed class TalismanRulesTests
 {
     [Fact]
-    public void FireCharm_ProvidesAttackRateBonus()
+    public void ArmorBreakUsesActualDefenseReductionAndCountersArmor()
     {
-        CharacterStatModifier modifier = TalismanRules.GetModifier("talisman_fire_charm");
-        Assert.Equal(0.15, modifier.AttackRate, 6);
+        Assert.Equal(.30, TalismanRules.GetBattleEffect("talisman_fire_charm").DefenseReduction);
+        Assert.Equal(.60, TalismanRules.GetBattleEffect("talisman_fire_charm", "armor").DefenseReduction);
+        Assert.Equal(default, TalismanRules.GetModifier("talisman_fire_charm"));
     }
-
     [Fact]
-    public void ShieldCharm_ProvidesSpeedAndAttackBonus()
+    public void SwiftCharmGrantsInitiativeAndRoundAcceleration()
     {
-        CharacterStatModifier modifier = TalismanRules.GetModifier("talisman_shield_charm");
-        Assert.Equal(0.10, modifier.AttackRate, 6);
-        Assert.Equal(0.25, modifier.SpeedRate, 6);
+        var effect = TalismanRules.GetBattleEffect("talisman_shield_charm");
+        Assert.True(effect.ForceFirst); Assert.Equal(.25, effect.RoundAcceleration);
+        Assert.Equal(.50, TalismanRules.GetBattleEffect("talisman_shield_charm", "fast").RoundAcceleration);
     }
-
     [Fact]
-    public void BurstCharm_ProvidesHighestAttackRateBonus()
+    public void BurstCharmDealsPercentOfEnemyMaxHpOnce()
     {
-        CharacterStatModifier modifier = TalismanRules.GetModifier("talisman_burst_charm");
-        Assert.Equal(0.35, modifier.AttackRate, 6);
+        Assert.Equal(.15, TalismanRules.GetBattleEffect("talisman_burst_charm").FirstHitHpRate);
     }
 
     [Fact]

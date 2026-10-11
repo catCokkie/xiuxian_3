@@ -77,6 +77,8 @@ namespace Xiuxian.Scripts.Services
             string activeLevelId = _activeLevelManager.ActiveLevelId;
             bool isBoss = !string.IsNullOrEmpty(activeLevelId) && _activeLevelManager.IsBossMonsterForLevel(activeLevelId, monsterId);
             profile = MonsterStatRules.BuildProfile(monsterId, monsterName, hp, attack, defense, speedFactor, inputsPerRound, moveCategory, isBoss);
+            profile = profile with { StrategyTag = LevelConfigProvider.GetString(monster, "strategy_tag", isBoss ? "boss" : ""),
+                HealPerRound = Math.Max(0, monster.ContainsKey("heal_per_round") ? monster["heal_per_round"].AsInt32() : 0) };
             return true;
         }
 

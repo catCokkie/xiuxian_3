@@ -93,7 +93,7 @@ namespace Xiuxian.Scripts.Tests
             vbox.AddChild(_outputLabel);
         }
 
-        private void OnActivityTick(double apThisSecond, double apFinal)
+        private void OnActivityTick(double apThisSecond, double apFinal, double activeSecondsThisBatch)
         {
             CallDeferred(nameof(UpdateDisplay));
         }
@@ -114,7 +114,7 @@ namespace Xiuxian.Scripts.Tests
             if (_activityState == null || _outputLabel == null) return;
 
             string status = _hookService?.IsPaused ?? false ? "⏸ 暂停" : "▶ 采集中";
-            string hookActive = _hookService != null ? "🟢 已启动" : "🔴 未启动";
+            string hookActive = _hookService?.IsHookActive ?? false ? "🟢 已启动" : "🔴 未启动";
 
             string text = $@"=== 系统状态 ===
 钩子状态: {hookActive}

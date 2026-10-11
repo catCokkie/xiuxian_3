@@ -22,7 +22,7 @@ public sealed class EquipmentDropInstanceGenerationRulesTests
             nowUnix: () => 123456789);
 
         Assert.Single(instances);
-        Assert.Equal("eq_weapon_qi_outer_moss_blade__drop_1", instances[0].EquipmentId);
+        Assert.StartsWith("eq_weapon_qi_outer_moss_blade__drop_", instances[0].EquipmentId);
         Assert.Equal("attack_flat", instances[0].MainStatKey);
         Assert.Equal(6, instances[0].MainStatValue);
     }

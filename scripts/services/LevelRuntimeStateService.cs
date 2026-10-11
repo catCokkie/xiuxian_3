@@ -127,6 +127,16 @@ namespace Xiuxian.Scripts.Services
             return sawCappedTable ? (int)totalRemaining : int.MaxValue;
         }
 
+        public void ConsumeOfflineDropRolls(Dictionary<string, Godot.Collections.Dictionary<string, Variant>> tables, int count)
+        {
+            foreach (var entry in tables)
+            {
+                while (count > 0 && DropEconomyService.TryConsumeDropRoll(entry.Value, entry.Key,
+                    _dailyRollCountByTable, _dailyRollDayByTable, _hourlyRollCountByTable, _hourlyRollHourByTable, out _, out _)) count--;
+                if (count <= 0) break;
+            }
+        }
+
         public Dictionary<string, int> RollMonsterDrops(string monsterId)
         {
             var result = new Dictionary<string, int>();
@@ -143,6 +153,10 @@ namespace Xiuxian.Scripts.Services
             string dropTableId = ResolveDropTableForLevel(_activeLevelManager.ActiveLevelId, monsterId, configuredDropTableId);
             _lastDropTableResolved = dropTableId;
             int dropRollCount = Math.Max(0, drops.ContainsKey("drop_roll_count") ? drops["drop_roll_count"].AsInt32() : 1);
+            double dropBonus = SubsystemMasteryRules.GetEffectValue(PlayerActionState.ModeDungeon,
+                ServiceLocator.Instance?.SubsystemMasteryState?.GetLevel(PlayerActionState.ModeDungeon) ?? 1, "dungeon_drop_rate_bonus");
+            double extraRolls = dropRollCount * dropBonus;
+            dropRollCount += (int)extraRolls + (_rng.Randf() < extraRolls % 1 ? 1 : 0);
             string pityCounterKey = "";
             string pityItemId = "";
             int pityThreshold = 0;

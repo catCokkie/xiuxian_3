@@ -25,6 +25,8 @@ namespace Xiuxian.Scripts.Services
         [Export] public float JoyAxisStep { get; set; } = 0.25f;
         [Export] public bool EnableJoyAxisCounting { get; set; } = false;
 
+        public bool IsHookActive => _isHookActive;
+
         // 依赖：输入状态管理器
         [Export] public NodePath ActivityStatePath { get; set; } = "/root/InputActivityState";
 
@@ -47,6 +49,14 @@ namespace Xiuxian.Scripts.Services
 
         public override void _Ready()
         {
+            if (Array.IndexOf(OS.GetCmdlineUserArgs(), "--smoke-test") >= 0)
+            {
+                SetPaused(true);
+                AutoStart = false;
+                ForceGlobalCapture = false;
+                SetProcessInput(false);
+                return;
+            }
             _activityState = GetNode<InputActivityState>(ActivityStatePath);
             if (_activityState == null)
             {
@@ -190,8 +200,8 @@ namespace Xiuxian.Scripts.Services
 
             try
             {
-                // For low-level global hooks, null module handle is valid when callback is in current process.
-                IntPtr hModule = IntPtr.Zero;
+                // Low-level global hooks are more reliable when we pass the current process module handle.
+                IntPtr hModule = GetModuleHandle(null);
 
                 // 设置键盘钩子
                 _keyboardHookId = SetWindowsHookEx(WH_KEYBOARD_LL, _keyboardProc, hModule, 0);
@@ -419,7 +429,7 @@ namespace Xiuxian.Scripts.Services
         private static extern IntPtr CallNextHookEx(IntPtr hhk, int nCode, IntPtr wParam, IntPtr lParam);
 
         [DllImport("kernel32.dll", CharSet = CharSet.Auto)]
-        private static extern IntPtr GetModuleHandle(string lpModuleName);
+        private static extern IntPtr GetModuleHandle(string? lpModuleName);
 
         #endregion
     }

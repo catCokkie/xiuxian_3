@@ -9,33 +9,13 @@ namespace Xiuxian.Scripts.Services
         public static List<BackpackConsumableUsage> DetermineAutoUseBackpackConsumables(
             BattleConsumableState state,
             IReadOnlyDictionary<string, int> items,
-            int maxTalismansPerBattle = 1)
+            int maxTalismansPerBattle = 1,
+            string strategyTag = "")
         {
             var result = new List<BackpackConsumableUsage>();
-            int porridge = items != null && items.TryGetValue("food_spirit_porridge", out int porridgeCount) ? porridgeCount : 0;
-            int jelly = items != null && items.TryGetValue("food_fruit_jelly", out int jellyCount) ? jellyCount : 0;
-            int soup = items != null && items.TryGetValue("food_dragon_soup", out int soupCount) ? soupCount : 0;
-
             if (state.IsBattleStart)
-            {
-                foreach (string talismanId in GetAutoUseTalismans(items, maxTalismansPerBattle))
-                {
+                foreach (string talismanId in GetAutoUseTalismans(items, maxTalismansPerBattle, strategyTag))
                     result.Add(new BackpackConsumableUsage(talismanId, "battle_start"));
-                }
-
-                if (porridge > 0)
-                {
-                    result.Add(new BackpackConsumableUsage("food_spirit_porridge", "battle_start"));
-                }
-                if (jelly > 0)
-                {
-                    result.Add(new BackpackConsumableUsage("food_fruit_jelly", "battle_start"));
-                }
-                if (soup > 0)
-                {
-                    result.Add(new BackpackConsumableUsage("food_dragon_soup", "battle_start"));
-                }
-            }
 
             return result;
         }
@@ -81,9 +61,9 @@ namespace Xiuxian.Scripts.Services
                 MaxHpFlat: snapshot.BodyCultivationMaxHpFlat,
                 AttackFlat: snapshot.BodyCultivationAttackFlat,
                 DefenseFlat: snapshot.BodyCultivationDefenseFlat,
-                MaxHpRate: snapshot.ZhouTianMaxHpRate,
+                MaxHpRate: snapshot.ZhouTianMaxHpRate + snapshot.BodyCultivationMaxHpRate,
                 AttackRate: snapshot.ZhouTianAttackRate,
-                DefenseRate: snapshot.ZhouTianDefenseRate);
+                DefenseRate: snapshot.ZhouTianDefenseRate + snapshot.BodyCultivationDefenseRate);
         }
 
         private static FormationEffectProfile GetActiveFormationProfile(string activePrimaryId, string activeSecondaryId, IReadOnlyDictionary<string, int> items, int masteryLevel)
@@ -110,7 +90,7 @@ namespace Xiuxian.Scripts.Services
             return FormationRules.GetEffectProfile(formationId, masteryLevel);
         }
 
-        private static IEnumerable<string> GetAutoUseTalismans(IReadOnlyDictionary<string, int> items, int maxTalismansPerBattle)
+        private static IEnumerable<string> GetAutoUseTalismans(IReadOnlyDictionary<string, int> items, int maxTalismansPerBattle, string strategyTag)
         {
             if (items == null || maxTalismansPerBattle <= 0)
             {
@@ -124,6 +104,8 @@ namespace Xiuxian.Scripts.Services
                 "talisman_fire_charm",
             };
 
+            if (strategyTag == "armor") priority = new[] { "talisman_fire_charm", "talisman_burst_charm", "talisman_shield_charm" };
+            if (strategyTag == "fast") priority = new[] { "talisman_shield_charm", "talisman_burst_charm", "talisman_fire_charm" };
             int used = 0;
             for (int i = 0; i < priority.Length && used < maxTalismansPerBattle; i++)
             {

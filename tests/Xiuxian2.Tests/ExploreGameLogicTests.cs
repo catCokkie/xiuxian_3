@@ -46,7 +46,7 @@ public sealed class ExploreGameLogicTests
     }
 
     [Fact]
-    public void HandleBattleDefeat_BossBattleResetsProgressAndCountsBattle()
+    public void HandleBattleDefeat_BossBattlePreservesProgressAndCountsBattle()
     {
         ExploreGameLogic logic = new()
         {
@@ -60,8 +60,8 @@ public sealed class ExploreGameLogicTests
 
         BattleDefeatDecision defeat = logic.HandleBattleDefeat("lv_qi_001", isBossBattle: true);
 
-        Assert.True(defeat.ShouldResetExploreProgress);
-        Assert.Equal(0.0f, logic.ExploreProgress);
+        Assert.False(defeat.ShouldResetExploreProgress);
+        Assert.Equal(100.0f, logic.ExploreProgress);
         Assert.False(logic.InBattle);
         Assert.Equal(string.Empty, logic.BattleMonsterId);
         Assert.Equal(36, logic.PlayerHp);

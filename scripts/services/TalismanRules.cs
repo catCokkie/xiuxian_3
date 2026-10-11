@@ -4,6 +4,14 @@ namespace Xiuxian.Scripts.Services
 {
     public static class TalismanRules
     {
+        public readonly record struct BattleEffect(double DefenseReduction = 0, double RoundAcceleration = 0, bool ForceFirst = false, double FirstHitHpRate = 0);
+        public static BattleEffect GetBattleEffect(string id, string strategyTag = "") => id switch
+        {
+            "talisman_fire_charm" => new(DefenseReduction: strategyTag == "armor" ? 0.60 : 0.30),
+            "talisman_shield_charm" => new(RoundAcceleration: strategyTag == "fast" ? 0.50 : 0.25, ForceFirst: true),
+            "talisman_burst_charm" => new(FirstHitHpRate: 0.15),
+            _ => default
+        };
         public readonly record struct RecipeSpec(
             string RecipeId,
             string DisplayName,
@@ -27,7 +35,7 @@ namespace Xiuxian.Scripts.Services
                 45.0,
                 180,
                 1,
-                new CharacterStatModifier(AttackRate: ArmorBreakCharmAttackRate)),
+                default),
             new(
                 "talisman_shield_charm",
                 "疾风符",
@@ -35,7 +43,7 @@ namespace Xiuxian.Scripts.Services
                 60.0,
                 220,
                 2,
-                new CharacterStatModifier(AttackRate: SwiftCharmAttackRate, SpeedRate: SwiftCharmSpeedRate)),
+                default),
             new(
                 "talisman_burst_charm",
                 "炸裂符",
@@ -43,7 +51,7 @@ namespace Xiuxian.Scripts.Services
                 90.0,
                 280,
                 4,
-                new CharacterStatModifier(AttackRate: BurstCharmAttackRate)),
+                default),
         };
 
         public static IReadOnlyList<RecipeSpec> GetRecipes() => Recipes;

@@ -17,7 +17,7 @@ The current prototype already supports a minimal but real gameplay loop:
 The current UI surface also includes:
 
 - a bottom main bar for lightweight always-on progress visibility
-- a book-style submenu with `Cultivation`, `Battle Log`, `Equipment`, `Stats`, `Bug Feedback`, and `Settings`
+- a book-style submenu with `Cultivation`, `Events`, `Equipment`, `Backpack`, `Shop`, `Stats`, `Config Validation`, `Bug Feedback`, and `Settings` tabs (progressive unlock, see `docs/design/02_systems.md` §21)
 - a config validation view with battle-drop simulation filters and quick-run actions
 - manual breakthrough when realm progress is full
 - a submenu config validation view with scope and active-level filters

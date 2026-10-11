@@ -27,13 +27,31 @@ namespace Xiuxian.Scripts.Services
             CharacterBattleSnapshot player,
             CharacterBattleSnapshot monster,
             int enemyDamageDivider,
-            int enemyMinimumDamage)
+            int enemyMinimumDamage,
+            double playerCritRoll = 1.0,
+            double monsterCritRoll = 1.0)
         {
             int damageToMonster = CalculateAttackDamage(player.Attack, monster.Defense, 1);
+            if (playerCritRoll < player.CritChance)
+                damageToMonster = Math.Max(1, (int)Math.Round(damageToMonster * player.CritDamage));
             int nextMonsterHp = Math.Max(0, monster.CurrentHp - damageToMonster);
 
-            int damageToPlayer = CalculateScaledDamage(monster.Attack, enemyDamageDivider, enemyMinimumDamage);
+            int damageToPlayer = CalculateAttackDamage(CalculateScaledDamage(monster.Attack, enemyDamageDivider, enemyMinimumDamage), player.Defense, enemyMinimumDamage);
+            if (monsterCritRoll < monster.CritChance)
+                damageToPlayer = Math.Max(enemyMinimumDamage, (int)Math.Round(damageToPlayer * monster.CritDamage));
             int nextPlayerHp = Math.Max(0, player.CurrentHp - damageToPlayer);
+
+            // Equal speed preserves simultaneous exchanges; faster actors can finish before retaliation.
+            if (player.Speed > monster.Speed && nextMonsterHp == 0)
+            {
+                damageToPlayer = 0;
+                nextPlayerHp = player.CurrentHp;
+            }
+            else if (monster.Speed > player.Speed && nextPlayerHp == 0)
+            {
+                damageToMonster = 0;
+                nextMonsterHp = monster.CurrentHp;
+            }
 
             CharacterBattleSnapshot nextPlayer = player with { CurrentHp = nextPlayerHp };
             CharacterBattleSnapshot nextMonster = monster with { CurrentHp = nextMonsterHp };

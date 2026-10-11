@@ -18,6 +18,9 @@ namespace Xiuxian.Scripts.Services
                 + Math.Max(0, JoypadAxisInputCount);
         }
 
+        public static double MeasureActiveSeconds(double delta, double now, double activeUntil)
+            => System.Math.Min(System.Math.Min(5, System.Math.Max(0, delta)), System.Math.Max(0, activeUntil - (now - delta)));
+
         public static int CalculateRemainingWindowAllowance(int currentWindowCount, int maxInputPerMinute)
         {
             if (maxInputPerMinute <= 0)
@@ -125,6 +128,12 @@ namespace Xiuxian.Scripts.Services
         public static double CalculateAccumulator(double currentAccumulator, double apFinal, double drainPerSecond, double delta)
         {
             return Math.Max(0.0, currentAccumulator + apFinal - drainPerSecond * delta);
+        }
+
+        public static double ClampAp(double requestedAp, double usedAp, double maximumAp)
+        {
+            if (!double.IsFinite(requestedAp) || requestedAp <= 0) return 0;
+            return Math.Min(requestedAp, Math.Max(0, maximumAp - Math.Max(0, usedAp)));
         }
     }
 }

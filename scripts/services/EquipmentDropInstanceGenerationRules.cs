@@ -30,7 +30,7 @@ namespace Xiuxian.Scripts.Services
                     sourceLevelId,
                     sourceStage,
                     rarityOverride: null,
-                    uniqueSuffix: $"drop_{counter}",
+                    uniqueSuffix: $"drop_{Guid.NewGuid():N}_{counter}",
                     pickIndex: pickIndex,
                     rollValue: rollValue,
                     nowUnix: nowUnix));

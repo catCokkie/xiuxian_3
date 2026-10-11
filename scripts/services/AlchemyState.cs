@@ -33,15 +33,18 @@ namespace Xiuxian.Scripts.Services
 
         public bool AdvanceProgress(int inputEvents)
         {
-            if (!HasSelectedRecipe)
-            {
-                return false;
-            }
-
-            AlchemyRules.AlchemyProgressDecision decision = AlchemyRules.AdvanceProgress(CurrentProgress, inputEvents, Mathf.RoundToInt(RequiredProgress));
-            CurrentProgress = decision.NextProgress;
+            if (!HasSelectedRecipe) return false;
+            double inputRate = 1.0;
+            CurrentProgress = BatchProgressRules.Advance(CurrentProgress, inputEvents, RequiredProgress, inputRate);
             EmitSignal(SignalName.AlchemyChanged, SelectedRecipeId, CurrentProgress, RequiredProgress);
-            return decision.CompletedBatch;
+            return CurrentProgress >= RequiredProgress;
+        }
+
+        public void CompleteBatch()
+        {
+            if (CurrentProgress < RequiredProgress) return;
+            CurrentProgress = BatchProgressRules.Consume(CurrentProgress, RequiredProgress);
+            EmitSignal(SignalName.AlchemyChanged, SelectedRecipeId, CurrentProgress, RequiredProgress);
         }
 
         public Godot.Collections.Dictionary<string, Variant> ToDictionary()

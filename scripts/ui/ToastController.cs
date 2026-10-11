@@ -37,8 +37,6 @@ namespace Xiuxian.Scripts.Ui
         private double _toastClock;
 
         // Track last craft progress to detect completion edges
-        private float _lastAlchemyProgress;
-        private float _lastSmithingProgress;
 
         public override void _Ready()
         {
@@ -89,6 +87,7 @@ namespace Xiuxian.Scripts.Ui
         /// </summary>
         public void Enqueue(string message, Color? color = null, string foldKey = "")
         {
+            if (ServiceLocator.Instance?.PlayerActionState?.WorkMode == true) return;
             string normalizedMessage = message?.Trim() ?? string.Empty;
             if (string.IsNullOrEmpty(normalizedMessage))
             {
@@ -250,15 +249,7 @@ namespace Xiuxian.Scripts.Ui
                 BackpackState.SignalName.EquipmentInventoryChanged,
                 Callable.From(OnEquipmentInventoryChanged));
 
-            if (services.AlchemyState != null)
-            {
-                services.AlchemyState.AlchemyChanged += OnAlchemyChanged;
-            }
 
-            if (services.SmithingState != null)
-            {
-                services.SmithingState.SmithingChanged += OnSmithingChanged;
-            }
 
             if (services.CultivationRhythmState != null)
             {
@@ -306,15 +297,7 @@ namespace Xiuxian.Scripts.Ui
                     Callable.From(OnEquipmentInventoryChanged));
             }
 
-            if (services.AlchemyState != null)
-            {
-                services.AlchemyState.AlchemyChanged -= OnAlchemyChanged;
-            }
 
-            if (services.SmithingState != null)
-            {
-                services.SmithingState.SmithingChanged -= OnSmithingChanged;
-            }
 
             if (services.CultivationRhythmState != null)
             {
@@ -331,7 +314,7 @@ namespace Xiuxian.Scripts.Ui
 
         private void OnRealmLevelUp(int newRealmLevel)
         {
-            string message = $"突破成功 → 炼气{newRealmLevel}层";
+            string message = $"突破成功 → {RealmBreakthroughRules.DisplayName(newRealmLevel)}";
             Enqueue(message, new Color("C8A050"));
             PushEventLog(EventLogState.CategoryBreakthrough, message, accentId: EventLogState.AccentHighlight);
         }
@@ -351,35 +334,12 @@ namespace Xiuxian.Scripts.Ui
             PushEventLog(EventLogState.CategoryEquipment, message);
         }
 
-        private void OnAlchemyChanged(string selectedRecipeId, float currentProgress, float requiredProgress)
-        {
-            if (_lastAlchemyProgress > 0 && _lastAlchemyProgress >= requiredProgress && currentProgress < _lastAlchemyProgress)
-            {
-                const string message = "炼丹完成";
-                Enqueue(message, new Color("8CB870"), foldKey: "craft_alchemy_complete");
-                PushEventLog(EventLogState.CategoryCraft, message);
-            }
-
-            _lastAlchemyProgress = currentProgress;
-        }
-
-        private void OnSmithingChanged(string targetEquipmentId, float currentProgress, float requiredProgress)
-        {
-            if (_lastSmithingProgress > 0 && _lastSmithingProgress >= requiredProgress && currentProgress < _lastSmithingProgress)
-            {
-                const string message = "强化完成";
-                Enqueue(message, new Color("8CB870"), foldKey: "craft_smithing_complete");
-                PushEventLog(EventLogState.CategoryCraft, message);
-            }
-
-            _lastSmithingProgress = currentProgress;
-        }
-
         private void OnRhythmSummaryReady(string title, string rewardSummary, string suggestion, bool requestAttention)
         {
             string message = string.IsNullOrEmpty(rewardSummary) ? title : $"{title}｜{rewardSummary}";
-            Enqueue(message, new Color("C8A050"));
-            if (!string.IsNullOrEmpty(suggestion))
+            bool silent = ServiceLocator.Instance?.CultivationRhythmState?.Strength == CultivationRhythmRules.StrengthNone;
+            if (!silent) Enqueue(message, new Color("C8A050"));
+            if (!silent && !string.IsNullOrEmpty(suggestion))
             {
                 Enqueue(suggestion, new Color("D8CBA6"));
             }

@@ -38,7 +38,7 @@ public sealed class ActivityRegistryTests
         Assert.Equal("灵渔", ActivityRegistry.GetBySystem(PlayerActionState.ModeFishing)!.DisplayName);
         Assert.Equal("spirit_flower", ActivityRegistry.GetRecipe("garden_spirit_flower")!.Outputs[0].ItemId);
         Assert.Equal("spirit_jade", ActivityRegistry.GetRecipe("mining_spirit_jade")!.Outputs[0].ItemId);
-        Assert.Equal("dragon_saliva", ActivityRegistry.GetRecipe("fishing_deep_pond")!.Outputs[0].ItemId);
+        Assert.Equal("deep_abyss_fish", ActivityRegistry.GetRecipe("fishing_deep_pond")!.Outputs[0].ItemId);
     }
 
     [Fact]
@@ -51,7 +51,7 @@ public sealed class ActivityRegistryTests
         Assert.Equal("阵法", ActivityRegistry.GetBySystem(PlayerActionState.ModeFormation)!.DisplayName);
         Assert.Equal("体修", ActivityRegistry.GetBySystem(PlayerActionState.ModeBodyCultivation)!.DisplayName);
         Assert.Equal("talisman_fire_charm", ActivityRegistry.GetRecipe("talisman_fire_charm")!.Outputs[0].ItemId);
-        Assert.Equal("food_spirit_porridge", ActivityRegistry.GetRecipe("cooking_spirit_porridge")!.Outputs[0].ItemId);
+        Assert.Equal("food_clear_fish_soup", ActivityRegistry.GetRecipe("cooking_spirit_porridge")!.Outputs[0].ItemId);
         Assert.Equal("formation_spirit_plate", ActivityRegistry.GetRecipe("formation_spirit_plate")!.Outputs[0].ItemId);
         Assert.Empty(ActivityRegistry.GetRecipe("body_cultivation_temper")!.Outputs);
     }

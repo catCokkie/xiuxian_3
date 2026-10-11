@@ -34,19 +34,21 @@ namespace Xiuxian.Scripts.Services
 
         public bool AdvanceProgress(int inputEvents)
         {
-            if (!HasSelectedRecipe)
-            {
-                return false;
-            }
-
-            Xiuxian.Scripts.Game.CraftingProgressionService.GenericProgressResult result = Xiuxian.Scripts.Game.CraftingProgressionService.AdvanceGenericRecipe(SelectedRecipeId, CurrentProgress, inputEvents);
-            bool completed = result.CompletedBatch;
-            CurrentProgress = completed ? 0.0f : RequiredProgress * result.ProgressPercent / 100.0f;
+            if (!HasSelectedRecipe) return false;
+            double inputRate = 1.0;
+            CurrentProgress = BatchProgressRules.Advance(CurrentProgress, inputEvents, RequiredProgress, inputRate);
             EmitSignal(SignalName.RecipeProgressChanged, SelectedRecipeId, CurrentProgress, RequiredProgress);
-            return completed;
+            return CurrentProgress >= RequiredProgress;
         }
 
-        public Godot.Collections.Dictionary<string, Variant> ToDictionary()
+        public void CompleteBatch()
+        {
+            if (CurrentProgress < RequiredProgress) return;
+            CurrentProgress = BatchProgressRules.Consume(CurrentProgress, RequiredProgress);
+            EmitSignal(SignalName.RecipeProgressChanged, SelectedRecipeId, CurrentProgress, RequiredProgress);
+        }
+
+        public virtual Godot.Collections.Dictionary<string, Variant> ToDictionary()
         {
             return new Godot.Collections.Dictionary<string, Variant>
             {
@@ -56,7 +58,7 @@ namespace Xiuxian.Scripts.Services
             };
         }
 
-        public void FromDictionary(Godot.Collections.Dictionary<string, Variant> data)
+        public virtual void FromDictionary(Godot.Collections.Dictionary<string, Variant> data)
         {
             SelectedRecipeId = data.ContainsKey("selected_recipe") ? data["selected_recipe"].AsString() : string.Empty;
             CurrentProgress = data.ContainsKey("progress") ? Mathf.Max(0.0f, (float)data["progress"].AsDouble()) : 0.0f;

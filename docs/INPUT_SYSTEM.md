@@ -1,4 +1,4 @@
-﻿# 全局输入采集系统
+# 全局输入采集系统
 
 本文档说明修仙桌宠项目的全局键鼠输入采集系统实现。
 
@@ -10,7 +10,7 @@
 | `InputHookService` | `scripts/services/InputHookService.cs` | Win32 全局钩子管理 |
 | `InputPauseShortcut` | `scripts/services/InputPauseShortcut.cs` | 全局快捷键 (Ctrl+Shift+X) |
 
-**数值公式**: `AP = key×1.0 + click×1.2 + scroll×0.4 + move/600`，滑动窗口硬封顶 `MaxInputPerMinute = 600`（超出部分丢弃）
+**数值公式**: `AP = key×1.0 + click×1.2 + scroll×0.4 + move/600 + joypad_button×1.0 + joypad_axis×0.8`，滑动窗口硬封顶 `MaxInputPerMinute = 600`（超出部分丢弃；手柄输入同样计入硬封顶）
 
 **隐私**: 不记录键值/轨迹，仅统计次数/距离，本地处理不上传。
 
@@ -88,10 +88,15 @@ AP_raw = key_down * 1.0 + mouse_click * 1.2 + scroll_step * 0.4 + move_px / 600
 **滑动窗口硬封顶**：
 ```
 MaxInputPerMinute = 600
-统计口径 = key_down + mouse_click + scroll_step（鼠标移动不计入）
+离散计数 = key_down + mouse_click + scroll_step + joypad_button + joypad_axis_input
+离散事件最多 600 次；鼠标移动与离散事件同时受 AP 额度约束：
+AP额度 = MaxInputPerMinute × max(1, 各离散输入权重)，默认 720 AP/60秒。
+MaxInputPerMinute <= 0 时取消两种封顶。
 60 秒滑动窗口内超过 MaxInputPerMinute 的输入事件直接丢弃，不计入 AP。
 不给任何 UI 提示（避免暴露检测逻辑）。
 ```
+
+活跃时间按最近一次真实输入后的 5 秒窗口计算，连续帧只累计实际覆盖秒数；超过封顶的真实输入仍表明用户在工作，但不增加被封顶的 AP/离散推进收益。普通空闲不累计活跃时间。
 
 > 原"高频衰减"公式（`decay = clamp(1 - max(0, R-1)×0.25, 0.45, 1)`）已移除，
 > 由硬封顶替代。硬封顶比柔性衰减更简单直接：正常用户永远不会触及 600/min
@@ -124,6 +129,8 @@ MaxInputPerMinute = 600
 | mouse_click_count | 鼠标点击次数 | ✅ 不记录点击位置 |
 | mouse_scroll_step | 滚轮滚动步数 | ✅ 不记录方向内容 |
 | mouse_move_distance | 移动距离（像素） | ✅ 仅累积距离，不记录轨迹 |
+| joypad_button_count | 手柄按键次数 | ✅ 不记录按键映射 |
+| joypad_axis_input_count | 手柄轴输入次数 | ✅ 不记录轴值 |
 
 ### 不采集的内容
 
@@ -134,7 +141,7 @@ MaxInputPerMinute = 600
 
 ### 用户控制
 
-- 全局快捷键 `Ctrl + Shift + X`：暂停/恢复采集（待实现）
+- 全局快捷键 `Ctrl + Shift + X`：暂停/恢复采集（已接线：`InputPauseShortcut` → `InputHookService.TogglePause()`，见 2026-05-13 N-24）
 - 底栏状态指示器：显示当前采集状态
 - 设置面板：可完全禁用全局钩子
 
@@ -239,7 +246,7 @@ A: 影响极小。低级钩子直接在内核态处理，回调函数只做简�
 A: 支持。鼠标移动距离按像素计算，跨显示器时会正确累加总距离。
 
 ### Q: 如何防止脚本刷分？
-A: 滑动窗口硬封顶机制会丢弃 60 秒内超过 600 次的输入，超出部分不计入 AP。同时 `ApAccumulator` 缓冲区会平滑突发输入，避免瞬间大量操作直接转化为游戏进度。
+A: 滑动窗口硬封顶机制会丢弃 60 秒内超过 600 次的输入，超出部分不计入 AP。鼠标移动也占用同一 AP 额度；`ApAccumulator` 只作显示缓冲，不负责限制结算收益。
 
 ## 平台适配
 
