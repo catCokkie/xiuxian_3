@@ -5,6 +5,18 @@ namespace Xiuxian.Tests;
 public sealed class DungeonOfflineSettlementRulesTests
 {
     [Fact]
+    public void ExperienceUsesOnlyTheBudgetBeforeBossReadyAndDoesNotDependOnLoot()
+    {
+        ActionSettlementResult Build(double loot, double remaining) => DungeonOfflineSettlementRules.BuildDungeonOfflineSettlement(
+            "lv_qi_001", 600, .02, 20, new(100, 30, 10, 100, 0, 1.5),
+            Array.Empty<DungeonOfflineSettlementRules.WeightedMonsterProfile>(), loot, 0,
+            new Dictionary<string, double>(), 0, 1, 0, 0, remainingExploreProgress: remaining);
+        Assert.Equal(28, Build(0, 2).RealmExpGain, 6);
+        Assert.Equal(Build(0, 2).RealmExpGain, Build(1000, 2).RealmExpGain);
+        Assert.Equal(0, Build(1000, 0).RealmExpGain);
+    }
+
+    [Fact]
     public void CalculateEstimatedEncounters_UsesExploreProgressThreshold()
     {
         int encounters = DungeonOfflineSettlementRules.CalculateEstimatedEncounters(

@@ -59,7 +59,7 @@ namespace Xiuxian.Scripts.Services
         private static readonly ShopItemDefinition[] Items =
         {
             new(ItemHuiqiDanBundle, CategoryConsumables, "回气丹 ×5", "不想炼丹时的替代路径。", 30, GrantPotion, "potion_huiqi_dan", 5),
-            new(ItemSpiritHerbSeed, CategoryConsumables, "灵草种子", "灵田播种用，当前版本会先存入背包。", 20, GrantBackpackItem, "seed_spirit_herb", 1),
+            new(ItemSpiritHerbSeed, CategoryConsumables, "灵草种子", "每次播种另需2灵石；基础产量2–3株，可自制回气丹。", 6, GrantBackpackItem, "seed_spirit_herb", 1),
             new(ItemSpiritFlowerSeed, CategoryConsumables, "灵花种子", "灵田播种用，当前版本会先存入背包。", 80, GrantBackpackItem, "seed_spirit_flower", 1),
             new(ItemSpiritFruitSeed, CategoryConsumables, "灵果种子", "灵田播种用，当前版本会先存入背包。", 200, GrantBackpackItem, "seed_spirit_fruit", 1),
             new(ItemRipeningElixir, CategoryConsumables, "催熟灵液", "可在修炼页对当前灵田进度使用。", 30, GrantBackpackItem, "ripening_elixir", 1),

@@ -23,7 +23,7 @@ namespace Xiuxian.Scripts.Services
 
         [Export] public double LingqiFactor = GameBalanceConstants.ResourceConversion.LingqiFactor;
         [Export] public double InsightFactor = GameBalanceConstants.ResourceConversion.InsightFactor;
-        [Export] public double RealmExpFromLingqiRate = GameBalanceConstants.ResourceConversion.RealmExpFromLingqiRate;
+        [Export] public double BaseExpPerInput = GameBalanceConstants.ResourceConversion.BaseExpPerInput;
         [Export] public bool CultivationInputExpEnabled = true;
         [Export] public double CultivationExpPerInput = GameBalanceConstants.ResourceConversion.CultivationExpPerInput;
 
@@ -94,15 +94,13 @@ namespace Xiuxian.Scripts.Services
                     services?.BackpackState?.GetItemEntries() ?? new System.Collections.Generic.Dictionary<string, int>(),
                     services?.SubsystemMasteryState?.GetLevel(PlayerActionState.ModeFormation) ?? 1),
                 _rhythmState?.RestLingqiMultiplier ?? 1.0, CultivationInputExpEnabled,
-                LingqiFactor, InsightFactor, RealmExpFromLingqiRate, CultivationExpPerInput);
+                LingqiFactor, InsightFactor, BaseExpPerInput, CultivationExpPerInput);
             double lingqiGain = result.Lingqi;
             double insightGain = result.Insight;
             var meal = services?.CookingState?.ActiveMeal ?? default;
             lingqiGain *= 1 + meal.LingqiRate;
             insightGain *= 1 + meal.InsightRate;
             double realmExpGain = result.RealmExp;
-            if (!PlayerActionCapabilityRules.HasCapability(_actionState, PlayerActionCapability.GrantsCultivationInputExp))
-                realmExpGain = lingqiGain * RealmExpFromLingqiRate;
             _walletState.AddLingqi(lingqiGain);
             _walletState.AddInsight(insightGain);
             _progressState.AddRealmExp(realmExpGain);

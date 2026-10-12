@@ -9,7 +9,7 @@ public sealed class GameplayRepairTests
     {
         var result = ResourceConversionRules.Calculate("dungeon", 100, 100, 0, 1, 1, 0);
         Assert.Equal(90, result.Lingqi);
-        Assert.Equal(22.5, result.RealmExp);
+        Assert.Equal(28, result.RealmExp, 6);
         var cultivation = ResourceConversionRules.Calculate("cultivation", 100, 100, 0, 1, 1, 0);
         Assert.Equal(35, cultivation.RealmExp);
     }

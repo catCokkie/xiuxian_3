@@ -728,8 +728,8 @@
       ],
       "combat": {
         "hp": 108,
-        "attack": 14,
-        "defense": 6,
+        "attack": 20,
+        "defense": 3,
         "inputs_per_round": 20,
         "speed_factor": 0.92
       },
@@ -790,8 +790,8 @@
       ],
       "combat": {
         "hp": 140,
-        "attack": 16,
-        "defense": 7,
+        "attack": 28,
+        "defense": 4,
         "inputs_per_round": 22,
         "speed_factor": 1.08
       },
@@ -853,8 +853,8 @@
       ],
       "combat": {
         "hp": 185,
-        "attack": 20,
-        "defense": 10,
+        "attack": 32,
+        "defense": 5,
         "inputs_per_round": 22,
         "speed_factor": 0.96
       },
@@ -919,9 +919,9 @@
         "poison"
       ],
       "combat": {
-        "hp": 240,
-        "attack": 24,
-        "defense": 14,
+        "hp": 230,
+        "attack": 39,
+        "defense": 4,
         "inputs_per_round": 24,
         "speed_factor": 0.88
       },
@@ -971,7 +971,8 @@
         "insight_min": 36,
         "insight_max": 54
       },
-      "strategy_tag": "boss"
+      "strategy_tag": "healing",
+      "heal_per_round": 2
     },
     {
       "monster_id": "monster_nether_bone_king",
@@ -987,8 +988,8 @@
       ],
       "combat": {
         "hp": 310,
-        "attack": 30,
-        "defense": 18,
+        "attack": 51,
+        "defense": 4,
         "inputs_per_round": 24,
         "speed_factor": 0.85
       },
@@ -1039,7 +1040,7 @@
         "insight_min": 48,
         "insight_max": 70
       },
-      "strategy_tag": "boss"
+      "strategy_tag": "armor"
     }
   ],
   "drop_tables": [

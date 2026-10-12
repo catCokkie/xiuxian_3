@@ -49,7 +49,7 @@ namespace Xiuxian.Scripts.Services
                 PlayerActionState.ActionBodyCultivation => capability switch
                 {
                     PlayerActionCapability.ConsumesApSettlement => true,
-                    PlayerActionCapability.GrantsCultivationInputExp => true,
+                    PlayerActionCapability.GrantsCultivationInputExp => false,
                     PlayerActionCapability.SupportsOfflineSettlement => true,
                     _ => false,
                 },

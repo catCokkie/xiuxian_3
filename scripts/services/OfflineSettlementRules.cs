@@ -5,13 +5,10 @@ namespace Xiuxian.Scripts.Services
     public static class OfflineSettlementRules
     {
         public const double MaxOfflineSeconds = 24.0 * 60.0 * 60.0;
-        public const double SuspiciousOfflineSecondsThreshold = 36.0 * 60.0 * 60.0;
-        public const double GuardedTimeReductionFactor = 0.25;
 
         public enum OfflineTimeGuardMode
         {
             Normal,
-            Guarded,
             Invalid,
         }
 
@@ -22,23 +19,18 @@ namespace Xiuxian.Scripts.Services
 
         public static OfflineTimeEvaluation EvaluateOfflineSeconds(double offlineSeconds)
         {
-            if (offlineSeconds <= 0.0)
+            if (!double.IsFinite(offlineSeconds) || offlineSeconds <= 0.0)
             {
                 return new OfflineTimeEvaluation(offlineSeconds, 0.0, OfflineTimeGuardMode.Invalid);
             }
 
-            if (offlineSeconds > SuspiciousOfflineSecondsThreshold)
-            {
-                double guardedSeconds = ClampOfflineSeconds(offlineSeconds) * GuardedTimeReductionFactor;
-                return new OfflineTimeEvaluation(offlineSeconds, guardedSeconds, OfflineTimeGuardMode.Guarded);
-            }
-
+            // A long absence alone is not evidence of clock manipulation.
             return new OfflineTimeEvaluation(offlineSeconds, ClampOfflineSeconds(offlineSeconds), OfflineTimeGuardMode.Normal);
         }
 
         public static double ClampOfflineSeconds(double offlineSeconds)
         {
-            return Math.Clamp(offlineSeconds, 0.0, MaxOfflineSeconds);
+            return double.IsFinite(offlineSeconds) ? Math.Clamp(offlineSeconds, 0.0, MaxOfflineSeconds) : 0.0;
         }
 
         public static double CalculateOfflineInputBudget(double offlineSeconds)
@@ -59,9 +51,8 @@ namespace Xiuxian.Scripts.Services
             double apPerInput,
             double lingqiFactor,
             double insightFactor,
-            double realmExpFromLingqiRate,
+            double baseExpPerInput,
             double realmMultiplier,
-            bool inputExpActive,
             string actionTargetId = "")
         {
             OfflineTimeEvaluation evaluated = EvaluateOfflineSeconds(offlineSeconds);
@@ -70,7 +61,8 @@ namespace Xiuxian.Scripts.Services
 
             double lingqiGain = offlineAp * lingqiFactor * realmMultiplier;
             double insightGain = offlineAp * insightFactor;
-            double realmExpGain = inputExpActive ? 0.0 : lingqiGain * realmExpFromLingqiRate;
+            // Offline gets the common input rate, without the online cultivation bonus.
+            double realmExpGain = inputBudget * Math.Max(0.0, baseExpPerInput);
 
             return ActionSettlementRules.BuildCultivationSettlement(
                 actionTargetId,

@@ -831,9 +831,8 @@ namespace Xiuxian.Scripts.Game
                     apPerInput: GameBalanceConstants.Offline.ApPerInput,
                     lingqiFactor: GameBalanceConstants.ResourceConversion.LingqiFactor,
                     insightFactor: GameBalanceConstants.ResourceConversion.InsightFactor,
-                    realmExpFromLingqiRate: GameBalanceConstants.ResourceConversion.RealmExpFromLingqiRate,
+                    baseExpPerInput: GameBalanceConstants.ResourceConversion.BaseExpPerInput,
                     realmMultiplier: _playerProgressState.GetRealmMultiplier(),
-                    inputExpActive: false,
                     actionTargetId: _playerActionState.ActionTargetId)
                 : BuildOfflineDungeonSettlement(evaluation.EffectiveOfflineSeconds);
 

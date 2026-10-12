@@ -7,7 +7,7 @@ namespace Xiuxian.Scripts.Services
     {
         public const int BasePlotCount = 2;
         public const int MaxPlotCount = 6;
-        public const int PlantingSpiritStones = 5;
+        public const int PlantingSpiritStones = 2;
         public const int BaseRareSeedChancePercent = 5;
         public const int EnhancedRareSeedChancePercent = 10;
 
