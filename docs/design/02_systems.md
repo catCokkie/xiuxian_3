@@ -1106,7 +1106,7 @@ realm≥2展示修炼侧重，初始默认平衡。倍率只作用本模式的AP
 | `recipe_yangyuan_dan` / `potion_yangyuan_dan` | 抑生丹 | `spirit_herb`×3、`spirit_pearl`×1 | 70 | 260 | 1 | realm≥4、炼丹Lv2、首通第三区 |
 | `talisman_zhenling` / `talisman_zhenling` | 镇灵符 | `broken_talisman`×3、`spirit_ink`×2 | 70 | 280 | 1 | realm≥4、符箓Lv2、首通第三区 |
 | `recipe_plain_fish` / `food_plain_fish` | 家常鱼汤 | `spirit_fish`×2、`spirit_herb`×1 | 25 | 160 | 1 | realm≥4、烹饪Lv1 |
-| `recipe_mining_stew` / `food_mining_stew` | 矿工鱼煲 | `spirit_fish`×2、`cold_iron_ore`×1 | 35 | 180 | 1 | realm≥4、烹饪Lv2 |
+| `recipe_mining_stew` / `food_mining_stew` | 矿工鱼煲 | `spirit_fish`×2、`cold_iron_ore`×1 | 35 | 120 | 2 | realm≥4、烹饪Lv2 |
 | `recipe_garden_tea` / `food_garden_tea` | 灵圃花饮 | `spirit_herb`×2、`spirit_flower`×1 | 30 | 180 | 1 | realm≥4、烹饪Lv2、首通第一区 |
 | `formation_pathfinder` / `formation_pathfinder` | 寻踪阵盘 | `spirit_jade`×2、`beast_bone`×2 | 0 | 260 | 1 | realm≥5、阵法Lv2、首通第二区 |
 
@@ -1116,7 +1116,7 @@ realm≥2展示修炼侧重，初始默认平衡。倍率只作用本模式的AP
 - 灵盾丹在HP首次低于60%时提供最大HP的20%一次性护盾，护盾不跨战、不恢复HP，不叠加第二份。恢复丹与战术丹分槽：每战最多1份恢复丹、1份战术丹。
 - 抑生丹在有回血威胁的敌人战中自动阻断敌人前5回合回血；镇灵符提供同类阻断，二者取覆盖区间并集，不叠加时长，自动准备只选一种。无回血威胁时默认不用。
 - 家常鱼汤：悟性AP收入+10%，20分钟活跃时间；替代难获得灵泉水的清心鱼汤入门体验，不能与清心鱼汤叠加。
-- 矿工鱼煲：矿脉所需输入−10%，30分钟活跃时间；不作用副本或钓鱼。
+- 矿工鱼煲：矿脉所需输入−15%，90分钟活跃时间；不作用副本或钓鱼，面向长段开采，短段采集不建议额外备膳。此长效扩展不将其他灵膳的基础持续时长一起提高。
 - 灵圃花饮：播种时生长时长−10%，30分钟活跃时间。播种时锁定本次生长参数；到期或切膳不反改生长时间，收获前临时切膳无效。
 - 寻踪阵盘：探索推进+10%，仅探索状态；占用已有主/副阵槽，不降低战斗回合需求。
 
