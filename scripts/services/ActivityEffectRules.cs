@@ -60,7 +60,7 @@ namespace Xiuxian.Scripts.Services
             return new CharacterStatModifier(
                 MaxHpFlat: snapshot.BodyCultivationMaxHpFlat,
                 AttackFlat: snapshot.BodyCultivationAttackFlat,
-                DefenseFlat: snapshot.BodyCultivationDefenseFlat,
+                DefenseFlat: snapshot.BodyCultivationDefenseFlat + (snapshot.BoneforgeCount > 0 && snapshot.BodyCultivationDefenseFlat == 0 ? BodyCultivationRules.SpiritSkinStarterDefenseFlat : 0),
                 MaxHpRate: snapshot.ZhouTianMaxHpRate + snapshot.BodyCultivationMaxHpRate,
                 AttackRate: snapshot.ZhouTianAttackRate,
                 DefenseRate: snapshot.ZhouTianDefenseRate + snapshot.BodyCultivationDefenseRate);

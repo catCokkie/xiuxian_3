@@ -11,7 +11,7 @@ namespace Xiuxian.Scripts.Services
     /// </summary>
     public static class SaveMigrationRules
     {
-        public const int LatestVersion = 15;
+        public const int LatestVersion = 16;
 
         private const string DefaultLeftTab = "CultivationTab";
         private const string DefaultRightTab = "BugTab";
@@ -181,6 +181,10 @@ namespace Xiuxian.Scripts.Services
                         case 14:
                             MigrateV14ToV15(cfg);
                             version = 15;
+                            break;
+                        case 15:
+                            MigrateV15ToV16(cfg);
+                            version = 16;
                             break;
                         default:
                             version = LatestVersion;
@@ -703,6 +707,13 @@ namespace Xiuxian.Scripts.Services
         private static bool IsSupportedMode(string modeId)
         {
             return PlayerActionStateRules.Normalize(modeId).ActionId == modeId;
+        }
+
+        private static void MigrateV15ToV16(IMigrationStore cfg)
+        {
+            var explore = EnsureDictionaryValue(cfg, "explore", "runtime");
+            EnsureMissing(explore, "recovery_remainder", 0.0);
+            cfg.SetValue("explore", "runtime", explore);
         }
 
         private static Dictionary<string, object> EnsureDictionaryValue(IMigrationStore cfg, string section, string key)

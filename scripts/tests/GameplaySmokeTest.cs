@@ -2,6 +2,7 @@ using Godot;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using Xiuxian.Scripts.Game;
 using Xiuxian.Scripts.Services;
 
@@ -77,6 +78,7 @@ namespace Xiuxian.Scripts.Tests
 
                 controller.FromRuntimeDictionary(new() { ["explore_progress"] = 100f, ["battle_state"] = "boss_ready" });
                 s.PlayerActionState.SetAction("dungeon"); controller._Process(.1);
+                controller.AdvanceHealthRecovery(20);
                 Check(controller.ToRuntimeDictionary()["battle_state"].AsString() == "boss_ready", "full exploration waits at BossReady");
                 var challenge = root.GetNode<Control>("MainBarWindow/Chrome/BattleTrack").GetChildren().OfType<Button>().First(x => x.Text == "挑战 Boss");
                 challenge.EmitSignal(Button.SignalName.Pressed);
@@ -112,7 +114,7 @@ namespace Xiuxian.Scripts.Tests
                 s.GardenState.SelectCrop("garden_spirit_herb"); s.GardenState.SelectPlot(0);
                 s.BackpackState.AddItem("seed_spirit_herb", 10);
                 int coins = s.ResourceWalletState.SpiritStones;
-                Check(s.GardenState.TryPlantSelectedCrop(out _) && s.ResourceWalletState.SpiritStones == coins - 5, "planting charges a seed and five stones");
+                Check(s.GardenState.TryPlantSelectedCrop(out _) && s.ResourceWalletState.SpiritStones == coins - 2, "planting charges a seed and two stones");
                 Check(s.GardenState.TryResearchSelectedCrop(), "garden breeding consumes owned seeds");
                 var gardenSave = s.GardenState.ToDictionary(); s.GardenState.FromDictionary(Roundtrip(gardenSave));
                 Check(((Godot.Collections.Dictionary<string, Variant>)s.GardenState.ToDictionary()["breeding_level"])["garden_spirit_herb"].AsInt32() == 1, "breeding survives serialization");
@@ -155,12 +157,74 @@ namespace Xiuxian.Scripts.Tests
                 Check(!s.ShopState!.TryPurchase(ShopRules.ItemBackpackExpand1, out _) && s.ResourceWalletState.SpiritStones == purchaseCoins, "unimplemented backpack expansion cannot charge stones");
                 Check(!s.ShopState.CanPurchase(ShopRules.ItemGardenPlot3, out _), "full garden does not sell redundant plot expansion");
                 Check(s.ShopState.TryPurchase(ShopRules.ItemFishingPermitHualongpo, out _) && s.FishingState.CanSelectPond("fishing_hualong_pond"), "purchased fishing permit immediately unlocks the pond");
+                RunReturnAndRecoveryChecks((PrototypeRootController)root, controller, s);
                 GD.Print($"SMOKE SUCCESS: {_checks} checks");
                 if (Array.IndexOf(OS.GetCmdlineUserArgs(), "--render-smoke") >= 0) CaptureUi(root);
                 else GetTree().Quit(0);
             }
             catch (Exception error) { GD.PushError($"SMOKE FAILURE: {error}"); GetTree().Quit(1); }
         }
+        private void RunReturnAndRecoveryChecks(PrototypeRootController root, ExploreProgressController controller, ServiceLocator s)
+        {
+            const BindingFlags flags = BindingFlags.Instance | BindingFlags.NonPublic;
+            var rootType = typeof(PrototypeRootController);
+            var settle = rootType.GetMethod("ApplyOfflineSettlementIfNeeded", flags)!;
+            var savedAt = rootType.GetField("_lastLoadedSavedUnix", flags)!;
+            var applied = rootType.GetField("_offlineSettlementApplied", flags)!;
+            controller.FromRuntimeDictionary(new() { ["player_hp"] = 0, ["player_max_hp"] = 100, ["explore_progress"] = 100f, ["battle_state"] = "boss_ready" });
+            s.PlayerActionState!.SetAction("dungeon");
+            controller._Process(.1);
+            Check(!controller.CanStartBossChallenge, "low HP gates Boss challenge during visible automatic rest");
+            var button = root.GetNode<Control>("MainBarWindow/Chrome/BattleTrack").GetChildren().OfType<Button>().First(x => x.Text == "休整中…");
+            Check(button.Visible && button.Disabled, $"resting Boss button remains visible and disabled (visible={button.Visible}, disabled={button.Disabled}, action={s.PlayerActionState.ActionId}, progress={controller.ExploreProgressValue})");
+            controller.AdvanceHealthRecovery(2);
+            int hp = controller.ToRuntimeDictionary()["player_hp"].AsInt32();
+            controller.FromRuntimeDictionary(Roundtrip(controller.ToRuntimeDictionary()));
+            Check(controller.ToRuntimeDictionary()["player_hp"].AsInt32() == hp, "native save roundtrip preserves injured HP");
+            s.LevelConfigLoader!.TrySetActiveLevel("lv_qi_002");
+            Check(controller.ToRuntimeDictionary()["player_hp"].AsInt32() == hp, "switching region preserves HP without a free refill");
+            controller.AdvanceHealthRecovery(20);
+            Check(controller.ToRuntimeDictionary()["player_hp"].AsInt32() == controller.ToRuntimeDictionary()["player_max_hp"].AsInt32(), "real-time rest restores HP without input");
+
+            foreach (string mode in new[] { "cultivation", "dungeon", "alchemy", "smithing", "talisman", "cooking", "formation", "garden", "mining", "fishing", "body_cultivation" })
+            {
+                s.PlayerActionState.SetAction(mode);
+                float mining = s.MiningState!.CurrentProgress, fishing = s.FishingState!.CurrentProgress, body = s.BodyCultivationState!.CurrentProgress;
+                double before = s.PlayerProgressState!.RealmExp;
+                savedAt.SetValue(root, (long)Time.GetUnixTimeFromSystem() - 600);
+                applied.SetValue(root, false);
+                Check((bool)settle.Invoke(root, null)! && s.PlayerProgressState.RealmExp - before >= 33.6 - .001
+                    && s.PlayerProgressState.RealmExp - before < 33.8, $"actual return entry pays shared experience for {mode}");
+                Check(s.MiningState.CurrentProgress == mining && s.FishingState.CurrentProgress == fishing && s.BodyCultivationState.CurrentProgress == body,
+                    $"return from {mode} does not simulate unsupported gathering or body training");
+                double settledExp = s.PlayerProgressState.RealmExp;
+                Check(!(bool)settle.Invoke(root, null)! && s.PlayerProgressState.RealmExp == settledExp, $"return settlement for {mode} applies once per load");
+            }
+
+            s.CookingState!.FromDictionary(new());
+            s.FormationState!.FromDictionary(new());
+            s.PlayerProgressState!.FromDictionary(new() { ["realm_level"] = 9 });
+            var expectedStats = CharacterStatRules.BuildFinalStats(PlayerBaseStatRules.BuildBaseStats(9, s.LevelConfigLoader!.PlayerBaseHp, s.LevelConfigLoader.PlayerAttackPerRound), s.EquippedItemsState!.GetEquippedProfiles());
+            Check(controller.ToRuntimeDictionary()["player_max_hp"].AsInt32() == expectedStats.MaxHp, "realm change refreshes final maximum HP even while return summary is visible");
+            s.PlayerActionState.SetAction("dungeon");
+            s.LevelConfigLoader.TrySetActiveLevel("lv_qi_004");
+            string boss = s.LevelConfigLoader.GetBossMonsterId();
+            controller.FromRuntimeDictionary(new() { ["battle_state"] = "in_battle", ["battle_monster_id"] = boss,
+                ["player_hp"] = 100, ["player_max_hp"] = 122, ["enemy_hp"] = 230, ["enemy_max_hp"] = 230,
+                ["enemy_attack_power"] = 1, ["inputs_per_battle_round_runtime"] = 24, ["has_lingqi_drop_buff"] = true });
+            // Disable critical luck to assert the real controller's Juling/healing interaction.
+            typeof(ExploreProgressController).GetField("_battleConsumableModifier", flags)!.SetValue(controller, new CharacterStatModifier(CritChanceDelta: -1));
+            typeof(ExploreProgressController).GetMethod("AdvanceBattleByInput", flags)!.Invoke(controller, new object[] { 24 });
+            var stats = CharacterStatRules.BuildFinalStats(PlayerBaseStatRules.BuildBaseStats(9, s.LevelConfigLoader.PlayerBaseHp, s.LevelConfigLoader.PlayerAttackPerRound), s.EquippedItemsState!.GetEquippedProfiles());
+            Check(controller.ToRuntimeDictionary()["enemy_hp"].AsInt32() == 230 - Math.Max(1, stats.Attack - 4) + 2, "saved Juling reward buff does not suppress healing in the actual battle controller");
+            controller.FromRuntimeDictionary(new() { ["battle_state"] = "boss_ready", ["explore_progress"] = 100f, ["player_hp"] = 100 });
+            s.SubsystemMasteryState!.FromDictionary(new() { ["body_cultivation"] = 2 });
+            Check(s.PlayerProgressState.TryApplyBodyCultivationReward("body_cultivation_boneforge", 2, out string reward) && reward.Contains("额外防御 +1"), "first native skin training announces its effective starter defense");
+            s.BodyCultivationState!.SelectRecipe("body_cultivation_boneforge"); s.PlayerActionState.SetAction("body_cultivation");
+            string preview = (string)typeof(ExploreProgressController).GetMethod("BuildGenericRecipeProgressText", flags)!.Invoke(controller, null)!;
+            Check(preview.Contains("DEF") && preview.Contains("→"), "body training shows actual next defense and integer threshold preview");
+        }
+
         private static Godot.Collections.Dictionary<string, Variant> Roundtrip(Godot.Collections.Dictionary<string, Variant> data)
         {
             using ConfigFile encoded = new(); using ConfigFile decoded = new();

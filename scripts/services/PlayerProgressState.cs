@@ -142,6 +142,8 @@ namespace Xiuxian.Scripts.Services
             }
 
             rewardText = BuildBodyCultivationRewardText(technique.DisplayName, modifier, BodyCultivationRules.GetPostBattleHealRate(recipeId));
+            if (recipeId == "body_cultivation_boneforge" && BoneforgeCount == 1 && BodyCultivationDefenseFlat == 0)
+                rewardText += $"，首次修炼额外防御 +{BodyCultivationRules.SpiritSkinStarterDefenseFlat}";
             EmitSignal(SignalName.RealmProgressChanged, RealmLevel, RealmExp, RealmExpRequired);
             return true;
         }

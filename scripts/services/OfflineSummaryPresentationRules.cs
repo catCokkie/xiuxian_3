@@ -12,7 +12,9 @@ namespace Xiuxian.Scripts.Services
                 PlayerActionState.ActionCultivation => "离线修炼完成",
                 PlayerActionState.ActionAlchemy => "离线炼丹完成",
                 PlayerActionState.ActionSmithing => "离线炼器完成",
-                _ => "离线副本完成",
+                PlayerActionState.ActionDungeon => "离线副本完成",
+                PlayerActionState.ActionTalisman or PlayerActionState.ActionCooking or PlayerActionState.ActionFormation => "离线加工完成",
+                _ => "离线基础修行完成",
             };
         }
 
@@ -33,9 +35,18 @@ namespace Xiuxian.Scripts.Services
             {
                 labels.Add("结果：炼器进度已结算");
             }
+            else if (result.ActionId is PlayerActionState.ActionTalisman or PlayerActionState.ActionCooking or PlayerActionState.ActionFormation)
+            {
+                labels.Add("结果：加工进度已结算，基础修行持续");
+            }
+            else if (result.ActionId == PlayerActionState.ActionGarden)
+            {
+                labels.Add("结果：基础修行已结算，作物按实时时间生长并等待手动收获");
+            }
             else
             {
-                labels.Add("结果：修炼收益已结算");
+                labels.Add(result.ActionId == PlayerActionState.ActionCultivation ? "结果：修炼收益已结算"
+                    : "结果：基础修行已结算，当前采集或体修进度保留");
             }
 
             if (result.LingqiGain > 0.0)

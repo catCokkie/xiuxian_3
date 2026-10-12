@@ -19,6 +19,14 @@ namespace Xiuxian.Scripts.Services
             return BuildFinalStats(baseStats, CollectEquipmentModifiers(equipmentProfiles));
         }
 
+        public static CharacterStatBlock BuildFinalStats(CharacterStatBlock baseStats,
+            IReadOnlyList<EquipmentStatProfile> equipmentProfiles, IReadOnlyList<CharacterStatModifier> extraModifiers)
+        {
+            var modifiers = new List<CharacterStatModifier>(CollectEquipmentModifiers(equipmentProfiles));
+            modifiers.AddRange(extraModifiers);
+            return BuildFinalStats(baseStats, modifiers);
+        }
+
         public static CharacterStatBlock BuildFinalStats(CharacterStatBlock baseStats, IReadOnlyList<CharacterStatModifier> modifiers)
         {
             double hp = baseStats.MaxHp;
@@ -27,23 +35,28 @@ namespace Xiuxian.Scripts.Services
             double speed = baseStats.Speed;
             double critChance = baseStats.CritChance;
             double critDamage = baseStats.CritDamage;
+            double hpRate = 0, attackRate = 0, defenseRate = 0, speedRate = 0;
 
             for (int i = 0; i < modifiers.Count; i++)
             {
                 CharacterStatModifier modifier = modifiers[i];
-                hp = ApplyModifier(hp, modifier.MaxHpFlat, modifier.MaxHpRate);
-                attack = ApplyModifier(attack, modifier.AttackFlat, modifier.AttackRate);
-                defense = ApplyModifier(defense, modifier.DefenseFlat, modifier.DefenseRate);
-                speed = ApplyModifier(speed, modifier.SpeedFlat, modifier.SpeedRate);
+                hp += modifier.MaxHpFlat;
+                attack += modifier.AttackFlat;
+                defense += modifier.DefenseFlat;
+                speed += modifier.SpeedFlat;
+                hpRate += modifier.MaxHpRate;
+                attackRate += modifier.AttackRate;
+                defenseRate += modifier.DefenseRate;
+                speedRate += modifier.SpeedRate;
                 critChance += modifier.CritChanceDelta;
                 critDamage += modifier.CritDamageDelta;
             }
 
             return new CharacterStatBlock(
-                Math.Max(1, (int)Math.Round(hp)),
-                Math.Max(1, (int)Math.Round(attack)),
-                Math.Max(0, (int)Math.Round(defense)),
-                Math.Max(1, (int)Math.Round(speed)),
+                Math.Max(1, (int)Math.Round(hp * (1 + hpRate))),
+                Math.Max(1, (int)Math.Round(attack * (1 + attackRate))),
+                Math.Max(0, (int)Math.Round(defense * (1 + defenseRate))),
+                Math.Max(1, (int)Math.Round(speed * (1 + speedRate))),
                 Math.Clamp(critChance, 0.0, 1.0),
                 Math.Max(1.0, critDamage));
         }
@@ -96,9 +109,5 @@ namespace Xiuxian.Scripts.Services
             return trimmed;
         }
 
-        private static double ApplyModifier(double baseValue, int flat, double rate)
-        {
-            return (baseValue + flat) * (1.0 + rate);
-        }
     }
 }

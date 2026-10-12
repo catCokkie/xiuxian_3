@@ -1,6 +1,7 @@
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using Xiuxian.Scripts.Services;
+using Xiuxian.Scripts.Game;
 
 namespace Xiuxian.Tests;
 
@@ -36,57 +37,61 @@ internal sealed class ChapterBalanceModel
     internal static readonly Dictionary<string, JsonElement> Tables = Content.GetProperty("drop_tables").EnumerateArray().ToDictionary(x => Text(x, "drop_table_id"));
     internal static readonly HashSet<string> ExcludedRare = new() { "water_spirit_amber", "toxic_spore_powder", "nether_bone_shard", "sunken_equipment", "spirit_spring_water" };
 
-    internal sealed record CombatResult(bool Won, int Rounds, int RemainingHp, bool HealUsed, int PlayerAttack, int MonsterDefense);
+    internal sealed record CombatResult(bool Won, int Rounds, int RemainingHp, bool HealUsed, int PlayerAttack, int MonsterDefense,
+        int StartingHp, int MaxHp, int PlayerDefense);
     internal sealed record StageResult(string Region, int Realm, CombatResult Combat, long Inputs, int Gold, double Lingqi, double Insight);
     internal sealed record BudgetResult(string Route, double InputsPerMinute, int Seed, bool MinimumYield, bool RandomMaterialDrops, bool AllBossesWon, int FinalRealm,
         long Inputs, double Hours, int GoldSpent, int GoldEarned, double LingqiSpent, double InsightSpent,
-        int PlannedActions, double CropWaitingMinutes, double PondWaitingMinutes, Dictionary<string, long> InputsByMode,
+        int PlannedActions, double CropWaitingMinutes, double PondWaitingMinutes, double RecoveryWaitingSeconds, int OrdinaryDefeats, Dictionary<string, long> InputsByMode,
         Dictionary<string, int> MaterialsSpent, List<StageResult> Stages, Dictionary<string, int> Inventory);
 
-    internal static CharacterStatBlock PlayerStats(int region, int realm, EquipmentStatProfile weapon, double hpRate = 0, double defenseRate = 0)
+    internal static CharacterStatBlock PlayerStats(int region, int realm, EquipmentStatProfile weapon, double hpRate = 0, double defenseRate = 0, int defenseFlat = 0)
     {
         var runtime = Levels[region].GetProperty("battle_runtime");
         var basis = PlayerBaseStatRules.BuildBaseStats(realm, Number(runtime, "player_base_hp"), Number(runtime, "player_attack_per_round"));
         var equipment = EquipmentStarterLoadout.CreateDefaultProfiles();
         equipment[0] = weapon with { IsEquipped = true };
         var modifiers = CharacterStatRules.CollectEquipmentModifiers(equipment).ToList();
-        modifiers.Add(new(MaxHpRate: hpRate, DefenseRate: defenseRate));
+        modifiers.Add(new(MaxHpRate: hpRate, DefenseRate: defenseRate, DefenseFlat: defenseFlat));
         return CharacterStatRules.BuildFinalStats(basis, modifiers);
     }
 
     internal static CombatResult Fight(int region, int realm, EquipmentStatProfile weapon, JsonElement monster,
-        bool suppressRegeneration = false, bool armorCharm = false, double hpRate = 0, double defenseRate = 0, bool allowHeal = true)
+        bool suppressRegeneration = false, bool armorCharm = false, double hpRate = 0, double defenseRate = 0, bool allowHeal = true,
+        int? startingHp = null, bool isBoss = true, int defenseFlat = 0)
     {
-        var stats = PlayerStats(region, realm, weapon, hpRate, defenseRate);
-        var player = CharacterStatRules.CreateBattleSnapshot(stats, (int)Math.Floor(stats.MaxHp * .70));
+        var stats = PlayerStats(region, realm, weapon, hpRate, defenseRate, defenseFlat);
         var combat = monster.GetProperty("combat");
         var profile = MonsterStatRules.BuildProfile(Text(monster, "monster_id"), Text(monster, "monster_name"), Number(combat, "hp"),
             Number(combat, "attack"), Number(combat, "defense"), combat.GetProperty("speed_factor").GetDouble(), Number(combat, "inputs_per_round"), "normal", true);
-        var enemy = CharacterStatRules.CreateBattleSnapshot(profile);
+        profile = profile with { HealPerRound = Number(monster, "heal_per_round") };
         if (armorCharm)
         {
             var effect = TalismanRules.GetBattleEffect("talisman_fire_charm", monster.TryGetProperty("strategy_tag", out var tag) ? tag.GetString()! : "");
-            enemy = enemy with { Defense = (int)Math.Round(enemy.Defense * (1 - effect.DefenseReduction)) };
+            profile = profile with { BaseStats = profile.BaseStats with { Defense = (int)Math.Round(profile.BaseStats.Defense * (1 - effect.DefenseReduction)) } };
         }
         bool healed = false;
         var runtime = Levels[region].GetProperty("battle_runtime");
-        for (int round = 1; round <= GameBalanceConstants.Explore.MaxBossBattleRounds; round++)
+        var logic = new ExploreGameLogic { InBattle = true, PlayerHp = startingHp ?? (int)Math.Floor(stats.MaxHp * .70), PlayerMaxHp = stats.MaxHp,
+            EnemyHp = profile.BaseStats.MaxHp, EnemyMaxHp = profile.BaseStats.MaxHp, EnemyAttackPower = profile.BaseStats.Attack,
+            InputsPerBattleRoundRuntime = profile.InputsPerRound, EnemyDamageDividerRuntime = Number(runtime, "enemy_damage_divider"),
+            EnemyMinDamageRuntime = Number(runtime, "enemy_min_damage_per_round") };
+        void Heal()
         {
-            if (allowHeal && !healed && player.CurrentHp * 2 < player.MaxHp)
+            if (allowHeal && !healed && logic.PlayerHp > 0 && logic.PlayerHp * 2 < logic.PlayerMaxHp)
             {
-                int heal = Math.Max(1, (int)Math.Round(player.MaxHp * ConsumableUsageRules.HuiqiDanHealPercent));
-                player = player with { CurrentHp = Math.Min(player.MaxHp, player.CurrentHp + heal) };
+                int heal = Math.Max(1, (int)Math.Round(logic.PlayerMaxHp * ConsumableUsageRules.HuiqiDanHealPercent));
+                logic.PlayerHp = Math.Min(logic.PlayerMaxHp, logic.PlayerHp + heal);
                 healed = true;
             }
-            var result = BattleRules.ResolvePlayerVsMonsterRound(player, enemy, Number(runtime, "enemy_damage_divider"), Number(runtime, "enemy_min_damage_per_round"));
-            player = result.Player;
-            enemy = result.Monster;
-            if (result.Outcome != BattleOutcome.Ongoing)
-                return new(result.Outcome == BattleOutcome.PlayerWon, round, player.CurrentHp, healed, stats.Attack, enemy.Defense);
-            if (!suppressRegeneration || round > 5)
-                enemy = enemy with { CurrentHp = Math.Min(enemy.MaxHp, enemy.CurrentHp + Number(monster, "heal_per_round")) };
         }
-        return new(false, GameBalanceConstants.Explore.MaxBossBattleRounds, player.CurrentHp, healed, stats.Attack, enemy.Defense);
+        Heal();
+        int limit = isBoss ? GameBalanceConstants.Explore.MaxBossBattleRounds : 1000;
+        var result = logic.AdvanceBattleByInput(limit * profile.InputsPerRound, stats, Array.Empty<EquipmentStatProfile>(), isBoss,
+            GameBalanceConstants.Explore.MaxBossBattleRounds, afterRoundResolved: Heal, monsterProfile: profile,
+            suppressMonsterHealingRounds: suppressRegeneration ? 5 : 0);
+        return new(result.Outcome == BattleOutcome.PlayerWon, result.RoundsResolved, logic.PlayerHp, healed, stats.Attack, profile.BaseStats.Defense,
+            startingHp ?? (int)Math.Floor(stats.MaxHp * .70), stats.MaxHp, stats.Defense);
     }
 
     private readonly string _route;
@@ -106,6 +111,25 @@ internal sealed class ChapterBalanceModel
     private int _realm = 1, _cleared, _gold, _goldSpent, _goldEarned, _actions;
     private double _exp, _qi, _insight, _qiSpent, _insightSpent, _seconds, _waiting, _pondWaiting, _pondRefreshAt, _mealSeconds, _hpRate, _defenseRate;
     private int _fishCaught;
+    private int _currentRegion, _hp = 36, _ordinaryDefeats;
+    private double _recoveryRemainder, _recoveryWaiting;
+    private bool _fighting;
+    private int DefenseFlat => _guardCrafted ? FormationRules.GetModifier("formation_guard_flag").DefenseFlat : 0;
+
+    private void Recover(double seconds)
+    {
+        var stats = PlayerStats(_currentRegion, _realm, _weapon, _hpRate, _defenseRate, DefenseFlat);
+        var recovery = BattleRecoveryRules.Advance(_hp, stats.MaxHp, seconds, _recoveryRemainder, _fighting);
+        _hp = recovery.Hp; _recoveryRemainder = recovery.Remainder;
+    }
+    private void WaitUntilReady(int region)
+    {
+        _currentRegion = region;
+        var stats = PlayerStats(region, _realm, _weapon, _hpRate, _defenseRate, DefenseFlat);
+        if (BattleRecoveryRules.CanFight(_hp, stats.MaxHp)) return;
+        double wait = BattleRecoveryRules.SecondsUntilReady(_hp, stats.MaxHp) + .001;
+        _seconds += wait; _recoveryWaiting += wait; Recover(wait);
+    }
     private bool _gardenSeed, _guardCrafted, _bodyTrained;
     private string _mode = "";
     private long TotalInputs => _inputs.Values.Sum();
@@ -129,6 +153,7 @@ internal sealed class ChapterBalanceModel
         if (_mode != mode) { _actions++; _mode = mode; }
         _inputs[mode] = _inputs.GetValueOrDefault(mode) + count;
         double delta = 60 / _rate;
+        Recover(count * delta);
         for (int i = 0; i < count; i++)
         {
             double active = Math.Min(5, delta);
@@ -184,6 +209,7 @@ internal sealed class ChapterBalanceModel
     // movement constants. This does not emulate viewport geometry or repeated UI ticks.
     private void EncounterCheck(int region, int? exploreInputs = null)
     {
+        WaitUntilReady(region);
         int interval = (int)Math.Ceiling(GameBalanceConstants.Explore.MonsterRespawnSpacing / GameBalanceConstants.Explore.MonsterMovePxPerFrame)
             * GameBalanceConstants.Explore.InputsPerMoveFrame;
         Run("dungeon", exploreInputs ?? interval);
@@ -200,8 +226,14 @@ internal sealed class ChapterBalanceModel
                 .Where(x => Text(x, "move_category") == "elite").ToArray();
             if (elites.Length > 0) monster = elites[_random.Next(elites.Length)];
         }
-        var outcome = Fight(region, _realm, _weapon, monster, hpRate: _hpRate, defenseRate: _defenseRate, allowHeal: false);
+        WaitUntilReady(region);
+        var outcome = Fight(region, _realm, _weapon, monster, hpRate: _hpRate, defenseRate: _defenseRate, allowHeal: false,
+            startingHp: _hp, isBoss: false, defenseFlat: DefenseFlat);
+        _fighting = true;
         Run("dungeon", outcome.Rounds * Number(monster.GetProperty("combat"), "inputs_per_round"));
+        _fighting = false;
+        _hp = outcome.Won ? outcome.RemainingHp : 0;
+        if (!outcome.Won) { _ordinaryDefeats++; _recoveryRemainder = 0; }
         if (outcome.Won) Rewards(region, monster, false);
     }
 
@@ -281,7 +313,7 @@ internal sealed class ChapterBalanceModel
                     if (_fishCaught >= FishingRules.Capacity(pond.RecipeId, Mastery("fishing")))
                     {
                         double wait = Math.Max(0, _pondRefreshAt - _seconds);
-                        _seconds += wait; _pondWaiting += wait; _fishCaught = 0;
+                        _seconds += wait; _pondWaiting += wait; _fishCaught = 0; Recover(wait);
                     }
                     Run("fishing", pond.RequiredInputs);
                     _fishCaught++;
@@ -305,7 +337,7 @@ internal sealed class ChapterBalanceModel
         if (!_gardenSeed) { PayGold(seed.Price); _gardenSeed = true; }
         PayGold(GardenRules.PlantingSpiritStones);
         int grow = GardenRules.GetEffectiveGrowthSeconds(crop.RecipeId, Mastery("garden"));
-        _seconds += grow; _waiting += grow; _actions += 2;
+        _seconds += grow; _waiting += grow; _actions += 2; Recover(grow);
         int yield = _minimumYield ? crop.MinOutputCount : _random.Next(crop.MinOutputCount, crop.MaxOutputCount + 1);
         if (Mastery("garden") >= 2) yield--;
         else _gardenSeed = false;
@@ -428,6 +460,7 @@ internal sealed class ChapterBalanceModel
     {
         for (int region = 0; region < Levels.Length; region++)
         {
+            _currentRegion = region;
             ReachRealm(RecommendedRealms[region]);
             if (region >= 2 && _weapon.EnhanceLevel < 3) Enhance(3);
             PrepareBranch(region);
@@ -440,8 +473,14 @@ internal sealed class ChapterBalanceModel
             string counter = _route == "branch_supply" ? "potion_yangyuan_dan" : "talisman_zhenling";
             bool suppress = region == 3 && Count(counter) > 0;
             bool armor = region == 4 && Count("talisman_fire_charm") > 0;
-            var result = Fight(region, _realm, _weapon, boss, suppress, armor, _hpRate, _defenseRate);
+            WaitUntilReady(region);
+            var result = Fight(region, _realm, _weapon, boss, suppress, armor, _hpRate, _defenseRate,
+                startingHp: _hp, defenseFlat: DefenseFlat);
+            _fighting = true;
             Run("dungeon", result.Rounds * Number(boss.GetProperty("combat"), "inputs_per_round"));
+            _fighting = false;
+            _hp = result.Won ? result.RemainingHp : 0;
+            if (!result.Won) _recoveryRemainder = 0;
             if (result.HealUsed) Spend("potion_huiqi_dan", 1);
             if (suppress) Spend(counter, 1);
             if (armor) Spend("talisman_fire_charm", 1);
@@ -460,6 +499,7 @@ internal sealed class ChapterBalanceModel
         }
         if (_cleared == Levels.Length) ReachRealm(10);
         return new(_route, _rate, _seed, _minimumYield, _randomMaterialDrops, _cleared == Levels.Length, _realm, TotalInputs, Math.Round(_seconds / 3600, 2),
-            _goldSpent, _goldEarned, _qiSpent, _insightSpent, _actions, Math.Round(_waiting / 60, 2), Math.Round(_pondWaiting / 60, 2), _inputs, _spent, _stages, _items);
+            _goldSpent, _goldEarned, _qiSpent, _insightSpent, _actions, Math.Round(_waiting / 60, 2), Math.Round(_pondWaiting / 60, 2),
+            Math.Round(_recoveryWaiting, 2), _ordinaryDefeats, _inputs, _spent, _stages, _items);
     }
 }

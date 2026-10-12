@@ -27,7 +27,7 @@ namespace Xiuxian.Scripts.Services
                 result.Add(new PotionUsage("potion_juling_san", "battle_start", JulingSanLingqiBuffPercent));
             }
 
-            bool hpBelowHalf = state.PlayerMaxHp > 0 && state.PlayerCurrentHp * 2 < state.PlayerMaxHp;
+            bool hpBelowHalf = state.PlayerCurrentHp > 0 && state.PlayerMaxHp > 0 && state.PlayerCurrentHp * 2 < state.PlayerMaxHp;
             if (hpBelowHalf && !state.UsedHealPotionThisBattle && huiqiDanCount > 0)
             {
                 result.Add(new PotionUsage("potion_huiqi_dan", "hp_below_50%", HuiqiDanHealPercent));

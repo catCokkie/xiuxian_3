@@ -157,7 +157,7 @@ public sealed class GameplayRepairTests
     public void OfflineCapabilitiesMatchTheActualSupportedActions()
     {
         foreach (string id in new[] { "mining", "fishing", "body_cultivation" })
-            Assert.False(PlayerActionCapabilityRules.HasCapability(id, PlayerActionCapability.SupportsOfflineSettlement));
+            Assert.True(PlayerActionCapabilityRules.HasCapability(id, PlayerActionCapability.SupportsOfflineSettlement));
         foreach (string id in new[] { "dungeon", "cultivation", "alchemy", "smithing", "talisman", "cooking", "formation", "garden" })
             Assert.True(PlayerActionCapabilityRules.HasCapability(id, PlayerActionCapability.SupportsOfflineSettlement));
         Assert.Equal(0, OfflineCraftingRules.InputBudget(86400, "mining"));

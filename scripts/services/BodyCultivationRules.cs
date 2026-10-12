@@ -20,6 +20,7 @@ namespace Xiuxian.Scripts.Services
         public const int BloodflowMaxCount = 10;
         public const int IronBoneMaxHpFlat = 6;
         public const int SpiritSkinDefenseFlat = 2;
+        public const int SpiritSkinStarterDefenseFlat = 1;
         public const int BloodflowAttackFlat = 2;
         public const double BloodflowHealRate = 0.02;
 

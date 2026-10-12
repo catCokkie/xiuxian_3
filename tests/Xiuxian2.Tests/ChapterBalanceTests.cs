@@ -63,12 +63,13 @@ public sealed class ChapterBalanceTests(ITestOutputHelper output)
             File.WriteAllText(path, JsonSerializer.Serialize(new
             {
                 Model = "design_budget_simulation",
-                Scope = "Runtime combat/resource/cost rules with planned operations; not a native UI or full queue playthrough",
-                Assumptions = new[] { "one input pipeline", "keyboard AP=1", "no critical hits", "70% starting HP with at most one basic heal per battle",
+                Scope = "Continuous HP and runtime battle/recovery/stat rules with planned operations; not a native UI or full queue playthrough",
+                Assumptions = new[] { "one input pipeline", "keyboard AP=1", "no critical hits", "persistent absolute HP; default boss-only healing, at most one basic heal per battle",
                     "no rare equipment or ingredients", "ordinary drops use fixed seeds and actual quotas/pity", "conservative queue encounter estimate",
                     "garden waiting is charged separately, without free input income", "basic armor retained; optional first-clear armor not required",
                     "exploration pauses for sampled ordinary encounters; farming costs are charged separately", "planned actions count is not measured UI clicks or return visits",
-                    "HP is an isolated 70% battle fixture, not persistent HP across encounters", "input income is online; no offline income is added", "manual realm 10 breakthrough requires all five first clears",
+                    "out-of-combat recovery is 5% max HP per real second; starts require 70%; extra waits pay no inputs or currency",
+                    "battle calls ExploreGameLogic and a single shared stat composition", "input income is online; no offline income is added", "manual realm 10 breakthrough requires all five first clears",
                     "extra preparation farming is charged without reducing later exploration budgets, which overestimates inputs" },
                 PlannedOperations = new[] { "forge_weapon_iron_spear", "deep_mining_recycle", "deep_garden_reserve_seed", "deep_fishing_supply", "recipe_plain_fish", "recipe_yangyuan_dan", "talisman_zhenling" },
                 Cases = results,
@@ -84,6 +85,7 @@ public sealed class ChapterBalanceTests(ITestOutputHelper output)
             Assert.Equal(result.Inputs, result.InputsByMode.Values.Sum());
             Assert.All(result.Inventory.Values, count => Assert.True(count >= 0));
             Assert.All(result.Stages, stage => Assert.True(stage.Gold >= 0 && stage.Lingqi >= 0 && stage.Insight >= 0));
+            Assert.All(result.Stages, stage => Assert.InRange(stage.Combat.StartingHp, BattleRecoveryRules.ReadyHp(stage.Combat.MaxHp), stage.Combat.MaxHp));
             Assert.DoesNotContain(result.MaterialsSpent.Keys, id => ChapterBalanceModel.ExcludedRare.Contains(id));
         });
         Assert.True(stressCases.Single(x => x.Route == "branch_forge").InputsByMode["mining"] > results.First(x => x.Route == "branch_forge").InputsByMode["mining"]);

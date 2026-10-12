@@ -102,8 +102,7 @@ namespace Xiuxian.Scripts.Services
                 itemDrops: itemDrops,
                 equipmentDrops: equipmentDrops,
                 lingqiGain: averageLingqiPerVictory * effectiveVictories,
-                insightGain: averageInsightPerVictory * effectiveVictories) with
-                { RealmExpGain = Math.Max(0, offlineInputBudget) * GameBalanceConstants.ResourceConversion.BaseExpPerInput };
+                insightGain: averageInsightPerVictory * effectiveVictories);
         }
 
         private static double CalculateDropQuotaScale(int remainingDailyRolls, double averageDropRollsPerVictory, double effectiveVictories)

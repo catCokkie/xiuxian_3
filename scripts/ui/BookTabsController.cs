@@ -758,9 +758,10 @@ public partial class BookTabsController : Control
                 _playerProgressState.BodyCultivationPostBattleHealRate,
                 _playerProgressState.ZhouTianMaxHpRate,
                 _playerProgressState.ZhouTianAttackRate,
-                _playerProgressState.ZhouTianDefenseRate))
+                _playerProgressState.ZhouTianDefenseRate, _playerProgressState.BodyCultivationMaxHpRate, _playerProgressState.BodyCultivationDefenseRate)),
+            new CharacterStatModifier(DefenseRate: ServiceLocator.Instance?.CookingState?.ActiveMeal.DefenseRate ?? 0)
         };
-        CharacterStatBlock finalStats = CharacterStatRules.BuildFinalStats(CharacterStatRules.BuildFinalStats(baseStats, bonusModifiers), equippedProfiles);
+        CharacterStatBlock finalStats = CharacterStatRules.BuildFinalStats(baseStats, equippedProfiles, bonusModifiers);
         EquipmentInstanceData[] backpackInstances = _backpackState.GetEquipmentInstances();
         EquipmentStatProfile[] backpackProfiles = _backpackState.GetEquipmentProfiles();
         RefreshSmithingControls(equippedProfiles);

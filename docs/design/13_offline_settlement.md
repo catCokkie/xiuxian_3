@@ -43,7 +43,7 @@
 - `formation`（阵法，参见 §18E — 支持）
 - `body_cultivation`（体修，参见 §18B — 不支持，回退修炼）
 
-> 运行口径：修炼结算资源；副本推进到 BossReady；灵田独立真实时间；炼丹/炼器/符箓/烹饪/阵法按 50% 离线输入预算执行实际批次事务。矿脉、灵渔、体修不支持离线输入。任务验收状态仅见 `10_todo.md`。
+> 运行口径：全部11模式按同一衰减预算结算一次基础修行；副本额外推进至BossReady并估算掉落；灵田独立生长等待手动收获；五种加工按50%预算执行真实批次。矿脉/灵渔/体修只领取基础修行，不生成材料或永久训练。任务状态仅见`10_todo.md`。
 
 ### 2.3 当前不自动离线执行的行为
 - `突破`
@@ -67,10 +67,10 @@
 3. 若时间异常跳变，进入保守结算
 4. 对离线时间做上限裁剪
 5. 按时间分组换算“等效输入预算”
-6. 将等效输入预算转给当前行动
+6. 统一发放基础修行，并将同一预算用于当前行动进度（加工使用50%效率，不是第二份成长预算）
 7. 得到统一 `ActionSettlementResult`
 8. 应用资源、掉落、装备与日志摘要
-> **例外**：灵田采用真实时间驱动，不参与上述输入模拟流程。离线期间灵田作物按真实时间继续生长，登录时直接收割已成熟作物（详见 §18A）。
+> 灵田生长独立按真实时间处理，成熟后等待手动收获；退出在灵田仍领取基础修行。脱战HP按02§4.1.1恢复；未结束战斗不利用离线补血。同一载入中的结算入口重复调用不再发奖，不提前改写供灵田/周天使用的原离线时长。
 ---
 
 ## 4. 离线时间差额与上限
@@ -170,7 +170,7 @@
 
 ### 7.2 经验口径
 - 离线使用基础每输入经验0.28，低于在线平衡修炼0.35，并受分段预算衰减约束。AP、境界灵气倍率及供气增益不改变经验。
-- 每份预算只计一次经验；主行为停止及回退须切分预算，不能重复发放。
+- 全部退出模式的基础成长统一为`预算×0.28经验`、`预算×AP/输入×0.9×境界倍率灵气`、`预算×AP/输入×0.08悟性`。加工进度、缺料暂停、BossReady和采集回退均不另发或取消这份成长；不额外补一份假想在线被动收益。
 
 ### 7.3 第一版建议
 - 修炼离线完整支持。
@@ -189,7 +189,7 @@
 #### 8.1.1 推荐公式
 - `offline_explore_progress = min(remaining_progress, offline_input_budget × dungeon_progress_per_input)`
 - `estimated_encounters = floor(offline_explore_progress / encounter_progress_threshold)`
-- `allocated_inputs = min(offline_input_budget, remaining_progress / dungeon_progress_per_input)`；经验为`allocated_inputs × 0.28`，不由胜场灵气派生，BossReady后的未使用预算不发经验。
+- `allocated_inputs = min(offline_input_budget, remaining_progress / dungeon_progress_per_input)`只限制探索/遭遇与掉落；副本分支不发境界经验。统一基础成长已使用完整衰减预算，BossReady以后仍保留这一份基础修行，不产生新遭遇/自动Boss奖励。
 
 #### 8.1.2 设计要求
 - 副本离线先算“理论遭遇次数”，再进入压缩战斗。
@@ -479,10 +479,10 @@
 
 ### 17.2 结算流程
 1. 计算 `offline_input_budget`（复用 §5 分组输入率模型）。
-2. `completed_batches = floor(offline_input_budget / recipe_input_per_batch)`
+2. `completed_batches = floor((offline_input_budget * 0.5 + saved_recipe_progress) / recipe_input_per_batch)`
 3. 按批次逐次检查材料是否充足：
    - 充足 → 扣除材料，产出丹药
-   - 不足 → 停止，剩余输入预算废弃
+   - 不足 → 停止加工，保留进度；基础成长持续，剩余预算不额外重复发奖
 4. AP 正常结算灵气/悟性（复用修炼离线公式）。
 5. 生成摘要：`离线炼丹：完成 X 批次，获得 回气丹×Y`。
 
@@ -561,8 +561,7 @@
 
 ## 18B. 不支持离线的系统（矿脉 / 灵渔 / 体修）
 
-以下 3 个系统均为主动交互模式，离线无法还原核心选择环节，**不支持离线结算**。
-离线期间若玩家退出前 `action_id` 为其中之一，自动回退为**修炼离线**（§6.2），获得灵气/悟性基础收益。
+以下3系统不支持离线推进其采集/训练操作，退出后按§7.2领取统一基础修行（含境界经验），保留模式选择与原进度。行动能力的`SupportsOfflineSettlement`包含回退；活动定义的`SupportsOffline`仅表示该活动自身是否推进，二者不可混用。
 
 | action_id | 系统 | 不支持原因 |
 |-----------|------|-----------|
@@ -580,7 +579,7 @@
 
 ### 18C.2 结算流程
 1. 计算 `offline_input_budget`（复用 §5 分组输入率模型）。
-2. `completed_batches = floor(offline_input_budget / recipe_input_per_batch)`
+2. `completed_batches = floor((offline_input_budget * 0.5 + saved_recipe_progress) / recipe_input_per_batch)`
 3. 按批次逐次检查材料 + 灵气是否充足：
    - 充足 → 扣除材料 + 灵气，产出符咒
    - 不足 → 停止
@@ -603,7 +602,7 @@
 
 ### 18D.2 结算流程
 1. 计算 `offline_input_budget`（复用 §5 分组输入率模型）。
-2. `completed_batches = floor(offline_input_budget / recipe_input_per_batch)`
+2. `completed_batches = floor((offline_input_budget * 0.5 + saved_recipe_progress) / recipe_input_per_batch)`
 3. 按批次逐次检查材料 + 灵气是否充足：
    - 充足 → 扣除材料 + 灵气，产出灵膳
    - 不足 → 停止
@@ -626,7 +625,7 @@
 
 ### 18E.2 结算流程
 1. 计算 `offline_input_budget`（复用 §5 分组输入率模型）。
-2. `completed_batches = floor(offline_input_budget / recipe_input_per_batch)`
+2. `completed_batches = floor((offline_input_budget * 0.5 + saved_recipe_progress) / recipe_input_per_batch)`
 3. 按批次逐次检查材料 + 灵气是否充足：
    - 充足 → 扣除材料 + 灵气，产出阵盘
    - 不足 → 停止
@@ -667,8 +666,8 @@
 扩展规格采用`02_systems.md`§24；本节不引入副活动输入管道或额外离线货币。
 
 - 离线以退出时已确认的主行为、操作选项、目标批次和库存保留为准。加工只分配一次既有输入预算，达到批次目标或材料下限即停；停止后的剩余预算不能再生成另一份加工收入。
-- 按基础规则允许的回退仅一次结算修炼资源，摘要区分主行为完成与回退；自动回退/停止的预算切分必须守恒，严禁同一预算既制作又完整修炼。
-- 守元/悟法只影响其适用AP部分；离线经验按实际分配的衰减预算×0.28，不吃在线侧重经验倍率，不从灵气派生。
+- 全部模式先结算一次基础修行，行动进度复用同一预算；加工的50%效率不是基础成长预算被减半。摘要区分成品、暂停与基础收益，禁止暂停后再补发第二份修行或第二份加工收入。
+- 守元/悟法只影响其适用AP部分；离线经验按统一衰减预算×0.28，不吃在线侧重经验倍率，不从灵气派生。
 - 矿脉、灵渔及尾矿回收仍不离线执行；回归显示“离线按基础修炼规则回退”，不虚构矿石/稀有装备。
 - 灵田真实时间成熟，保留播种时选定的留种和生长参数。灵膳活跃时长不因离线流逝；自动播种使用退出时授权的种子、田位和预算，未设置自动补货不能购买种子。
 - 副本讨伐仅改变配置内普通遭遇权重，Boss首通保持在线主动挑战；离线不解锁区域深造、目标首次奖励或筑基门槛。

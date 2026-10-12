@@ -61,7 +61,7 @@ namespace Xiuxian.Scripts.Game
                 _activitySummaryLabel.Visible = !expanded;
                 _activitySummaryLabel.Size = new Vector2(Math.Max(100, _battleInfoLabel.GetParent<Control>().Size.X - 48), 26);
                 _activitySummaryLabel.Text = work ? "静心工作 · 收益照常累积" : HasDungeonCapability()
-                    ? _inBattle ? $"正在与 {UiText.LocalizeGameNames(_battleMonsterName)} 交战" : $"副本 · 探索 {_exploreProgress:0}%"
+                    ? _inBattle ? $"正在与 {UiText.LocalizeGameNames(_battleMonsterName)} 交战" : IsRecoveringForBattle ? HealthRecoverySummary : $"副本 · 探索 {_exploreProgress:0}%"
                     : $"{GetPausedModeLabel()} · {GetPausedModeRoundLabel()}";
             }
             if (_compactCompanion != null) _compactCompanion.Visible = !expanded;
@@ -72,7 +72,7 @@ namespace Xiuxian.Scripts.Game
                 _bossChallengeButton.SetAnchorsPreset(Control.LayoutPreset.TopLeft);
                 _bossChallengeButton.Position = new Vector2(Math.Max(40, _battleInfoLabel.GetParent<Control>().Size.X - 116), 0);
                 _bossChallengeButton.Size = new Vector2(110, 26);
-                _bossChallengeButton.Visible = CanStartBossChallenge && !GetNode<Control>("../SubmenuBookWindow").Visible;
+                _bossChallengeButton.Visible = IsBossChallengeReady && !GetNode<Control>("../SubmenuBookWindow").Visible;
                 if (_bossChallengeButton.Visible && _activitySummaryLabel != null) _activitySummaryLabel.Size -= new Vector2(120, 0);
             }
         }

@@ -254,6 +254,7 @@ namespace Xiuxian.Scripts.Game
             }
 
             _activityState.InputBatchTick += OnInputBatchTick;
+            if (_equippedItemsState != null) _equippedItemsState.EquippedItemsChanged += RefreshPlayerStats;
             if (_levelConfigLoader != null)
             {
                 _levelConfigLoader.ConfigLoaded += OnLevelConfigLoaded;
@@ -312,6 +313,7 @@ namespace Xiuxian.Scripts.Game
 
         public override void _ExitTree()
         {
+            if (_equippedItemsState != null) _equippedItemsState.EquippedItemsChanged -= RefreshPlayerStats;
             if (_playerProgressState != null) _playerProgressState.RealmLevelUp -= OnRealmMilestone;
             if (_activityState != null)
             {
@@ -422,6 +424,7 @@ namespace Xiuxian.Scripts.Game
 
         public override void _Process(double delta)
         {
+            AdvanceHealthRecovery(delta);
             RefreshBossChallengeButton();
             _gardenPresentationTimer += delta;
             if (_gardenPresentationTimer >= 1.0
@@ -529,10 +532,17 @@ namespace Xiuxian.Scripts.Game
 
         private void OnRealmProgressChanged(int realmLevel, double realmExp, double realmExpRequired)
         {
+            RefreshPlayerStats();
             UpdateRealmStageLabel();
             RefreshCultivationPanel();
             RefreshActionModeOptionButton();
             RefreshDebugPanel();
+        }
+
+        private void RefreshPlayerStats()
+        {
+            ApplyLevelConfig();
+            UpdateHpLabels();
         }
 
         private void OnCultivationRhythmChanged()
@@ -814,6 +824,8 @@ namespace Xiuxian.Scripts.Game
                 return;
             }
 
+            if (!BattleRecoveryRules.CanFight(_playerHp, _playerMaxHp)) return;
+
             if (!AdvanceExploreByInput(inputEvents))
             {
                 return;
@@ -1038,9 +1050,9 @@ namespace Xiuxian.Scripts.Game
                 _playerProgressState?.RealmLevel ?? 1,
                 _levelConfigLoader?.PlayerBaseHp ?? _playerMaxHp,
                 _levelConfigLoader?.PlayerAttackPerRound ?? _playerAttackPerRoundRuntime);
-            playerBaseStats = CharacterStatRules.BuildFinalStats(playerBaseStats, BuildNonEquipmentModifiers());
             var activeMeal = ServiceLocator.Instance?.CookingState?.ActiveMeal ?? default;
-            playerBaseStats = CharacterStatRules.BuildFinalStats(playerBaseStats, new[] { new CharacterStatModifier(DefenseRate: activeMeal.DefenseRate) });
+            var modifiers = new List<CharacterStatModifier>(BuildNonEquipmentModifiers());
+            modifiers.Add(new CharacterStatModifier(DefenseRate: activeMeal.DefenseRate));
             ExploreGameLogic.BattleAdvanceResult progress = _logic.AdvanceBattleByInput(
                 inputEvents,
                 playerBaseStats,
@@ -1055,9 +1067,9 @@ namespace Xiuxian.Scripts.Game
                 },
                 monsterProfile: ResolveCurrentMonsterProfile(),
                 criticalRoll: Random.Shared.NextDouble,
-                suppressMonsterHealing: _hasLingqiDropBuffThisBattle,
                 healPerRound: activeMeal.HealPerRound,
-                incomingDamageReduction: activeMeal.Id == "food_iron_fish_meal" && IsBossChallengeBattle() ? .15 : 0);
+                incomingDamageReduction: activeMeal.Id == "food_iron_fish_meal" && IsBossChallengeBattle() ? .15 : 0,
+                extraModifiers: modifiers);
             SyncControllerStateFromLogic();
             if (progress.RoundsResolved <= 0)
             {
@@ -1251,9 +1263,32 @@ namespace Xiuxian.Scripts.Game
             if (_bossChallengeButton == null) return;
             _bossChallengeButton.Visible = PlayerActionCapabilityRules.HasCapability(_actionState, PlayerActionCapability.AdvancesDungeon)
                 && !_inBattle && _exploreProgress >= MaxProgress;
+            _bossChallengeButton.Disabled = !BattleRecoveryRules.CanFight(_playerHp, _playerMaxHp);
+            _bossChallengeButton.Text = _bossChallengeButton.Disabled ? "休整中…" : "挑战 Boss";
         }
 
-        public bool CanStartBossChallenge => HasDungeonCapability() && !_inBattle && _exploreProgress >= MaxProgress;
+        public bool IsBossChallengeReady => HasDungeonCapability() && !_inBattle && _exploreProgress >= MaxProgress;
+        public bool IsRecoveringForBattle => !_inBattle && !BattleRecoveryRules.CanFight(_playerHp, _playerMaxHp);
+        public string HealthRecoverySummary => $"自动休整 · 气血 {_playerHp}/{_playerMaxHp}，约 {Math.Ceiling(BattleRecoveryRules.SecondsUntilReady(_playerHp, _playerMaxHp))} 秒后可出战";
+        public bool CanStartBossChallenge => IsBossChallengeReady && !IsRecoveringForBattle;
+
+        public void AdvanceHealthRecovery(double seconds)
+        {
+            SyncLogicFromControllerState();
+            bool wasResting = !_inBattle && !BattleRecoveryRules.CanFight(_playerHp, _playerMaxHp);
+            bool changed = _logic.AdvanceRecovery(seconds);
+            SyncControllerStateFromLogic();
+            if (changed) { UpdateHpLabels(); RefreshActorSlots(); RefreshBossChallengeButton(); }
+            if (!_inBattle && !BattleRecoveryRules.CanFight(_playerHp, _playerMaxHp) && HasDungeonCapability())
+            {
+                _battleInfoLabel.Text = HealthRecoverySummary;
+                _battleInfoLabel.Show();
+            }
+            else if (wasResting && HasDungeonCapability())
+            {
+                _battleInfoLabel.Text = _exploreProgress >= MaxProgress ? "休整就绪 · 可挑战 Boss" : "休整就绪 · 继续探索";
+            }
+        }
 
         public bool StartBossChallengeFromUi()
         {
@@ -1383,11 +1418,6 @@ namespace Xiuxian.Scripts.Game
 
         private void ApplyLevelConfig()
         {
-            if (_offlineSummaryVisible)
-            {
-                return;
-            }
-
             if (_levelConfigLoader == null)
             {
                 return;
@@ -1399,7 +1429,10 @@ namespace Xiuxian.Scripts.Game
                 _playerProgressState?.RealmLevel ?? 1,
                 _levelConfigLoader.PlayerBaseHp,
                 _levelConfigLoader.PlayerAttackPerRound);
-            playerBaseStats = CharacterStatRules.BuildFinalStats(playerBaseStats, BuildNonEquipmentModifiers());
+            var statModifiers = new List<CharacterStatModifier>(BuildNonEquipmentModifiers());
+            statModifiers.Add(new CharacterStatModifier(DefenseRate: ServiceLocator.Instance?.CookingState?.ActiveMeal.DefenseRate ?? 0));
+            playerBaseStats = CharacterStatRules.BuildFinalStats(playerBaseStats,
+                _equippedItemsState?.GetEquippedProfiles() ?? Array.Empty<EquipmentStatProfile>(), statModifiers);
             SyncLogicFromControllerState();
             _logic.ApplyLevelConfig(
                 _currentZone,
@@ -1577,6 +1610,7 @@ namespace Xiuxian.Scripts.Game
                 ["move_frame_counter"] = logicState.MoveFrameCounter,
                 ["queue_move_input_pending"] = trackState.QueueMoveInputPending,
                 ["player_hp"] = logicState.PlayerHp,
+                ["recovery_remainder"] = logicState.RecoveryRemainder,
                 ["player_max_hp"] = logicState.PlayerMaxHp,
                 ["enemy_hp"] = logicState.EnemyHp,
                 ["enemy_max_hp"] = logicState.EnemyMaxHp,
@@ -1616,6 +1650,7 @@ namespace Xiuxian.Scripts.Game
                 QueueMoveInputPending = data.ContainsKey("queue_move_input_pending") ? Mathf.Max(0, data["queue_move_input_pending"].AsInt32()) : _queueMoveInputPending,
                 InBattle = data.ContainsKey("battle_state") && data["battle_state"].AsString() == "in_battle",
                 PlayerHp = data.ContainsKey("player_hp") ? Mathf.Max(0, data["player_hp"].AsInt32()) : _playerHp,
+                RecoveryRemainder = data.ContainsKey("recovery_remainder") ? data["recovery_remainder"].AsDouble() : 0,
                 PlayerMaxHp = data.ContainsKey("player_max_hp") ? Mathf.Max(1, data["player_max_hp"].AsInt32()) : _playerMaxHp,
                 EnemyHp = data.ContainsKey("enemy_hp") ? Mathf.Max(0, data["enemy_hp"].AsInt32()) : _enemyHp,
                 EnemyMaxHp = data.ContainsKey("enemy_max_hp") ? Mathf.Max(1, data["enemy_max_hp"].AsInt32()) : _enemyMaxHp,
@@ -1713,6 +1748,7 @@ namespace Xiuxian.Scripts.Game
                 _roundInfoLabel.Text = $"{UiText.ExploreProgress(_exploreProgress)} | {BuildFrontMoveStatus()}{BuildActiveFormationSuffix()}";
             }
 
+            ApplyLevelConfig();
             UpdateHpLabels();
             RefreshActorSlots();
             RefreshMoveDebugLabel();
@@ -2261,6 +2297,9 @@ namespace Xiuxian.Scripts.Game
                 }
             }
 
+            if (recipe.SystemId == PlayerActionState.ModeBodyCultivation || recipe.SystemId == PlayerActionState.ModeFormation)
+                ApplyLevelConfig();
+
             _battleInfoLabel.Text = rewardText;
             _battleInfoLabel.Visible = true;
             RecordActivityCompletion(rewardText);
@@ -2550,6 +2589,26 @@ namespace Xiuxian.Scripts.Game
             }
 
             float percent = state.RequiredProgress > 0.0f ? state.CurrentProgress / state.RequiredProgress * 100.0f : 0.0f;
+            if (recipe.RecipeId == "body_cultivation_boneforge" && _playerProgressState != null && _levelConfigLoader != null)
+            {
+                var basis = PlayerBaseStatRules.BuildBaseStats(_playerProgressState.RealmLevel, _levelConfigLoader.PlayerBaseHp, _levelConfigLoader.PlayerAttackPerRound);
+                var modifiers = new List<CharacterStatModifier>(BuildNonEquipmentModifiers());
+                modifiers.Add(new CharacterStatModifier(DefenseRate: ServiceLocator.Instance?.CookingState?.ActiveMeal.DefenseRate ?? 0));
+                var equipment = _equippedItemsState?.GetEquippedProfiles() ?? Array.Empty<EquipmentStatProfile>();
+                int defense = CharacterStatRules.BuildFinalStats(basis, equipment, modifiers).Defense;
+                int remaining = BodyCultivationRules.GetEffectiveBoneforgeCap(_subsystemMasteryState?.GetLevel(PlayerActionState.ModeBodyCultivation) ?? 1) - _playerProgressState.BoneforgeCount;
+                int starter = _playerProgressState.BoneforgeCount == 0 && _playerProgressState.BodyCultivationDefenseFlat == 0 ? BodyCultivationRules.SpiritSkinStarterDefenseFlat : 0;
+                int nextDefense = defense, threshold = 0;
+                for (int n = 1; n <= remaining; n++)
+                {
+                    var preview = new List<CharacterStatModifier>(modifiers) { new(DefenseFlat: starter, DefenseRate: n * .02) };
+                    int value = CharacterStatRules.BuildFinalStats(basis, equipment, preview).Defense;
+                    if (n == 1) nextDefense = value;
+                    if (value > defense) { threshold = n; break; }
+                }
+                string hint = threshold > 1 ? $"，再练{threshold}次提升" : threshold == 0 ? "，当前上限内无整点提升" : string.Empty;
+                return $"{recipe.DisplayName} {percent:0}% · DEF {defense}→{nextDefense}{hint}";
+            }
             return $"{recipe.DisplayName} {percent:0}%";
         }
 

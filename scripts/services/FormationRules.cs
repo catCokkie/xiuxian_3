@@ -12,6 +12,7 @@ namespace Xiuxian.Scripts.Services
     {
         public const double SpiritPlateLingqiRate = 0.08;
         public const double GuardFlagDefenseRate = 0.05;
+        public const int GuardFlagDefenseFlat = 1;
         public const double HarvestArrayGatherSpeedRate = 0.12;
         public const double CraftArrayCraftSpeedRate = 0.12;
         public const double SecondarySlotEffectRatio = 0.5;
@@ -29,7 +30,7 @@ namespace Xiuxian.Scripts.Services
                     CraftSpeedRate: 0.0,
                     IsKnownFormation: true),
                 "formation_guard_flag" => new FormationEffectProfile(
-                    BattleModifier: new CharacterStatModifier(DefenseRate: GuardFlagDefenseRate),
+                    BattleModifier: new CharacterStatModifier(DefenseFlat: GuardFlagDefenseFlat, DefenseRate: GuardFlagDefenseRate),
                     LingqiRewardRate: 0.0,
                     InsightRewardRate: 0.0,
                     GatherSpeedRate: 0.0,

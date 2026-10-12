@@ -5,6 +5,22 @@ namespace Xiuxian.Tests;
 public sealed class SaveMigrationRulesTests
 {
     [Fact]
+    public void RecoveryMigrationPreservesInjuriesAndExistingFractionsWithoutHealing()
+    {
+        var cfg = new SaveMigrationRules.MigrationStore();
+        cfg.SetValue("meta", "version", 15);
+        cfg.SetValue("explore", "runtime", new Dictionary<string, object> { ["player_hp"] = 17, ["player_max_hp"] = 100 });
+        SaveMigrationRules.MigrateToLatest(cfg, 15);
+        var runtime = (Dictionary<string, object>)cfg.GetValue("explore", "runtime", new Dictionary<string, object>());
+        Assert.Equal(17, Convert.ToInt32(runtime["player_hp"]));
+        Assert.Equal(0, Convert.ToDouble(runtime["recovery_remainder"]));
+        runtime["recovery_remainder"] = .75;
+        cfg.SetValue("meta", "version", 15);
+        SaveMigrationRules.MigrateToLatest(cfg, 15);
+        Assert.Equal(.75, Convert.ToDouble(runtime["recovery_remainder"]));
+        Assert.Equal(17, Convert.ToInt32(runtime["player_hp"]));
+    }
+    [Fact]
     public void NeedsMigration_ReturnsTrueForOlderSchema()
     {
         Assert.True(SaveMigrationRules.NeedsMigration(4));

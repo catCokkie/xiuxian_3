@@ -28,6 +28,7 @@ namespace Xiuxian.Scripts.Game
             public bool InBattle { get; init; }
             public int PlayerHp { get; init; } = 36;
             public int PlayerMaxHp { get; init; } = 36;
+            public double RecoveryRemainder { get; init; }
             public int EnemyHp { get; init; } = 24;
             public int EnemyMaxHp { get; init; } = 24;
             public int EnemyAttackPower { get; init; } = 4;
@@ -65,6 +66,18 @@ namespace Xiuxian.Scripts.Game
         public int EnemyMaxHp { get; set; } = 24;
         public int PlayerHp { get; set; } = 36;
         public int PlayerMaxHp { get; set; } = 36;
+        public double RecoveryRemainder { get; set; }
+
+        public bool CanStartBattle => !InBattle && BattleRecoveryRules.CanFight(PlayerHp, PlayerMaxHp);
+
+        public bool AdvanceRecovery(double seconds)
+        {
+            var next = BattleRecoveryRules.Advance(PlayerHp, PlayerMaxHp, seconds, RecoveryRemainder, InBattle);
+            bool changed = PlayerHp != next.Hp;
+            PlayerHp = next.Hp;
+            RecoveryRemainder = next.Remainder;
+            return changed;
+        }
         public int EnemyAttackPower { get; set; } = 4;
         public int InputsPerBattleRoundRuntime { get; set; } = GameBalanceConstants.Explore.InputsPerBattleRound;
         public int PlayerAttackPerRoundRuntime { get; set; } = 4;
@@ -130,7 +143,7 @@ namespace Xiuxian.Scripts.Game
             int zoneDangerLevel = 1,
             double randomRoll = 0.0)
         {
-            if (InBattle)
+            if (!CanStartBattle)
             {
                 return false;
             }
@@ -151,7 +164,7 @@ namespace Xiuxian.Scripts.Game
             int defaultInputsPerBattleRound,
             float maxProgress)
         {
-            if (InBattle || ExploreProgress < maxProgress)
+            if (!CanStartBattle || ExploreProgress < maxProgress)
             {
                 return false;
             }
@@ -180,9 +193,10 @@ namespace Xiuxian.Scripts.Game
             Action? afterRoundResolved = null,
             MonsterStatProfile? monsterProfile = null,
             Func<double>? criticalRoll = null,
-            bool suppressMonsterHealing = false,
+            int suppressMonsterHealingRounds = 0,
             int healPerRound = 0,
-            double incomingDamageReduction = 0)
+            double incomingDamageReduction = 0,
+            IReadOnlyList<CharacterStatModifier>? extraModifiers = null)
         {
             BattleInputProgress progress = BattleRules.ConsumeBattleInputs(PendingBattleInputEvents, inputEvents, InputsPerBattleRoundRuntime);
             PendingBattleInputEvents = progress.RemainingInputs;
@@ -194,10 +208,10 @@ namespace Xiuxian.Scripts.Game
             for (int i = 0; i < progress.RoundsToResolve; i++)
             {
                 BattleRoundCounter++;
-                CharacterBattleSnapshot playerSnapshot = CharacterStatRules.CreatePlayerBattleSnapshot(
-                    playerBaseStats,
-                    equippedProfiles ?? Array.Empty<EquipmentStatProfile>(),
-                    PlayerHp);
+                CharacterStatBlock playerStats = CharacterStatRules.BuildFinalStats(playerBaseStats,
+                    equippedProfiles ?? Array.Empty<EquipmentStatProfile>(), extraModifiers ?? Array.Empty<CharacterStatModifier>());
+                PlayerMaxHp = playerStats.MaxHp;
+                CharacterBattleSnapshot playerSnapshot = CharacterStatRules.CreateBattleSnapshot(playerStats, PlayerHp);
                 CharacterStatBlock enemyStats = monsterProfile?.BaseStats ?? new CharacterStatBlock(EnemyMaxHp, EnemyAttackPower, 0, 1, 0, 1.5);
                 CharacterBattleSnapshot monsterSnapshot = CharacterStatRules.CreateBattleSnapshot(
                     enemyStats with { MaxHp = EnemyMaxHp, Attack = Math.Max(1, (int)Math.Round(EnemyAttackPower * (1 - incomingDamageReduction))) }, EnemyHp);
@@ -211,10 +225,11 @@ namespace Xiuxian.Scripts.Game
                 PlayerHp = roundResult.Player.CurrentHp;
                 if (roundResult.Outcome == BattleOutcome.Ongoing)
                 {
-                    if (!suppressMonsterHealing) EnemyHp = Math.Min(EnemyMaxHp, EnemyHp + Math.Max(0, monsterProfile?.HealPerRound ?? 0));
+                    if (BattleRoundCounter > Math.Max(0, suppressMonsterHealingRounds)) EnemyHp = Math.Min(EnemyMaxHp, EnemyHp + Math.Max(0, monsterProfile?.HealPerRound ?? 0));
                     PlayerHp = Math.Min(roundResult.Player.MaxHp, PlayerHp + Math.Max(0, healPerRound));
                 }
-                afterRoundResolved?.Invoke();
+                if (roundResult.Outcome == BattleOutcome.Ongoing
+                    && !(isBossBattle && BattleRoundCounter >= maxBossBattleRounds)) afterRoundResolved?.Invoke();
 
                 BattleFlowDecision flowDecision = BattleRules.DetermineBattleFlow(roundResult.Outcome);
                 if (flowDecision.EndBattle)
@@ -243,7 +258,8 @@ namespace Xiuxian.Scripts.Game
                 ExploreProgress = DungeonLoopRules.ResolveProgressAfterBossBattle(isBossBattle, ExploreProgress);
             }
 
-            PlayerHp = PlayerMaxHp;
+            PlayerHp = 0;
+            RecoveryRemainder = 0;
             BattleMonsterIndex = -1;
             BattleMonsterId = string.Empty;
             TotalBattleCount++;
@@ -282,7 +298,7 @@ namespace Xiuxian.Scripts.Game
             EnemyAttackPower = 4;
             InputsPerBattleRoundRuntime = Math.Max(1, defaultInputsPerBattleRound);
             EnemyHp = EnemyMaxHp;
-            PlayerHp = PlayerMaxHp;
+            // Changing region or restarting the track is not a healing action.
             LastBattleEndedByBossTimeout = false;
             BossWeaknessInsightApplied = false;
         }
@@ -321,6 +337,7 @@ namespace Xiuxian.Scripts.Game
                 InBattle = InBattle,
                 PlayerHp = PlayerHp,
                 PlayerMaxHp = PlayerMaxHp,
+                RecoveryRemainder = RecoveryRemainder,
                 EnemyHp = EnemyHp,
                 EnemyMaxHp = EnemyMaxHp,
                 EnemyAttackPower = EnemyAttackPower,
@@ -348,6 +365,7 @@ namespace Xiuxian.Scripts.Game
             QueueMoveInputPending = Math.Max(0, state.QueueMoveInputPending);
             InBattle = state.InBattle;
             PlayerHp = Math.Max(0, state.PlayerHp);
+            RecoveryRemainder = double.IsFinite(state.RecoveryRemainder) ? Math.Clamp(state.RecoveryRemainder, 0, .999999999) : 0;
             PlayerMaxHp = Math.Max(1, state.PlayerMaxHp);
             EnemyHp = Math.Max(0, state.EnemyHp);
             EnemyMaxHp = Math.Max(1, state.EnemyMaxHp);

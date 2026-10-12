@@ -219,7 +219,9 @@ public partial class BookTabsController
         string action = _playerActionState?.ActionId ?? "dungeon";
         _homeActivity!.Text = action == "dungeon" ? $"{BuildCultivationActionSummary()} · 探索 {_exploreProgressController?.ExploreProgressValue ?? 0:0}%" : BuildCultivationFocusSummary();
         _homeBossChallenge!.Disabled = _exploreProgressController?.CanStartBossChallenge != true;
-        _homeBossChallenge.TooltipText = _homeBossChallenge.Disabled ? "探索达到 100% 且当前没有战斗时，可以挑战 Boss。" : "挑战当前副本的 Boss。";
+        _homeBossChallenge.Text = _exploreProgressController?.IsBossChallengeReady == true && _exploreProgressController.IsRecoveringForBattle ? "休整中…" : "挑战 Boss";
+        _homeBossChallenge.TooltipText = _exploreProgressController?.IsRecoveringForBattle == true ? _exploreProgressController.HealthRecoverySummary
+            : _homeBossChallenge.Disabled ? "探索达到 100%、脱离战斗且气血至少 70% 时，可以挑战 Boss。" : "挑战当前副本的 Boss。";
         _homeNextStep!.Text = BuildHomeNextStep(action);
         _refreshingHomeMode = true;
         _homeMode!.Clear();
@@ -236,6 +238,7 @@ public partial class BookTabsController
 
     private string BuildHomeNextStep(string action)
     {
+        if (action == "dungeon" && _exploreProgressController?.IsRecoveringForBattle == true) return _exploreProgressController.HealthRecoverySummary;
         if (_playerProgressState?.CanBreakthrough == true) return "经验与通关条件已满足，点击上方“突破”提升境界。";
         if (action == "dungeon" && _exploreProgressController?.CanStartBossChallenge == true) return "探索已满，点击“挑战 Boss”完成本区；也可以先准备丹药与装备。";
         return action switch

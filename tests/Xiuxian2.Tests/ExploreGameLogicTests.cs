@@ -64,7 +64,7 @@ public sealed class ExploreGameLogicTests
         Assert.Equal(100.0f, logic.ExploreProgress);
         Assert.False(logic.InBattle);
         Assert.Equal(string.Empty, logic.BattleMonsterId);
-        Assert.Equal(36, logic.PlayerHp);
+        Assert.Equal(0, logic.PlayerHp);
         Assert.Equal(1, logic.TotalBattleCount);
     }
 

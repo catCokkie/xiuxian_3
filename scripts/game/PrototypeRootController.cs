@@ -59,6 +59,7 @@ namespace Xiuxian.Scripts.Game
         private StatePersistenceManager _persistenceManager = new();
         private bool _cloudSyncEnabled;
         private long _lastLoadedSavedUnix;
+        private bool _offlineSettlementApplied;
         private Control? _privacyNoticeOverlay;
         private bool _saveBlockedByLoadFailure;
 
@@ -680,6 +681,7 @@ namespace Xiuxian.Scripts.Game
         private void ReadUnifiedState(ConfigFile config)
         {
             _lastLoadedSavedUnix = config.GetValue("meta", "last_saved_unix", 0L).AsInt64();
+            _offlineSettlementApplied = false;
             int version = config.GetValue("meta", "version", SaveSchemaVersion).AsInt32();
 
             ReadStateSafe("UiState", () => ReadUiState(config, version));
@@ -781,23 +783,12 @@ namespace Xiuxian.Scripts.Game
 
         private bool ApplyOfflineSettlementIfNeeded()
         {
-            if (_playerActionState == null || _resourceWalletState == null || _playerProgressState == null)
+            if (_offlineSettlementApplied || _playerActionState == null || _resourceWalletState == null || _playerProgressState == null)
             {
                 return false;
             }
 
-            if (_playerActionState.ActionId == PlayerActionState.ActionGarden
-                || !PlayerActionCapabilityRules.HasCapability(_playerActionState, PlayerActionCapability.SupportsOfflineSettlement))
-            {
-                return false;
-            }
-
-            bool isCultivation = PlayerActionCapabilityRules.HasCapability(_playerActionState, PlayerActionCapability.ConsumesApSettlement);
             bool isDungeon = PlayerActionCapabilityRules.HasCapability(_playerActionState, PlayerActionCapability.AdvancesDungeon);
-            if (!isCultivation && !isDungeon)
-            {
-                return false;
-            }
 
             if (_lastLoadedSavedUnix <= 0)
             {
@@ -812,29 +803,11 @@ namespace Xiuxian.Scripts.Game
                 return false;
             }
 
-            int craftingBudget = OfflineCraftingRules.InputBudget(evaluation.EffectiveOfflineSeconds, _playerActionState.ActionId);
-            if (craftingBudget > 0 && _exploreProgressController != null)
-            {
-                string detail = _exploreProgressController.AdvanceOfflineCrafting(craftingBudget);
-                string title = $"闭关加工 · {UiText.MasterySystemName(_playerActionState.ActionId)}";
-                _eventLogState?.AddEvent(EventLogState.CategoryCraft, title, detail);
-                _exploreProgressController.ShowOfflineSummary(title, detail);
-                _bookTabs?.ShowReturnCard(title, detail);
-                MarkDirty();
-                return true;
-            }
-            if (!isDungeon && _playerActionState.ActionId != PlayerActionState.ActionCultivation) return false;
-
-            ActionSettlementResult result = !isDungeon
-                ? OfflineSettlementRules.BuildCultivationOfflineSettlement(
-                    evaluation.EffectiveOfflineSeconds,
-                    apPerInput: GameBalanceConstants.Offline.ApPerInput,
-                    lingqiFactor: GameBalanceConstants.ResourceConversion.LingqiFactor,
-                    insightFactor: GameBalanceConstants.ResourceConversion.InsightFactor,
-                    baseExpPerInput: GameBalanceConstants.ResourceConversion.BaseExpPerInput,
-                    realmMultiplier: _playerProgressState.GetRealmMultiplier(),
-                    actionTargetId: _playerActionState.ActionTargetId)
-                : BuildOfflineDungeonSettlement(evaluation.EffectiveOfflineSeconds);
+            _exploreProgressController?.AdvanceHealthRecovery(evaluation.EffectiveOfflineSeconds);
+            ActionSettlementResult result = OfflineActionSettlementRules.BuildShared(evaluation.EffectiveOfflineSeconds,
+                _playerProgressState.GetRealmMultiplier(), _playerActionState.ActionId, _playerActionState.ActionTargetId);
+            if (isDungeon) result = OfflineActionSettlementRules.WithDungeonRewards(result,
+                BuildOfflineDungeonSettlement(evaluation.EffectiveOfflineSeconds));
 
             if (!result.HasAnyReward)
             {
@@ -844,6 +817,9 @@ namespace Xiuxian.Scripts.Game
             _resourceWalletState.AddLingqi(result.LingqiGain);
             _resourceWalletState.AddInsight(result.InsightGain);
             _playerProgressState.AddRealmExp(result.RealmExpGain);
+            int craftingBudget = OfflineCraftingRules.InputBudget(evaluation.EffectiveOfflineSeconds, _playerActionState.ActionId);
+            string craftDetail = craftingBudget > 0 && _exploreProgressController != null
+                ? "\n加工：" + _exploreProgressController.AdvanceOfflineCrafting(craftingBudget) : string.Empty;
             if (isDungeon)
             {
                 _exploreProgressController?.ApplyOfflineExploreProgress(result.ExploreProgressGain);
@@ -867,12 +843,12 @@ namespace Xiuxian.Scripts.Game
                     }
                 }
             }
-            _exploreProgressController?.ShowOfflineSummary(
-                OfflineSummaryPresentationRules.BuildTitle(result),
-                OfflineSummaryPresentationRules.BuildBody(result));
-            _bookTabs?.ShowReturnCard(OfflineSummaryPresentationRules.BuildTitle(result), OfflineSummaryPresentationRules.BuildBody(result));
-            _eventLogState?.AddEvent(EventLogState.CategorySystem, OfflineSummaryPresentationRules.BuildTitle(result), OfflineSummaryPresentationRules.BuildBody(result));
+            string summary = OfflineSummaryPresentationRules.BuildBody(result) + craftDetail;
+            _exploreProgressController?.ShowOfflineSummary(OfflineSummaryPresentationRules.BuildTitle(result), summary);
+            _bookTabs?.ShowReturnCard(OfflineSummaryPresentationRules.BuildTitle(result), summary);
+            _eventLogState?.AddEvent(EventLogState.CategorySystem, OfflineSummaryPresentationRules.BuildTitle(result), summary);
             _toastController?.Enqueue(OfflineSummaryPresentationRules.BuildTitle(result), new Color("C8A050"));
+            _offlineSettlementApplied = true;
             MarkDirty();
             return true;
         }
@@ -974,9 +950,8 @@ namespace Xiuxian.Scripts.Game
                     _playerProgressState.ZhouTianAttackRate,
                     _playerProgressState.ZhouTianDefenseRate, _playerProgressState.BodyCultivationMaxHpRate, _playerProgressState.BodyCultivationDefenseRate))
             };
-            return CharacterStatRules.BuildFinalStats(
-                CharacterStatRules.BuildFinalStats(baseStats, extraModifiers),
-                _equippedItemsState.GetEquippedProfiles());
+            extraModifiers.Add(new CharacterStatModifier(DefenseRate: ServiceLocator.Instance?.CookingState?.ActiveMeal.DefenseRate ?? 0));
+            return CharacterStatRules.BuildFinalStats(baseStats, _equippedItemsState.GetEquippedProfiles(), extraModifiers);
         }
 
         private void LoadLegacyState()

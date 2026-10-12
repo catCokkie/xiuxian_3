@@ -174,9 +174,14 @@ public partial class LayoutSmokeTest : Node
             Check(_tabs.ActivePageName == "BugTab" && PageRoot("BugFeedbackRoot").IsVisibleInTree() && !PageRoot("SettingsRoot").IsVisibleInTree(), "restore: explicit current page overrides legacy groups");
             s.PlayerActionState!.SetWorkMode(false); s.PlayerActionState.SetAction("dungeon");
             var controller = _root.GetNode<ExploreProgressController>("ExploreProgressController");
-            controller.FromRuntimeDictionary(new() { ["explore_progress"] = 100f, ["battle_state"] = "boss_ready" });
+            controller.FromRuntimeDictionary(new() { ["explore_progress"] = 100f, ["battle_state"] = "boss_ready", ["player_hp"] = 0 });
             await Select("CultivationTab");
             var boss = (Button)_tabs.FindChild("HomeBossChallenge", true, false);
+            Check(boss.Disabled && boss.Text == "休整中…", "home: injured BossReady exposes recovery instead of starting battle");
+            Check(Inside(_book.GetGlobalRect(), boss.GetGlobalRect()), "home: recovery action fits book");
+            await Capture("home_rest");
+            controller.AdvanceHealthRecovery(20);
+            await Select("CultivationTab");
             Check(!boss.Disabled, "home: BossReady has accessible challenge action");
             boss.EmitSignal(Button.SignalName.Pressed);
             Check(controller.ToRuntimeDictionary()["battle_state"].AsString() == "in_battle", "home challenge starts real battle");
@@ -200,6 +205,7 @@ public partial class LayoutSmokeTest : Node
                 regionPicker.Select(choice); regionPicker.EmitSignal(OptionButton.SignalName.ItemSelected, choice);
                 Check(s.LevelConfigLoader!.ActiveLevelId == levelId, levelId + ": region switches in memory via UI");
                 controller.FromRuntimeDictionary(new() { ["explore_progress"] = 100f, ["battle_state"] = "boss_ready" });
+                controller.AdvanceHealthRecovery(20);
                 Check(controller.StartBossChallengeFromUi(), levelId + ": boss challenge starts");
                 await Settle();
                 string bossId = s.LevelConfigLoader.GetBossMonsterId(levelId);
