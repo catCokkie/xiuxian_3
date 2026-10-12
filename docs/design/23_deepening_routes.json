@@ -1,0 +1,545 @@
+{
+    "schema_version":  1,
+    "document_kind":  "design_blueprint",
+    "runtime_consumed":  false,
+    "rules_source":  "02_systems.md#24",
+    "route_source":  "22_play_routes.md",
+    "systems":  [
+                    "dungeon",
+                    "cultivation",
+                    "alchemy",
+                    "smithing",
+                    "garden",
+                    "mining",
+                    "fishing",
+                    "talisman",
+                    "cooking",
+                    "formation",
+                    "body_cultivation"
+                ],
+    "milestones":  [
+                       {
+                           "id":  "route_start",
+                           "min_realm":  1,
+                           "requires":  [
+
+                                        ],
+                           "kind":  "tutorial",
+                           "optional_for_progression":  true
+                       },
+                       {
+                           "id":  "route_first_prepare",
+                           "min_realm":  1,
+                           "requires":  [
+                                            "route_start"
+                                        ],
+                           "kind":  "tutorial",
+                           "optional_for_progression":  true
+                       },
+                       {
+                           "id":  "route_clear_001",
+                           "min_realm":  1,
+                           "requires":  [
+
+                                        ],
+                           "kind":  "region_clear",
+                           "region_id":  "lv_qi_001",
+                           "optional_for_progression":  false
+                       },
+                       {
+                           "id":  "route_clear_002",
+                           "min_realm":  1,
+                           "requires":  [
+                                            "route_clear_001"
+                                        ],
+                           "kind":  "region_clear",
+                           "region_id":  "lv_qi_002",
+                           "optional_for_progression":  false
+                       },
+                       {
+                           "id":  "route_clear_003",
+                           "min_realm":  1,
+                           "requires":  [
+                                            "route_clear_002"
+                                        ],
+                           "kind":  "region_clear",
+                           "region_id":  "lv_qi_003",
+                           "optional_for_progression":  false
+                       },
+                       {
+                           "id":  "route_clear_004",
+                           "min_realm":  1,
+                           "requires":  [
+                                            "route_clear_003"
+                                        ],
+                           "kind":  "region_clear",
+                           "region_id":  "lv_qi_004",
+                           "optional_for_progression":  false
+                       },
+                       {
+                           "id":  "route_clear_005",
+                           "min_realm":  1,
+                           "requires":  [
+                                            "route_clear_004"
+                                        ],
+                           "kind":  "region_clear",
+                           "region_id":  "lv_qi_005",
+                           "optional_for_progression":  false
+                       },
+                       {
+                           "id":  "route_qi_complete",
+                           "min_realm":  1,
+                           "requires":  [
+                                            "route_clear_005"
+                                        ],
+                           "kind":  "chapter_summary",
+                           "optional_for_progression":  false
+                       },
+                       {
+                           "id":  "route_foundation",
+                           "min_realm":  10,
+                           "requires":  [
+                                            "route_clear_005"
+                                        ],
+                           "kind":  "realm_boundary",
+                           "optional_for_progression":  false
+                       }
+                   ],
+    "branches":  [
+                     {
+                         "id":  "branch_forge",
+                         "name":  "斩妖炼器",
+                         "min_realm":  3,
+                         "recommended_mastery":  {
+                                                     "dungeon":  2,
+                                                     "smithing":  2,
+                                                     "mining":  2
+                                                 },
+                         "early_insight_budget_check":  85,
+                         "actions":  [
+                                         "deep_dungeon_hunt",
+                                         "deep_smithing_forge",
+                                         "deep_smithing_inherit",
+                                         "deep_mining_select",
+                                         "deep_mining_recycle"
+                                     ],
+                         "mandatory_for_main":  false
+                     },
+                     {
+                         "id":  "branch_supply",
+                         "name":  "田渔丹膳",
+                         "min_realm":  4,
+                         "recommended_mastery":  {
+                                                     "garden":  2,
+                                                     "fishing":  2,
+                                                     "cooking":  2,
+                                                     "alchemy":  2
+                                                 },
+                         "early_insight_budget_check":  95,
+                         "actions":  [
+                                         "deep_garden_layout",
+                                         "deep_garden_reserve_seed",
+                                         "deep_fishing_supply",
+                                         "deep_cooking_simple",
+                                         "deep_alchemy_seed_refine"
+                                     ],
+                         "mandatory_for_main":  false
+                     },
+                     {
+                         "id":  "branch_inner",
+                         "name":  "符阵内修",
+                         "min_realm":  5,
+                         "recommended_mastery":  {
+                                                     "cultivation":  2,
+                                                     "talisman":  2,
+                                                     "formation":  2,
+                                                     "body_cultivation":  2,
+                                                     "mining":  2
+                                                 },
+                         "early_insight_budget_check":  145,
+                         "actions":  [
+                                         "deep_cultivation_insight",
+                                         "deep_talisman_plan",
+                                         "deep_formation_path",
+                                         "deep_body_course",
+                                         "deep_body_stance"
+                                     ],
+                         "mandatory_for_main":  false
+                     }
+                 ],
+    "actions":  [
+                    {
+                        "id":  "deep_dungeon_survey",
+                        "name":  "查探",
+                        "system":  "dungeon",
+                        "min_realm":  2,
+                        "required_mastery":  {
+
+                                             },
+                        "required_clears":  [
+
+                                            ],
+                        "parameter_source":  "02_systems.md#24"
+                    },
+                    {
+                        "id":  "deep_dungeon_hunt",
+                        "name":  "讨伐",
+                        "system":  "dungeon",
+                        "min_realm":  3,
+                        "required_mastery":  {
+
+                                             },
+                        "required_clears":  [
+                                                "lv_qi_001"
+                                            ],
+                        "parameter_source":  "02_systems.md#24"
+                    },
+                    {
+                        "id":  "deep_cultivation_reserve",
+                        "name":  "守元",
+                        "system":  "cultivation",
+                        "min_realm":  2,
+                        "required_mastery":  {
+
+                                             },
+                        "required_clears":  [
+
+                                            ],
+                        "parameter_source":  "02_systems.md#24"
+                    },
+                    {
+                        "id":  "deep_cultivation_insight",
+                        "name":  "悟法",
+                        "system":  "cultivation",
+                        "min_realm":  2,
+                        "required_mastery":  {
+
+                                             },
+                        "required_clears":  [
+
+                                            ],
+                        "parameter_source":  "02_systems.md#24"
+                    },
+                    {
+                        "id":  "deep_alchemy_seed_refine",
+                        "name":  "留种回气丹",
+                        "system":  "alchemy",
+                        "min_realm":  2,
+                        "required_mastery":  {
+                                                 "alchemy":  2
+                                             },
+                        "required_clears":  [
+
+                                            ],
+                        "parameter_source":  "02_systems.md#24",
+                        "recipe_id":  "recipe_huiqi_seed"
+                    },
+                    {
+                        "id":  "deep_alchemy_guard",
+                        "name":  "灵盾丹",
+                        "system":  "alchemy",
+                        "min_realm":  4,
+                        "required_mastery":  {
+                                                 "alchemy":  3
+                                             },
+                        "required_clears":  [
+                                                "lv_qi_002"
+                                            ],
+                        "parameter_source":  "02_systems.md#24",
+                        "recipe_id":  "recipe_lingdun_dan"
+                    },
+                    {
+                        "id":  "deep_alchemy_antiregen",
+                        "name":  "抑生丹",
+                        "system":  "alchemy",
+                        "min_realm":  4,
+                        "required_mastery":  {
+                                                 "alchemy":  2
+                                             },
+                        "required_clears":  [
+                                                "lv_qi_003"
+                                            ],
+                        "parameter_source":  "02_systems.md#24",
+                        "recipe_id":  "recipe_yangyuan_dan"
+                    },
+                    {
+                        "id":  "deep_smithing_forge",
+                        "name":  "自制装备",
+                        "system":  "smithing",
+                        "min_realm":  3,
+                        "required_mastery":  {
+
+                                             },
+                        "required_clears":  [
+
+                                            ],
+                        "parameter_source":  "02_systems.md#24"
+                    },
+                    {
+                        "id":  "deep_smithing_inherit",
+                        "name":  "强化继承",
+                        "system":  "smithing",
+                        "min_realm":  3,
+                        "required_mastery":  {
+                                                 "smithing":  2
+                                             },
+                        "required_clears":  [
+                                                "lv_qi_001"
+                                            ],
+                        "parameter_source":  "02_systems.md#24"
+                    },
+                    {
+                        "id":  "deep_smithing_salvage",
+                        "name":  "装备分解",
+                        "system":  "smithing",
+                        "min_realm":  3,
+                        "required_mastery":  {
+
+                                             },
+                        "required_clears":  [
+
+                                            ],
+                        "parameter_source":  "02_systems.md#24"
+                    },
+                    {
+                        "id":  "deep_garden_layout",
+                        "name":  "灵田布局",
+                        "system":  "garden",
+                        "min_realm":  2,
+                        "required_mastery":  {
+
+                                             },
+                        "required_clears":  [
+
+                                            ],
+                        "parameter_source":  "02_systems.md#24"
+                    },
+                    {
+                        "id":  "deep_garden_reserve_seed",
+                        "name":  "留种",
+                        "system":  "garden",
+                        "min_realm":  2,
+                        "required_mastery":  {
+                                                 "garden":  2
+                                             },
+                        "required_clears":  [
+
+                                            ],
+                        "parameter_source":  "02_systems.md#24"
+                    },
+                    {
+                        "id":  "deep_mining_select",
+                        "name":  "精选开采",
+                        "system":  "mining",
+                        "min_realm":  3,
+                        "required_mastery":  {
+                                                 "mining":  2
+                                             },
+                        "required_clears":  [
+
+                                            ],
+                        "parameter_source":  "02_systems.md#24"
+                    },
+                    {
+                        "id":  "deep_mining_recycle",
+                        "name":  "尾矿回收",
+                        "system":  "mining",
+                        "min_realm":  3,
+                        "required_mastery":  {
+
+                                             },
+                        "required_clears":  [
+
+                                            ],
+                        "parameter_source":  "02_systems.md#24"
+                    },
+                    {
+                        "id":  "deep_fishing_supply",
+                        "name":  "食材优先",
+                        "system":  "fishing",
+                        "min_realm":  3,
+                        "required_mastery":  {
+
+                                             },
+                        "required_clears":  [
+
+                                            ],
+                        "parameter_source":  "02_systems.md#24"
+                    },
+                    {
+                        "id":  "deep_fishing_treasure",
+                        "name":  "寻珍",
+                        "system":  "fishing",
+                        "min_realm":  3,
+                        "required_mastery":  {
+
+                                             },
+                        "required_clears":  [
+
+                                            ],
+                        "parameter_source":  "02_systems.md#24"
+                    },
+                    {
+                        "id":  "deep_cooking_simple",
+                        "name":  "家常鱼汤",
+                        "system":  "cooking",
+                        "min_realm":  4,
+                        "required_mastery":  {
+
+                                             },
+                        "required_clears":  [
+
+                                            ],
+                        "parameter_source":  "02_systems.md#24",
+                        "recipe_id":  "recipe_plain_fish"
+                    },
+                    {
+                        "id":  "deep_cooking_mining",
+                        "name":  "矿工鱼煲",
+                        "system":  "cooking",
+                        "min_realm":  4,
+                        "required_mastery":  {
+                                                 "cooking":  2
+                                             },
+                        "required_clears":  [
+
+                                            ],
+                        "parameter_source":  "02_systems.md#24",
+                        "recipe_id":  "recipe_mining_stew"
+                    },
+                    {
+                        "id":  "deep_cooking_garden",
+                        "name":  "灵圃花饮",
+                        "system":  "cooking",
+                        "min_realm":  4,
+                        "required_mastery":  {
+                                                 "cooking":  2
+                                             },
+                        "required_clears":  [
+                                                "lv_qi_001"
+                                            ],
+                        "parameter_source":  "02_systems.md#24",
+                        "recipe_id":  "recipe_garden_tea"
+                    },
+                    {
+                        "id":  "deep_talisman_antiregen",
+                        "name":  "镇灵符",
+                        "system":  "talisman",
+                        "min_realm":  4,
+                        "required_mastery":  {
+                                                 "talisman":  2
+                                             },
+                        "required_clears":  [
+                                                "lv_qi_003"
+                                            ],
+                        "parameter_source":  "02_systems.md#24",
+                        "recipe_id":  "talisman_zhenling"
+                    },
+                    {
+                        "id":  "deep_talisman_plan",
+                        "name":  "备战方案",
+                        "system":  "talisman",
+                        "min_realm":  4,
+                        "required_mastery":  {
+
+                                             },
+                        "required_clears":  [
+
+                                            ],
+                        "parameter_source":  "02_systems.md#24"
+                    },
+                    {
+                        "id":  "deep_formation_combo",
+                        "name":  "双阵组合",
+                        "system":  "formation",
+                        "min_realm":  5,
+                        "required_mastery":  {
+                                                 "formation":  3
+                                             },
+                        "required_clears":  [
+
+                                            ],
+                        "parameter_source":  "02_systems.md#24"
+                    },
+                    {
+                        "id":  "deep_formation_path",
+                        "name":  "寻踪阵盘",
+                        "system":  "formation",
+                        "min_realm":  5,
+                        "required_mastery":  {
+                                                 "formation":  2
+                                             },
+                        "required_clears":  [
+                                                "lv_qi_002"
+                                            ],
+                        "parameter_source":  "02_systems.md#24",
+                        "recipe_id":  "formation_pathfinder"
+                    },
+                    {
+                        "id":  "deep_body_course",
+                        "name":  "有限训练计划",
+                        "system":  "body_cultivation",
+                        "min_realm":  5,
+                        "required_mastery":  {
+
+                                             },
+                        "required_clears":  [
+
+                                            ],
+                        "parameter_source":  "02_systems.md#24"
+                    },
+                    {
+                        "id":  "deep_body_stance",
+                        "name":  "体修姿态",
+                        "system":  "body_cultivation",
+                        "min_realm":  5,
+                        "required_mastery":  {
+
+                                             },
+                        "required_clears":  [
+
+                                            ],
+                        "parameter_source":  "02_systems.md#24",
+                        "required_training_completions":  3
+                    },
+                    {
+                        "id":  "deep_inventory_protect",
+                        "name":  "背包保护",
+                        "system":  "inventory",
+                        "min_realm":  1,
+                        "required_mastery":  {
+
+                                             },
+                        "required_clears":  [
+
+                                            ],
+                        "parameter_source":  "02_systems.md#24"
+                    },
+                    {
+                        "id":  "deep_market_restocks",
+                        "name":  "目标补货",
+                        "system":  "shop",
+                        "min_realm":  2,
+                        "required_mastery":  {
+
+                                             },
+                        "required_clears":  [
+
+                                            ],
+                        "parameter_source":  "02_systems.md#24"
+                    },
+                    {
+                        "id":  "deep_journal_goal",
+                        "name":  "目标与异闻录",
+                        "system":  "journal",
+                        "min_realm":  1,
+                        "required_mastery":  {
+
+                                             },
+                        "required_clears":  [
+
+                                            ],
+                        "parameter_source":  "02_systems.md#24"
+                    }
+                ]
+}

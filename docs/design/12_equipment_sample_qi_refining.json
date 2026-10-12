@@ -540,7 +540,7 @@
       "required_mastery": { "smithing": 2 },
       "cost_materials": [
         { "item_id": "cold_iron_ore", "qty": 8 },
-        { "item_id": "equipment_shard", "qty": 3 }
+        { "item_id": "lingqi_shard", "qty": 3 }
       ],
       "cost_lingqi": 80,
       "required_input_events": 350,
@@ -621,7 +621,7 @@
       "output_template_id": "eq_weapon_runic_seal_staff",
       "required_mastery": { "smithing": 2, "talisman": 2 },
       "cost_materials": [
-        { "item_id": "talisman_shard", "qty": 6 },
+        { "item_id": "broken_talisman", "qty": 6 },
         { "item_id": "spirit_ink", "qty": 3 }
       ],
       "cost_lingqi": 85,
@@ -633,7 +633,7 @@
       "output_template_id": "eq_accessory_runic_seal_band",
       "required_mastery": { "smithing": 2 },
       "cost_materials": [
-        { "item_id": "talisman_shard", "qty": 4 },
+        { "item_id": "broken_talisman", "qty": 4 },
         { "item_id": "spirit_ink", "qty": 2 }
       ],
       "cost_lingqi": 65,
@@ -710,7 +710,7 @@
       "talisman_id": "talisman_enchant_atk",
       "display_name": "锋锐附魔符",
       "cost_materials": [
-        { "item_id": "talisman_shard", "qty": 3 },
+        { "item_id": "broken_talisman", "qty": 3 },
         { "item_id": "spirit_ink", "qty": 2 }
       ],
       "cost_lingqi": 55,
@@ -723,7 +723,7 @@
       "talisman_id": "talisman_enchant_def",
       "display_name": "坚壁附魔符",
       "cost_materials": [
-        { "item_id": "talisman_shard", "qty": 3 },
+        { "item_id": "broken_talisman", "qty": 3 },
         { "item_id": "spirit_pearl", "qty": 1 }
       ],
       "cost_lingqi": 55,
@@ -736,7 +736,7 @@
       "talisman_id": "talisman_enchant_spd",
       "display_name": "疾影附魔符",
       "cost_materials": [
-        { "item_id": "talisman_shard", "qty": 4 },
+        { "item_id": "broken_talisman", "qty": 4 },
         { "item_id": "spirit_ink", "qty": 1 },
         { "item_id": "dragon_saliva", "qty": 1 }
       ],

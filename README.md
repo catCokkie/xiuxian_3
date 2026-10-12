@@ -86,6 +86,15 @@ For a fuller coverage summary and current testing gaps, see `TESTING.md`.
 - input system notes: `docs/INPUT_SYSTEM.md`
 - design documents: `docs/design/00_vision.md` through `docs/design/14_save_migration.md`
 - master task list: `docs/design/10_todo.md`
+- operation depth blueprint: `docs/design/16_subsystem_deepening.md`, with authoritative rules in `02_systems.md` §24
+- player routes and chapter pacing: `docs/design/22_play_routes.md`
+- design-only route/action index: `docs/design/23_deepening_routes.json` (not loaded by the game)
+
+Check route dependencies, unlock gates, recipe references, and mastery budget snapshots:
+
+```bash
+python tools/design/validate_deepening.py
+```
 
 ## Directory Responsibilities
 
