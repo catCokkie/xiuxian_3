@@ -1345,7 +1345,9 @@ namespace Xiuxian.Scripts.Game
 
             double required = Mathf.Max(1.0f, (float)_playerProgressState.RealmExpRequired);
             double percent = _playerProgressState.RealmExp / required * 100.0;
-            _realmStageLabel.Text = UiText.RealmStage(_playerProgressState.RealmLevel, percent);
+            _realmStageLabel.Text = _playerProgressState.IsAtContentLimit
+                ? (_playerProgressState.RealmLevel == 10 ? "筑基初成" : RealmBreakthroughRules.DisplayName(_playerProgressState.RealmLevel))
+                : UiText.RealmStage(_playerProgressState.RealmLevel, percent);
         }
 
         private void SyncLogicFromControllerState()
@@ -1767,6 +1769,16 @@ namespace Xiuxian.Scripts.Game
             double percent = Mathf.Clamp((float)percentRaw, 0.0f, 100.0f);
             _cultivationProgressBar.Value = percent;
             string rhythmStatus = _cultivationRhythmState?.BuildStatusText() ?? "周天未加载";
+            if (_playerProgressState.IsAtContentLimit)
+            {
+                _cultivationProgressBar.Value = 100;
+                _cultivationProgressBar.TooltipText = $"本篇境界已达上限；修行储备 {_playerProgressState.RealmExp:0.0}，经验持续保留。\n{rhythmStatus}";
+                _breakthroughButton.Disabled = true;
+                _breakthroughButton.Text = "本篇终点";
+                _breakthroughButton.TooltipText = "筑基初成是本篇终点；可继续收集装备与渔获，后续境界尚未开放。";
+                if (_cultivationLabel != null) _cultivationLabel.Text = $"修行储备 {_playerProgressState.RealmExp:0.0} | {rhythmStatus}";
+                return;
+            }
             _cultivationProgressBar.TooltipText = $"修炼进度 {_playerProgressState.RealmExp:0.0}/{required:0.0}\n{rhythmStatus}";
             _breakthroughButton.Disabled = !_playerProgressState.CanBreakthrough;
             _breakthroughButton.Text = !_playerProgressState.HasRequiredBossClear ? "需击败最终 Boss" : _playerProgressState.CanBreakthrough ? "突破!" : "突破";
@@ -1975,6 +1987,7 @@ namespace Xiuxian.Scripts.Game
                 return;
             }
 
+            _smithingState.SynchronizeTargetLevel(targetProfile.EnhanceLevel);
             while (_smithingState.Production.CanProduce && _smithingState.CurrentProgress >= _smithingState.RequiredProgress
                 && _equippedItemsState.TryGetEquippedProfileById(_smithingState.TargetEquipmentId, out targetProfile)
                 && TryCompleteSmithingBatch(targetProfile)) { }
@@ -2630,7 +2643,7 @@ namespace Xiuxian.Scripts.Game
             return $"{recipe.DisplayName} {percent:0}%" + (CraftingProductionPlan.Supports(recipe.SystemId) ? " | " + state.Production.Summary : "");
         }
 
-        private CharacterStatModifier[] BuildNonEquipmentModifiers()
+        private CharacterStatModifier[] BuildNonEquipmentModifiers(bool includeBattleConsumables = true)
         {
             var result = new List<CharacterStatModifier>();
             Dictionary<string, int> items = _backpackState?.GetItemEntries() ?? new Dictionary<string, int>();
@@ -2668,7 +2681,7 @@ namespace Xiuxian.Scripts.Game
                 }
             }
 
-            if (!_battleConsumableModifier.Equals(default(CharacterStatModifier)))
+            if (includeBattleConsumables && !_battleConsumableModifier.Equals(default(CharacterStatModifier)))
             {
                 result.Add(_battleConsumableModifier);
             }

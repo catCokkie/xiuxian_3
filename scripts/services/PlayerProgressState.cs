@@ -33,8 +33,9 @@ namespace Xiuxian.Scripts.Services
         [Export] public bool AutoBreakthrough = false;
 
         public double RealmExpRequired => GetExpRequired(RealmLevel, GetRealmExpReductionRate());
-        public bool CanBreakthrough => RealmExp >= RealmExpRequired && HasRequiredBossClear;
-        public bool HasRequiredBossClear => RealmBreakthroughRules.CanCrossRealm(RealmLevel,
+        public bool IsAtContentLimit => RealmBreakthroughRules.IsAtContentLimit(RealmLevel);
+        public bool CanBreakthrough => !IsAtContentLimit && RealmExp >= RealmExpRequired && HasRequiredBossClear;
+        public bool HasRequiredBossClear => RealmBreakthroughRules.MeetsRegionalGate(RealmLevel,
             ServiceLocator.Instance?.LevelConfigLoader?.GetBossDefeatedLevelIds() ?? new Godot.Collections.Array<string>());
 
         public void AddRealmExp(double amount)

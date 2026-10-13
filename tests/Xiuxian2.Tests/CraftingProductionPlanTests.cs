@@ -86,6 +86,6 @@ public sealed class CraftingProductionPlanTests
         Assert.Equal(0, ((Dictionary<string, object>)alchemy["production"])["round_limit"]);
         Assert.Equal(1, ((Dictionary<string, object>)smithing["production"])["round_limit"]);
         Assert.True((bool)((Dictionary<string, object>)formation["production"])["paused"]);
-        Assert.Equal(17, store.GetValue("meta", "version", 0));
+        Assert.Equal(SaveMigrationRules.LatestVersion, store.GetValue("meta", "version", 0));
     }
 }

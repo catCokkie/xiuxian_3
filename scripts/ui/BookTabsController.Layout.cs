@@ -167,6 +167,7 @@ public partial class BookTabsController
         summary.AddChild(_homeRealmProgress);
         _homeResources = new Label { AutowrapMode = TextServer.AutowrapMode.WordSmart }; summary.AddChild(_homeResources);
         summary.AddChild(_cultivationStatusLabel);
+        BuildChapterUi();
 
         VBoxContainer activity = HomeSection("当前活动");
         _homeMode = new OptionButton { Name = "HomeActivityPicker" }; activity.AddChild(_homeMode);
@@ -202,6 +203,7 @@ public partial class BookTabsController
 
         VBoxContainer next = HomeSection("下一步");
         _homeNextStep = new Label { AutowrapMode = TextServer.AutowrapMode.WordSmart }; next.AddChild(_homeNextStep);
+        BuildPreparationUi(next);
         Button journal = new() { Text = "查看本轮动态" }; journal.Pressed += () => SetActiveLeftTab("BattleLogTab"); next.AddChild(journal);
         _masteryToggle = new Button { Name = "MasteryToggle", Text = "展开精通与详细状态", ToggleMode = true };
         _cultivationRoot.AddChild(_masteryToggle);
@@ -219,11 +221,16 @@ public partial class BookTabsController
     {
         if (_homeRealm == null || _playerProgressState == null) return;
         double percent = 100 * _playerProgressState.RealmExp / Math.Max(1, _playerProgressState.RealmExpRequired);
-        _homeRealm.Text = UiText.RealmStage(_playerProgressState.RealmLevel, percent);
+        bool capped = _playerProgressState.IsAtContentLimit;
+        _homeRealm.Text = capped ? RealmBreakthroughRules.DisplayName(_playerProgressState.RealmLevel)
+            + (_playerProgressState.RealmLevel == 10 ? " · 筑基初成" : " · 旧档境界保留") : UiText.RealmStage(_playerProgressState.RealmLevel, percent);
+        _homeRealmProgress!.Visible = !capped;
+        _cultivationBreakthroughButton.Visible = !capped;
         _homeRealmProgress!.Value = Math.Clamp(percent, 0, 100);
         _homeResources!.Text = $"灵气 {_resourceWalletState?.Lingqi ?? 0:N0}    悟性 {_resourceWalletState?.Insight ?? 0:N0}    灵石 {_resourceWalletState?.SpiritStones ?? 0:N0}";
         _cultivationStatusLabel.AddThemeColorOverride("font_color", new Color("705334"));
-        if (!_playerProgressState.HasRequiredBossClear) _cultivationStatusLabel.Text = "突破筑基前，需要击败当前阶段的最终 Boss。";
+        if (capped) _cultivationStatusLabel.Text = "本篇境界已达上限，继续修行的经验会保留；可查看篇章回顾与收藏。";
+        else if (!_playerProgressState.HasRequiredBossClear) _cultivationStatusLabel.Text = "突破筑基前，需要击败当前阶段的最终 Boss。";
         string action = _playerActionState?.ActionId ?? "dungeon";
         _homeActivity!.Text = action == "dungeon" ? $"{BuildCultivationActionSummary()} · 探索 {_exploreProgressController?.ExploreProgressValue ?? 0:0}%" : BuildCultivationFocusSummary();
         _homeBossChallenge!.Disabled = _exploreProgressController?.CanStartBossChallenge != true;
@@ -243,10 +250,16 @@ public partial class BookTabsController
         _refreshingHomeMode = false;
         foreach (var row in _homeActions) row.Value.Visible = row.Key == action;
         RefreshProductionControls();
+        RefreshPreparationUi();
+        RefreshChapterUi();
     }
 
     private string BuildHomeNextStep(string action)
     {
+        if (_playerProgressState?.IsAtContentLimit == true)
+            return ServiceLocator.Instance?.LevelConfigLoader?.GetBossDefeatedLevelIds().Contains(RealmBreakthroughRules.FinalRegionId) == true
+                ? "本篇境界已完成；可收集装备、探索渔获或尝试其他准备路线。"
+                : "旧档境界已保留，可继续补齐五区首通记录并探索收藏。";
         if (action == "dungeon" && _exploreProgressController?.IsRecoveringForBattle == true) return _exploreProgressController.HealthRecoverySummary;
         if (_playerProgressState?.CanBreakthrough == true) return "经验与通关条件已满足，点击上方“突破”提升境界。";
         if (action == "dungeon" && _exploreProgressController?.CanStartBossChallenge == true) return "探索已满，点击“挑战 Boss”完成本区；也可以先准备丹药与装备。";

@@ -867,8 +867,8 @@ public partial class BookTabsController : Control
         sb.AppendLine();
         sb.AppendLine("成长状态");
         sb.AppendLine($"- 当前境界: 炼气{_playerProgressState.RealmLevel}层");
-        sb.AppendLine($"- 境界经验: {_playerProgressState.RealmExp:0.0}/{expRequired:0.0} ({expPercent:0}%)");
-        sb.AppendLine($"- 突破状态: {UiText.CultivationBreakthroughStatus(_playerProgressState.CanBreakthrough, Mathf.Max(0.0f, (float)(expRequired - _playerProgressState.RealmExp)))}");
+        sb.AppendLine(_playerProgressState.IsAtContentLimit ? $"- 修行储备: {_playerProgressState.RealmExp:0.0}（经验保留）" : $"- 境界经验: {_playerProgressState.RealmExp:0.0}/{expRequired:0.0} ({expPercent:0}%)");
+        sb.AppendLine(_playerProgressState.IsAtContentLimit ? "- 境界状态: 本篇境界已达上限，后续境界尚未开放" : $"- 突破状态: {UiText.CultivationBreakthroughStatus(_playerProgressState.CanBreakthrough, Mathf.Max(0.0f, (float)(expRequired - _playerProgressState.RealmExp)))}");
         sb.AppendLine($"- 悟性储备: {_resourceWalletState.Insight:0.0}（{BuildInsightStatusSummary()}）");
         sb.AppendLine();
         sb.AppendLine("战斗准备");

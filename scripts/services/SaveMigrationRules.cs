@@ -11,7 +11,7 @@ namespace Xiuxian.Scripts.Services
     /// </summary>
     public static class SaveMigrationRules
     {
-        public const int LatestVersion = 17;
+        public const int LatestVersion = 18;
 
         private const string DefaultLeftTab = "CultivationTab";
         private const string DefaultRightTab = "BugTab";
@@ -189,6 +189,10 @@ namespace Xiuxian.Scripts.Services
                         case 16:
                             MigrateV16ToV17(cfg);
                             version = 17;
+                            break;
+                        case 17:
+                            MigrateV17ToV18(cfg);
+                            version = 18;
                             break;
                         default:
                             version = LatestVersion;
@@ -731,6 +735,28 @@ namespace Xiuxian.Scripts.Services
                     ["round_limit"] = string.IsNullOrEmpty(target) ? 1 : 0,
                     ["completed_rounds"] = 0, ["paused"] = false,
                 });
+                cfg.SetValue(section, "state", state);
+            }
+        }
+
+        private static void MigrateV17ToV18(IMigrationStore cfg)
+        {
+            foreach (string section in new[] { "alchemy", "smithing", "talisman", "cooking", "formation" })
+            {
+                var state = EnsureDictionaryValue(cfg, section, "state");
+                var projects = state.TryGetValue("projects", out object value) && value is Dictionary<string, object> records
+                    ? records : new Dictionary<string, object>();
+                string target = ReadString(GetDictionaryValue(state, section == "smithing" ? "target_equipment_id" : "selected_recipe"), "");
+                int level = section == "smithing" ? Math.Max(0, (int)((ReadDouble(GetDictionaryValue(state, "required_progress"), 100) - 100) / 50)) : -1;
+                if (section == "smithing") state.TryAdd("enhance_level", level);
+                if (!string.IsNullOrEmpty(target)) projects.TryAdd(target, new Dictionary<string, object>
+                {
+                    ["progress"] = GetDictionaryValue(state, "progress") ?? 0.0,
+                    ["required_progress"] = GetDictionaryValue(state, "required_progress") ?? 100.0,
+                    ["production"] = GetDictionaryValue(state, "production") ?? new CraftingProductionPlan().ToPlainDictionary(),
+                    ["enhance_level"] = level,
+                });
+                state["projects"] = projects;
                 cfg.SetValue(section, "state", state);
             }
         }

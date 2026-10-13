@@ -80,7 +80,7 @@ namespace Xiuxian.Scripts.Services
             new(ItemAutoHarvest, CategoryUtility, "自动收获符", "灵田成熟后自动收获；种子和播种灵石充足时自动重播。", 500, GrantPermanent, LifetimeLimit: 1),
             new(ItemDoubleYield, CategoryUtility, "双倍产出符（1h 活跃时间）", "所有采集/加工产出 ×2。", 100, GrantActiveBuff, LifetimeLimit: 0, DailyLimit: 3),
 
-            new(ItemBreakthroughPill, CategoryRare, "突破丹（筑基用）", "永久降低突破经验需求 10%。", 2000, GrantPermanent, LifetimeLimit: 1),
+            new(ItemBreakthroughPill, CategoryRare, "突破丹", "永久降低突破经验需求 10%；筑基初成后暂不出售。", 2000, GrantPermanent, LifetimeLimit: 1),
             new(ItemPageFragment, CategoryRare, "异闻录·残页", "收集 10 页可兑换一件随机装备。", 500, GrantBackpackItem, "page_fragment", 1, DailyLimit: 3),
         };
 

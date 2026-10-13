@@ -314,7 +314,9 @@ namespace Xiuxian.Scripts.Ui
 
         private void OnRealmLevelUp(int newRealmLevel)
         {
-            string message = $"突破成功 → {RealmBreakthroughRules.DisplayName(newRealmLevel)}";
+            string message = newRealmLevel == RealmBreakthroughRules.ChapterEndLevel
+                ? "筑基初成 · 炼气篇完成！可在书卷回顾五区记录与继续收藏。"
+                : $"突破成功 → {RealmBreakthroughRules.DisplayName(newRealmLevel)}";
             Enqueue(message, new Color("C8A050"));
             PushEventLog(EventLogState.CategoryBreakthrough, message, accentId: EventLogState.AccentHighlight);
         }

@@ -67,10 +67,15 @@ namespace Xiuxian.Scripts.Tests
             var production = (Control)tabs.FindChild("HomeProduction", true, false);
             var mode = production.GetNode<OptionButton>("ProductionActions/ProductionMode");
             var rounds = production.GetNode<SpinBox>("ProductionActions/ProductionRounds");
+            var dirty = typeof(PrototypeRootController).GetField("_saveDirty", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!;
+            dirty.SetValue(root, false);
             mode.Select(0); rounds.GetLineEdit().Text = "4"; production.GetNode<Button>("ProductionActions/ProductionStart").EmitSignal(Button.SignalName.Pressed);
             Check(s.AlchemyState.Production.RoundLimit == 4 && s.AlchemyState.Production.CompletedRounds == 0, "UI custom rounds starts a fresh completed plan");
+            Check((bool)dirty.GetValue(root)!, "production settings mark autosave dirty even before new inputs");
+            dirty.SetValue(root, false);
             production.GetNode<Button>("ProductionActions/ProductionStop").EmitSignal(Button.SignalName.Pressed);
             Check(s.AlchemyState.Production.Paused, "UI stop freezes the selected plan");
+            Check((bool)dirty.GetValue(root)!, "manual production stop marks autosave dirty without changing action mode");
             mode.Select(1); production.GetNode<Button>("ProductionActions/ProductionStart").EmitSignal(Button.SignalName.Pressed);
             Check(s.AlchemyState.Production.Continuous && s.AlchemyState.Production.CanProduce, "UI continuous mode explicitly enables unlimited production");
             void stateRoundtrip() => s.AlchemyState.FromDictionary(Roundtrip(s.AlchemyState.ToDictionary()));

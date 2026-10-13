@@ -67,6 +67,8 @@ namespace Xiuxian.Scripts.Services
             }
 
             int realmLevel = ServiceLocator.Instance?.PlayerProgressState?.RealmLevel ?? 1;
+            if (itemId == ShopRules.ItemBreakthroughPill && RealmBreakthroughRules.IsAtContentLimit(realmLevel) && !HasBreakthroughPill)
+            { reason = "本篇境界已达上限，暂无进一步突破内容"; return false; }
             if (!item.IsAvailable) { reason = "功能预留，暂不可购买"; return false; }
             if ((itemId == ShopRules.ItemGardenPlot3 || itemId == ShopRules.ItemGardenPlot4 || itemId == ShopRules.ItemGardenPlot5 || itemId == ShopRules.ItemGardenPlot6)
                 && (_gardenState?.GetUnlockedPlotCount() ?? 2) >= GardenRules.MaxPlotCount)

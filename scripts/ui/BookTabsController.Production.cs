@@ -35,6 +35,17 @@ public partial class BookTabsController
         "talisman" => _talismanState?.SelectedRecipeId ?? "", "formation" => _formationState?.SelectedRecipeId ?? "",
         "cooking" => ServiceLocator.Instance?.CookingState?.SelectedRecipeId ?? "", _ => "",
     };
+    private void NotifyProductionChanged(string system)
+    {
+        switch (system)
+        {
+            case "alchemy": _alchemyState?.NotifyProductionChanged(); break;
+            case "smithing": _smithingState?.NotifyProductionChanged(); break;
+            case "talisman": _talismanState?.NotifyProductionChanged(); break;
+            case "formation": _formationState?.NotifyProductionChanged(); break;
+            case "cooking": ServiceLocator.Instance?.CookingState?.NotifyProductionChanged(); break;
+        }
+    }
     private void BuildProductionControls(VBoxContainer parent, string fixedSystem = "")
     {
         VBoxContainer root = new() { Name = fixedSystem == "" ? "HomeProduction" : "EquipmentProduction", SizeFlagsHorizontal = SizeFlags.ExpandFill };
@@ -54,12 +65,14 @@ public partial class BookTabsController
             if (GetProductionPlan(system) is not { } plan || GetProductionTarget(system) == "") return;
             rounds.Apply();
             plan.Start(mode.Selected == 1, (int)rounds.Value);
+            NotifyProductionChanged(system);
             _playerActionState?.SetAction(system);
             RefreshDynamicTabContent(); RefreshProductionControls();
         };
         stop.Pressed += () =>
         {
-            GetProductionPlan(fixedSystem == "" ? _playerActionState?.ActionId ?? "" : fixedSystem)?.Stop();
+            string system = fixedSystem == "" ? _playerActionState?.ActionId ?? "" : fixedSystem;
+            GetProductionPlan(system)?.Stop(); NotifyProductionChanged(system);
             RefreshProductionControls();
         };
     }
@@ -85,7 +98,7 @@ public partial class BookTabsController
                 "talisman" => _cultivationTalismanOption, "formation" => _cultivationFormationOption,
                 "cooking" => _productionCookingRecipeOption, _ => null,
             };
-            if (picker != null) picker.TooltipText = "切换不同制作项目会重置当前批次进度与计划；同一项目停止、继续或重新选择会保留未完成进度。";
+            if (picker != null) picker.TooltipText = "切换项目会冻结原进度与轮数；切回来后点击继续。只有当前项目会推进。强化等级在其他途径发生变化时，旧批次进度会重新校验。";
             if (view.LastPlan != plan || view.LastTarget != target || view.LastLimit != plan.RoundLimit)
             {
                 view.Mode.Select(plan.Continuous ? 1 : 0); view.Rounds.Value = Math.Max(1, plan.RoundLimit);

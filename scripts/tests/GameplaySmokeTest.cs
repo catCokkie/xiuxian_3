@@ -161,6 +161,7 @@ namespace Xiuxian.Scripts.Tests
                 Check(s.ShopState.TryPurchase(ShopRules.ItemFishingPermitHualongpo, out _) && s.FishingState.CanSelectPond("fishing_hualong_pond"), "purchased fishing permit immediately unlocks the pond");
                 RunReturnAndRecoveryChecks((PrototypeRootController)root, controller, s);
                 RunProductionChecks((PrototypeRootController)root, controller, s);
+                RunPreparationAndProjectChecks((PrototypeRootController)root, controller, s);
                 GD.Print($"SMOKE SUCCESS: {_checks} checks");
                 if (Array.IndexOf(OS.GetCmdlineUserArgs(), "--render-smoke") >= 0) CaptureUi(root);
                 else GetTree().Quit(0);

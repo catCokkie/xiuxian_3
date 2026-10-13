@@ -9,6 +9,7 @@ namespace Xiuxian.Scripts.Services
 
         public string SelectedRecipeId { get; private set; } = string.Empty;
         public CraftingProductionPlan Production { get; } = new();
+        private readonly CraftingProjectRecords _projects = new();
         public float CurrentProgress { get; private set; }
         public float RequiredProgress { get; private set; } = 100.0f;
 
@@ -19,6 +20,8 @@ namespace Xiuxian.Scripts.Services
         public void SelectRecipe(string recipeId)
         {
             if (SelectedRecipeId == (recipeId ?? string.Empty)) return;
+            Production.Stop();
+            if (UsesProductionPlan) _projects.Capture(SelectedRecipeId, CurrentProgress, RequiredProgress, Production);
             Production.Configure(false);
             Production.Stop();
             IRecipeDefinition? recipe = ActivityRegistry.GetRecipe(recipeId);
@@ -34,6 +37,8 @@ namespace Xiuxian.Scripts.Services
                 CurrentProgress = 0.0f;
                 RequiredProgress = recipe.RequiredInputEvents;
             }
+
+            if (UsesProductionPlan && _projects.TryRestore(SelectedRecipeId, Production, out float savedProgress, out _, out _)) CurrentProgress = savedProgress;
 
             EmitSignal(SignalName.RecipeProgressChanged, SelectedRecipeId, CurrentProgress, RequiredProgress);
         }
@@ -61,6 +66,8 @@ namespace Xiuxian.Scripts.Services
             EmitSignal(SignalName.RecipeProgressChanged, SelectedRecipeId, CurrentProgress, RequiredProgress);
         }
 
+        public void NotifyProductionChanged() => EmitSignal(SignalName.RecipeProgressChanged, SelectedRecipeId, CurrentProgress, RequiredProgress);
+
         public virtual Godot.Collections.Dictionary<string, Variant> ToDictionary()
         {
             var data = new Godot.Collections.Dictionary<string, Variant>
@@ -70,6 +77,9 @@ namespace Xiuxian.Scripts.Services
                 ["required_progress"] = RequiredProgress,
             };
             Production.WriteTo(data);
+            if (UsesProductionPlan) _projects.Capture(SelectedRecipeId, CurrentProgress, RequiredProgress, Production);
+            _projects.WriteTo(data);
+
             return data;
         }
 
@@ -79,6 +89,7 @@ namespace Xiuxian.Scripts.Services
             CurrentProgress = data.ContainsKey("progress") ? Mathf.Max(0.0f, (float)data["progress"].AsDouble()) : 0.0f;
             RequiredProgress = data.ContainsKey("required_progress") ? Mathf.Max(1.0f, (float)data["required_progress"].AsDouble()) : 100.0f;
             Production.ReadFrom(data, HasSelectedRecipe);
+            _projects.ReadFrom(data);
             EmitSignal(SignalName.RecipeProgressChanged, SelectedRecipeId, CurrentProgress, RequiredProgress);
         }
     }

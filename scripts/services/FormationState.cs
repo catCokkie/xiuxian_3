@@ -10,6 +10,7 @@ namespace Xiuxian.Scripts.Services
 
         public string SelectedRecipeId { get; private set; } = string.Empty;
         public CraftingProductionPlan Production { get; } = new();
+        private readonly CraftingProjectRecords _projects = new();
         public float CurrentProgress { get; private set; }
         public float RequiredProgress { get; private set; } = 100.0f;
         public string ActivePrimaryId { get; private set; } = string.Empty;
@@ -25,6 +26,8 @@ namespace Xiuxian.Scripts.Services
         public void SelectRecipe(string recipeId)
         {
             if (SelectedRecipeId == (recipeId ?? string.Empty)) return;
+            Production.Stop();
+            _projects.Capture(SelectedRecipeId, CurrentProgress, RequiredProgress, Production);
             Production.Configure(false);
             Production.Stop();
             IRecipeDefinition? recipe = ActivityRegistry.GetRecipe(recipeId);
@@ -40,6 +43,8 @@ namespace Xiuxian.Scripts.Services
                 CurrentProgress = 0.0f;
                 RequiredProgress = recipe.RequiredInputEvents;
             }
+
+            if (_projects.TryRestore(SelectedRecipeId, Production, out float savedProgress, out _, out _)) CurrentProgress = savedProgress;
 
             EmitSignal(SignalName.RecipeProgressChanged, SelectedRecipeId, CurrentProgress, RequiredProgress);
         }
@@ -106,6 +111,8 @@ namespace Xiuxian.Scripts.Services
             return true;
         }
 
+        public void NotifyProductionChanged() => EmitSignal(SignalName.RecipeProgressChanged, SelectedRecipeId, CurrentProgress, RequiredProgress);
+
         public Godot.Collections.Dictionary<string, Variant> ToDictionary()
         {
             var data = FormationPersistenceRules.ToDictionary(new FormationPersistenceRules.FormationSnapshot(
@@ -117,6 +124,9 @@ namespace Xiuxian.Scripts.Services
                 _craftedIds,
                 _inventory));
             Production.WriteTo(data);
+            _projects.Capture(SelectedRecipeId, CurrentProgress, RequiredProgress, Production);
+            _projects.WriteTo(data);
+
             return data;
         }
 
@@ -125,6 +135,7 @@ namespace Xiuxian.Scripts.Services
             FormationPersistenceRules.FormationSnapshot snapshot = FormationPersistenceRules.FromDictionary(data);
             SelectedRecipeId = snapshot.SelectedRecipeId;
             Production.ReadFrom(data, HasSelectedRecipe);
+            _projects.ReadFrom(data);
             CurrentProgress = snapshot.Progress;
             RequiredProgress = snapshot.RequiredProgress;
             ActivePrimaryId = snapshot.ActivePrimaryId;

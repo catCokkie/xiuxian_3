@@ -256,7 +256,7 @@ namespace Xiuxian.Scripts.Game
             return true;
         }
 
-        private static MaterialCost[] GetEffectiveInputs(IRecipeDefinition recipe, int masteryLevel)
+        public static MaterialCost[] GetEffectiveInputs(IRecipeDefinition recipe, int masteryLevel)
         {
             double discount = recipe.SystemId switch
             {
