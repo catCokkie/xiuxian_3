@@ -47,6 +47,7 @@ namespace Xiuxian.Scripts.Tests
                 s.PlayerActionState.SetAction("talisman");
                 var talisman = s.TalismanState!;
                 talisman.SelectRecipe("talisman_fire_charm");
+                talisman.Production.Configure(true);
                 controller.AdvanceOfflineCrafting(400);
                 Check(talisman.CurrentProgress == 0, "missing materials freeze partial crafting");
                 s.BackpackState!.AddItem("broken_talisman", 30); s.BackpackState.AddItem("spirit_ink", 30);
@@ -71,6 +72,7 @@ namespace Xiuxian.Scripts.Tests
                 s.BackpackState.AddItem("spirit_herb", 30);
                 s.PlayerActionState.SetAction("alchemy"); s.AlchemyState!.SelectRecipe("recipe_huiqi_dan");
                 int potions = s.PotionInventoryState!.GetPotionEntries().GetValueOrDefault("potion_huiqi_dan");
+                s.AlchemyState.Production.Configure(true);
                 controller.AdvanceOfflineCrafting(450);
                 Check(s.PotionInventoryState.GetPotionEntries().GetValueOrDefault("potion_huiqi_dan") == potions + 6 && s.AlchemyState.CurrentProgress == 50, "offline alchemy awards two funded batches");
                 Check(s.GardenState!.GetUnlockedPlotCount() == 6, "garden mastery unlocks six plots");
@@ -158,6 +160,7 @@ namespace Xiuxian.Scripts.Tests
                 Check(!s.ShopState.CanPurchase(ShopRules.ItemGardenPlot3, out _), "full garden does not sell redundant plot expansion");
                 Check(s.ShopState.TryPurchase(ShopRules.ItemFishingPermitHualongpo, out _) && s.FishingState.CanSelectPond("fishing_hualong_pond"), "purchased fishing permit immediately unlocks the pond");
                 RunReturnAndRecoveryChecks((PrototypeRootController)root, controller, s);
+                RunProductionChecks((PrototypeRootController)root, controller, s);
                 GD.Print($"SMOKE SUCCESS: {_checks} checks");
                 if (Array.IndexOf(OS.GetCmdlineUserArgs(), "--render-smoke") >= 0) CaptureUi(root);
                 else GetTree().Quit(0);

@@ -124,14 +124,40 @@ public partial class LayoutSmokeTest : Node
                 var rows = _tabs.FindChildren("HomeAction_*", "HFlowContainer", true, false).Cast<Control>().ToArray();
                 Check(rows.Count(x => x.IsVisibleInTree()) == 1 && rows.Single(x => x.IsVisibleInTree()).Name == "HomeAction_" + mode, mode + ": only relevant actions shown");
                 Check(!_root.GetNode<Control>("MainBarWindow/Chrome/BattleTrack/EnemySlotTexture").Visible, mode + ": compact stage hides enemies");
+                var production = (Control)_tabs.FindChild("HomeProduction", true, false);
+                Check(production.IsVisibleInTree() == CraftingProductionPlan.Supports(mode), mode + ": production controls appear only for processing activities");
                 await Capture("activity_" + mode);
             }
+            s.PlayerActionState!.SetAction("alchemy"); s.AlchemyState!.SelectRecipe("recipe_huiqi_dan");
+            await Settle();
+            var productionPanel = (Control)_tabs.FindChild("HomeProduction", true, false);
+            var productionMode = productionPanel.GetNode<OptionButton>("ProductionActions/ProductionMode");
+            var productionRounds = productionPanel.GetNode<SpinBox>("ProductionActions/ProductionRounds");
+            productionRounds.GetLineEdit().Text = "5";
+            productionPanel.GetNode<Button>("ProductionActions/ProductionStart").EmitSignal(Button.SignalName.Pressed);
+            await Settle();
+            Check(s.AlchemyState.Production.RoundLimit == 5 && productionPanel.GetNode<Label>("ProductionStatus").Text.Contains("0/5"), "production: custom round count and status agree");
+            await Capture("production_rounds");
+            productionMode.Select(1); productionMode.EmitSignal(OptionButton.SignalName.ItemSelected, 1L);
+            productionPanel.GetNode<Button>("ProductionActions/ProductionStart").EmitSignal(Button.SignalName.Pressed);
+            await Settle();
+            Check(s.AlchemyState.Production.Continuous && !productionRounds.Visible, "production: continuous mode hides finite round input");
+            await Capture("production_continuous");
             foreach (Vector2I dimensions in new[] { new Vector2I(1600, 900), new Vector2I(1280, 720), new Vector2I(1024, 768), new Vector2I(800, 600) })
             {
                 GetWindow().Size = dimensions;
                 await Settle();
                 string scenario = dimensions.ToString();
                 Check(Inside(GetViewport().GetVisibleRect(), _book.GetGlobalRect()), scenario + ": book fits viewport");
+                s.PlayerActionState!.SetAction("alchemy"); await Select("CultivationTab");
+                foreach (Control control in productionPanel.GetNode<Control>("ProductionActions").GetChildren())
+                    if (control.Visible) Check(Inside(productionPanel.GetGlobalRect(), control.GetGlobalRect()), scenario + ": production action fits its wrapping row");
+                if (dimensions.X == 800)
+                {
+                    PageRoot("CultivationScroll").GetNode<Control>("CultivationRoot").GetParent<ScrollContainer>().ScrollVertical = 220;
+                    await Settle(); await Capture("small_production");
+                    ((ScrollContainer)PageRoot("CultivationScroll")).ScrollVertical = 0;
+                }
                 foreach (string page in Pages.Append("SettingsTab").Append("BugTab"))
                 {
                     await Select(page);

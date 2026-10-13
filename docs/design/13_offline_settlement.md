@@ -43,7 +43,7 @@
 - `formation`（阵法，参见 §18E — 支持）
 - `body_cultivation`（体修，参见 §18B — 不支持，回退修炼）
 
-> 运行口径：全部11模式按同一衰减预算结算一次基础修行；副本额外推进至BossReady并估算掉落；灵田独立生长等待手动收获；五种加工按50%预算执行真实批次。矿脉/灵渔/体修只领取基础修行，不生成材料或永久训练。任务状态仅见`10_todo.md`。
+> 运行口径：全部11模式按同一衰减预算结算一次基础修行；副本额外推进至BossReady并估算掉落；灵田独立生长等待手动收获；五种加工按50%预算执行真实批次，并共用在线生产轮数及停止状态（02§24.2）。矿脉/灵渔/体修只领取基础修行，不生成材料或永久训练。任务状态仅见`10_todo.md`。
 
 ### 2.3 当前不自动离线执行的行为
 - `突破`
@@ -475,11 +475,11 @@
 
 ### 17.1 前置条件
 - 退出前 `action_id = alchemy`、且 `action_target_id` 包含有效配方 ID。
-- 背包中必须有足够材料完成至少 1 批次；否则该行动视为无效，回退为修炼离线。
+- 退出时保存有效丹方及生产计划；缺料时只暂停加工，统一基础成长仍结算。
 
 ### 17.2 结算流程
 1. 计算 `offline_input_budget`（复用 §5 分组输入率模型）。
-2. `completed_batches = floor((offline_input_budget * 0.5 + saved_recipe_progress) / recipe_input_per_batch)`
+2. `budget_batch_upper_bound = floor((offline_input_budget * 0.5 + saved_recipe_progress) / recipe_input_per_batch)`；实际批数还受剩余生产轮数、手动停止、材料和精通限制，不能直接按上界发货
 3. 按批次逐次检查材料是否充足：
    - 充足 → 扣除材料，产出丹药
    - 不足 → 停止加工，保留进度；基础成长持续，剩余预算不额外重复发奖
@@ -487,9 +487,9 @@
 5. 生成摘要：`离线炼丹：完成 X 批次，获得 回气丹×Y`。
 
 ### 17.3 流量约束
-- 无人为批次上限。材料不足时立即停止，不允许负资源。
-- 天然闸门：灵草产出已受掉落表 `daily_cap` / `hourly_soft_cap` / `repeat_decay_factor` 三重限制，玩家可囤积的材料本身有上界。
-- 设计依据：参考 Melvor Idle 离线 = 纯时间 × 效率，材料耗尽即停，不设批次上限。
+- 按退出时保存的“指定轮数 / 一直生产”设置执行；有限计划只完成剩余轮数，手动停止或已完成计划不加工。材料不足时暂停并保留进度与剩余轮数，不允许负资源。
+- 副本灵草收入受掉落配额和衰减限制；生产轮数提供明确停止点，不能将每日收入限制视为总库存上限。
+- 设计依据：参考 Melvor Idle 离线 = 纯时间 × 效率，材料耗尽暂停；指定轮数到达即停，一直生产没有人为轮数上限。
 
 ### 17.4 验收标准
 - 炼丹模式离线后登录，丹药库存增加、材料减少。
@@ -579,7 +579,7 @@
 
 ### 18C.2 结算流程
 1. 计算 `offline_input_budget`（复用 §5 分组输入率模型）。
-2. `completed_batches = floor((offline_input_budget * 0.5 + saved_recipe_progress) / recipe_input_per_batch)`
+2. `budget_batch_upper_bound = floor((offline_input_budget * 0.5 + saved_recipe_progress) / recipe_input_per_batch)`；实际批数还受剩余生产轮数、手动停止、材料和精通限制，不能直接按上界发货
 3. 按批次逐次检查材料 + 灵气是否充足：
    - 充足 → 扣除材料 + 灵气，产出符咒
    - 不足 → 停止
@@ -587,7 +587,7 @@
 5. 生成摘要：`离线符箓：完成 X 批次，获得火球符×Y`。
 
 ### 18C.3 流量约束
-- 与炼丹一致：材料耗尽即停，不设批次上限。
+- 与炼丹一致：材料耗尽暂停；指定轮数到达即停，一直生产没有人为轮数上限。
 
 ### 18C.4 验收标准
 - 符箓模式离线后登录，符咒库存增加、材料/灵气减少。
@@ -602,7 +602,7 @@
 
 ### 18D.2 结算流程
 1. 计算 `offline_input_budget`（复用 §5 分组输入率模型）。
-2. `completed_batches = floor((offline_input_budget * 0.5 + saved_recipe_progress) / recipe_input_per_batch)`
+2. `budget_batch_upper_bound = floor((offline_input_budget * 0.5 + saved_recipe_progress) / recipe_input_per_batch)`；实际批数还受剩余生产轮数、手动停止、材料和精通限制，不能直接按上界发货
 3. 按批次逐次检查材料 + 灵气是否充足：
    - 充足 → 扣除材料 + 灵气，产出灵膳
    - 不足 → 停止
@@ -610,7 +610,7 @@
 5. 生成摘要：`离线烹饪：完成 X 批次，获得灵鱼粥×Y`。
 
 ### 18D.3 流量约束
-- 与炼丹一致：材料耗尽即停，不设批次上限。
+- 与炼丹一致：材料耗尽暂停；指定轮数到达即停，一直生产没有人为轮数上限。
 
 ### 18D.4 验收标准
 - 烹饪模式离线后登录，灵膳库存增加、材料/灵气减少。
@@ -625,7 +625,7 @@
 
 ### 18E.2 结算流程
 1. 计算 `offline_input_budget`（复用 §5 分组输入率模型）。
-2. `completed_batches = floor((offline_input_budget * 0.5 + saved_recipe_progress) / recipe_input_per_batch)`
+2. `budget_batch_upper_bound = floor((offline_input_budget * 0.5 + saved_recipe_progress) / recipe_input_per_batch)`；实际批数还受剩余生产轮数、手动停止、材料和精通限制，不能直接按上界发货
 3. 按批次逐次检查材料 + 灵气是否充足：
    - 充足 → 扣除材料 + 灵气，产出阵盘
    - 不足 → 停止
@@ -633,7 +633,7 @@
 5. 生成摘要：`离线阵法：完成 X 批次，获得聚灵阵盘×Y`。
 
 ### 18E.3 流量约束
-- 与炼丹一致：材料耗尽即停，不设批次上限。
+- 与炼丹一致：材料耗尽暂停；指定轮数到达即停，一直生产没有人为轮数上限。
 
 ### 18E.4 验收标准
 - 阵法模式离线后登录，阵盘库存增加、材料/灵气减少。

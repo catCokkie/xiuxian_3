@@ -11,7 +11,7 @@ namespace Xiuxian.Scripts.Services
     /// </summary>
     public static class SaveMigrationRules
     {
-        public const int LatestVersion = 16;
+        public const int LatestVersion = 17;
 
         private const string DefaultLeftTab = "CultivationTab";
         private const string DefaultRightTab = "BugTab";
@@ -185,6 +185,10 @@ namespace Xiuxian.Scripts.Services
                         case 15:
                             MigrateV15ToV16(cfg);
                             version = 16;
+                            break;
+                        case 16:
+                            MigrateV16ToV17(cfg);
+                            version = 17;
                             break;
                         default:
                             version = LatestVersion;
@@ -714,6 +718,21 @@ namespace Xiuxian.Scripts.Services
             var explore = EnsureDictionaryValue(cfg, "explore", "runtime");
             EnsureMissing(explore, "recovery_remainder", 0.0);
             cfg.SetValue("explore", "runtime", explore);
+        }
+
+        private static void MigrateV16ToV17(IMigrationStore cfg)
+        {
+            foreach (string section in new[] { "alchemy", "smithing", "talisman", "cooking", "formation" })
+            {
+                var state = EnsureDictionaryValue(cfg, section, "state");
+                string target = ReadString(GetDictionaryValue(state, section == "smithing" ? "target_equipment_id" : "selected_recipe"), "");
+                state.TryAdd("production", new Dictionary<string, object>
+                {
+                    ["round_limit"] = string.IsNullOrEmpty(target) ? 1 : 0,
+                    ["completed_rounds"] = 0, ["paused"] = false,
+                });
+                cfg.SetValue(section, "state", state);
+            }
         }
 
         private static Dictionary<string, object> EnsureDictionaryValue(IMigrationStore cfg, string section, string key)

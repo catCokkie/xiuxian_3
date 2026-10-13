@@ -9,6 +9,7 @@ namespace Xiuxian.Scripts.Services
         public delegate void RecipeProgressChangedEventHandler(string selectedRecipeId, float currentProgress, float requiredProgress);
 
         public string SelectedRecipeId { get; private set; } = string.Empty;
+        public CraftingProductionPlan Production { get; } = new();
         public float CurrentProgress { get; private set; }
         public float RequiredProgress { get; private set; } = 100.0f;
         public string ActivePrimaryId { get; private set; } = string.Empty;
@@ -23,6 +24,9 @@ namespace Xiuxian.Scripts.Services
 
         public void SelectRecipe(string recipeId)
         {
+            if (SelectedRecipeId == (recipeId ?? string.Empty)) return;
+            Production.Configure(false);
+            Production.Stop();
             IRecipeDefinition? recipe = ActivityRegistry.GetRecipe(recipeId);
             if (recipe == null)
             {
@@ -43,16 +47,20 @@ namespace Xiuxian.Scripts.Services
         public bool AdvanceProgress(int inputEvents)
         {
             if (!HasSelectedRecipe) return false;
+            if (!Production.CanProduce) return false;
             double inputRate = 1.0;
             CurrentProgress = BatchProgressRules.Advance(CurrentProgress, inputEvents, RequiredProgress, inputRate);
+            CurrentProgress = Production.BoundProgress(CurrentProgress, RequiredProgress);
             EmitSignal(SignalName.RecipeProgressChanged, SelectedRecipeId, CurrentProgress, RequiredProgress);
             return CurrentProgress >= RequiredProgress;
         }
 
         public void CompleteBatch()
         {
-            if (CurrentProgress < RequiredProgress) return;
+            if (CurrentProgress < RequiredProgress || !Production.CanProduce) return;
             CurrentProgress = BatchProgressRules.Consume(CurrentProgress, RequiredProgress);
+            Production.CommitBatch();
+            if (Production.Finished) CurrentProgress = 0;
             EmitSignal(SignalName.RecipeProgressChanged, SelectedRecipeId, CurrentProgress, RequiredProgress);
         }
 
@@ -100,7 +108,7 @@ namespace Xiuxian.Scripts.Services
 
         public Godot.Collections.Dictionary<string, Variant> ToDictionary()
         {
-            return FormationPersistenceRules.ToDictionary(new FormationPersistenceRules.FormationSnapshot(
+            var data = FormationPersistenceRules.ToDictionary(new FormationPersistenceRules.FormationSnapshot(
                 SelectedRecipeId,
                 CurrentProgress,
                 RequiredProgress,
@@ -108,12 +116,15 @@ namespace Xiuxian.Scripts.Services
                 ActiveSecondaryId,
                 _craftedIds,
                 _inventory));
+            Production.WriteTo(data);
+            return data;
         }
 
         public void FromDictionary(Godot.Collections.Dictionary<string, Variant> data)
         {
             FormationPersistenceRules.FormationSnapshot snapshot = FormationPersistenceRules.FromDictionary(data);
             SelectedRecipeId = snapshot.SelectedRecipeId;
+            Production.ReadFrom(data, HasSelectedRecipe);
             CurrentProgress = snapshot.Progress;
             RequiredProgress = snapshot.RequiredProgress;
             ActivePrimaryId = snapshot.ActivePrimaryId;

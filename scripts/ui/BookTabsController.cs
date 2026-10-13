@@ -354,6 +354,7 @@ public partial class BookTabsController : Control
         }
 
         _livePanelRefreshAccumulator = 0.0;
+        RefreshProductionControls();
         if (ActivePageName == "SettingsTab" && _activeSettingsSection == "privacy")
         {
             UpdatePrivacySectionState();
@@ -2808,6 +2809,7 @@ public partial class BookTabsController : Control
         HFlowContainer mealRow = new();
         _cultivationRoot.AddChild(mealRow);
         OptionButton cookingRecipe = new();
+        _productionCookingRecipeOption = cookingRecipe;
         var cookingRecipes = ActivityRegistry.GetBySystem(PlayerActionState.ModeCooking)!.GetRecipes();
         foreach (var recipe in cookingRecipes) cookingRecipe.AddItem(recipe.DisplayName);
         cookingRecipe.ItemSelected += index => ServiceLocator.Instance?.CookingState?.SelectRecipe(cookingRecipes[(int)index].RecipeId);
@@ -2815,6 +2817,8 @@ public partial class BookTabsController : Control
         Button cookButton = new() { Text = "开始烹饪" };
         cookButton.Pressed += () => { ServiceLocator.Instance?.CookingState?.SelectRecipe(cookingRecipes[Math.Max(0, cookingRecipe.Selected)].RecipeId); _playerActionState?.SetAction(PlayerActionState.ModeCooking); };
         mealRow.AddChild(cookButton);
+        cookButton.Hide();
+        if (ServiceLocator.Instance?.CookingState is { HasSelectedRecipe: false } cooking) cooking.SelectRecipe(cookingRecipes[0].RecipeId);
         OptionButton mealChoice = new();
         foreach (var meal in MealRules.Meals) mealChoice.AddItem(meal.Name);
         mealRow.AddChild(mealChoice);
@@ -2879,6 +2883,8 @@ public partial class BookTabsController : Control
         _equipmentSmithingStartButton.Text = "开始强化";
         _equipmentSmithingStartButton.Pressed += OnSmithingStartPressed;
         actionRow.AddChild(_equipmentSmithingStartButton);
+        _equipmentSmithingStartButton.Hide();
+        BuildProductionControls(_equipmentRoot, "smithing");
 
         Label hint = new();
         hint.AutowrapMode = TextServer.AutowrapMode.WordSmart;

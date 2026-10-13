@@ -18,7 +18,8 @@ namespace Xiuxian.Scripts.Game
             finally { _settlingOfflineCrafts = false; }
             var messages = new List<string>();
             foreach (var entry in _offlineCraftMessages) messages.Add($"{entry.Key}（{entry.Value} 批）");
-            return messages.Count > 0 ? string.Join("\n", messages) : "暂无成品；保留当前进度。缺料或达到上限时暂停加工。";
+            string result = messages.Count > 0 ? string.Join("\n", messages) : "暂无成品；保留当前进度。缺料或达到上限时暂停加工。";
+            return GetCurrentProductionPlan() is { } plan ? plan.Summary + "\n" + result : result;
         }
     }
 }

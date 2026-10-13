@@ -70,6 +70,10 @@ public partial class BookTabsController
         bookTheme.SetColor("font_color", "TextEdit", new Color("4A3728"));
         bookTheme.SetColor("font_placeholder_color", "TextEdit", new Color("70604B"));
         bookTheme.SetStylebox("normal", "TextEdit", PaperStyle());
+        bookTheme.SetColor("font_color", "LineEdit", new Color("4A3728"));
+        bookTheme.SetColor("caret_color", "LineEdit", new Color("4A3728"));
+        bookTheme.SetStylebox("normal", "LineEdit", PaperStyle("F3E8CF"));
+        bookTheme.SetStylebox("focus", "LineEdit", PaperStyle("FFF6E2"));
         foreach (var state in new[] { ("background", "E3D5B8"), ("fill", "997342") })
         {
             StyleBoxFlat progressStyle = PaperStyle(state.Item2);
@@ -192,6 +196,10 @@ public partial class BookTabsController
         Button equipment = new() { Text = "前往装备强化" }; equipment.Pressed += () => SetActiveLeftTab("EquipmentTab"); _homeActions["smithing"].AddChild(equipment);
         _homeActions["cultivation"].AddChild(new Label { Text = "正常键鼠操作即可积累修炼收益。", AutowrapMode = TextServer.AutowrapMode.WordSmart });
 
+        _cultivationAlchemyStartButton.Hide();
+        _cultivationTalismanStartButton.Hide();
+        BuildProductionControls(activity);
+
         VBoxContainer next = HomeSection("下一步");
         _homeNextStep = new Label { AutowrapMode = TextServer.AutowrapMode.WordSmart }; next.AddChild(_homeNextStep);
         Button journal = new() { Text = "查看本轮动态" }; journal.Pressed += () => SetActiveLeftTab("BattleLogTab"); next.AddChild(journal);
@@ -234,6 +242,7 @@ public partial class BookTabsController
         }
         _refreshingHomeMode = false;
         foreach (var row in _homeActions) row.Value.Visible = row.Key == action;
+        RefreshProductionControls();
     }
 
     private string BuildHomeNextStep(string action)
