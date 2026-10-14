@@ -163,6 +163,7 @@ namespace Xiuxian.Scripts.Tests
                 RunProductionChecks((PrototypeRootController)root, controller, s);
                 RunPreparationAndProjectChecks((PrototypeRootController)root, controller, s);
                 RunConsumptionChecks((PrototypeRootController)root, controller, s);
+                RunMasteryAvailabilityChecks((PrototypeRootController)root, controller, s);
                 GD.Print($"SMOKE SUCCESS: {_checks} checks");
                 if (Array.IndexOf(OS.GetCmdlineUserArgs(), "--render-smoke") >= 0) CaptureUi(root);
                 else GetTree().Quit(0);
@@ -228,6 +229,36 @@ namespace Xiuxian.Scripts.Tests
             s.BodyCultivationState!.SelectRecipe("body_cultivation_boneforge"); s.PlayerActionState.SetAction("body_cultivation");
             string preview = (string)typeof(ExploreProgressController).GetMethod("BuildGenericRecipeProgressText", flags)!.Invoke(controller, null)!;
             Check(preview.Contains("DEF") && preview.Contains("→"), "body training shows actual next defense and integer threshold preview");
+        }
+
+        private void RunMasteryAvailabilityChecks(PrototypeRootController root, ExploreProgressController controller, ServiceLocator s)
+        {
+            var mastery = s.SubsystemMasteryState!; var wallet = s.ResourceWalletState!;
+            wallet.AddInsight(1000); mastery.FromDictionary(new() { ["alchemy"] = 3, ["formation"] = 3 });
+            var tabs = Descendants(root).OfType<BookTabsController>().Single(); tabs.RestoreActiveTabs("CultivationTab", "BugTab");
+            var alchemyButton = (Button)tabs.FindChild("MasteryUpgrade_alchemy", true, false);
+            var formationButton = (Button)tabs.FindChild("MasteryUpgrade_formation", true, false);
+            Check(alchemyButton.Disabled && alchemyButton.Text.Contains("尚未开放") && alchemyButton.TooltipText.Contains("不会扣除悟性"),
+                "unimplemented alchemy upgrade exposes a disabled informative entry even with abundant insight");
+            double insight = wallet.Insight;
+            alchemyButton.EmitSignal(Button.SignalName.Pressed);
+            Check(mastery.GetLevel("alchemy") == 3 && wallet.Insight == insight, "direct UI signal cannot bypass reserved mastery purchase protection");
+            Check(!formationButton.Disabled && formationButton.TooltipText.Contains("工巧阵盘") && !formationButton.TooltipText.Contains("自修复"),
+                "formation upgrade advertises its actual craft recipe instead of unsupported repair");
+            formationButton.EmitSignal(Button.SignalName.Pressed);
+            Check(mastery.GetLevel("formation") == 4 && Math.Abs(wallet.Insight - (insight - 100)) < .001, "implemented formation upgrade charges exactly its existing cost");
+            s.BackpackState!.AddItem("mithril", 1); s.BackpackState.AddItem("spirit_ink", 2);
+            s.FormationState!.SelectRecipe("formation_craft_array"); s.FormationState.Production.Start(false, 1);
+            s.PlayerActionState!.SetAction("formation"); controller.AdvanceOfflineCrafting(10000);
+            Check(s.BackpackState.GetItemCount("formation_craft_array") > 0 && s.FormationState.TryActivatePrimary("formation_craft_array"),
+                "formation level4 unlock is a funded producible and activatable craft array");
+            Check(FormationRules.GetEffectProfile(s.FormationState.ActivePrimaryId, 4).CraftSpeedRate > 0, "advertised craft array provides actual processing speed");
+            mastery.FromDictionary(new() { ["alchemy"] = 4, ["formation"] = 4 }); mastery.FromDictionary(Roundtrip(mastery.ToDictionary()));
+            tabs.RestoreActiveTabs("CultivationTab", "BugTab"); insight = wallet.Insight;
+            alchemyButton.EmitSignal(Button.SignalName.Pressed);
+            Check(mastery.GetLevel("alchemy") == 4 && wallet.Insight == insight && alchemyButton.Text.Contains("旧档保留"),
+                "legacy alchemy level4 survives native save roundtrip and cannot be recharged");
+            Check(AlchemyRules.CompleteRecipe("recipe_huiqi_dan", 4).PotionCount == 3, "legacy alchemy keeps its existing bonus output");
         }
 
         private static Godot.Collections.Dictionary<string, Variant> Roundtrip(Godot.Collections.Dictionary<string, Variant> data)

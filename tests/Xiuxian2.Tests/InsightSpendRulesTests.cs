@@ -5,6 +5,25 @@ namespace Xiuxian.Tests;
 public sealed class InsightSpendRulesTests
 {
     [Fact]
+    public void ReservedAlchemyLevel4CannotBePurchasedEvenWithExcessResources()
+    {
+        Assert.True(SubsystemMasteryRules.TryGetDefinition(PlayerActionState.ModeAlchemy, 4, out var definition));
+        Assert.False(definition.IsAvailable);
+        Assert.False(InsightSpendRules.CanUnlockMastery(PlayerActionState.ModeAlchemy, 3, 10000, 10));
+        Assert.False(InsightSpendRules.SpendInsightForMastery(PlayerActionState.ModeAlchemy, 3, 10000, 10, out int level, out double insight));
+        Assert.Equal(3, level); Assert.Equal(10000, insight);
+        Assert.True(InsightSpendRules.SpendInsightForMastery(PlayerActionState.ModeAlchemy, 2, 45, 3, out level, out insight));
+        Assert.Equal(3, level); Assert.Equal(0, insight);
+    }
+    [Fact]
+    public void LegacyAlchemyLevel4StillKeepsItsLevelAndExistingOutput()
+    {
+        Assert.Equal(4, SubsystemMasteryRules.GetCurrentLevel(PlayerActionState.ModeAlchemy, new System.Collections.Generic.Dictionary<string, int> { [PlayerActionState.ModeAlchemy] = 4 }));
+        Assert.Equal(AlchemyRules.CompleteRecipe("recipe_huiqi_dan", 3), AlchemyRules.CompleteRecipe("recipe_huiqi_dan", 4));
+        Assert.False(InsightSpendRules.SpendInsightForMastery(PlayerActionState.ModeAlchemy, 4, 123, 10, out int level, out double insight));
+        Assert.Equal(4, level); Assert.Equal(123, insight);
+    }
+    [Fact]
     public void CanUnlockMastery_RequiresEnoughInsightAndFreshState()
     {
         Assert.True(InsightSpendRules.CanUnlockMastery(PlayerActionState.ModeAlchemy, 1, 20.0, 1));

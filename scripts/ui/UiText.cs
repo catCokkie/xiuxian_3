@@ -117,6 +117,8 @@ public static class UiText
     public const string MasteryUnlockSuccessPrefix = "领悟成功：";
     public const string MasteryMaxLevelTooltip = "已达到当前系统的最高熟练度。";
     public const string MasteryUnavailableTooltip = "悟性或境界不足，暂时无法继续领悟。";
+    public const string AlchemyAdvancedUnavailableTooltip = "高阶丹方尚未开放，炼丹 Lv4 暂不接受研习，也不会扣除悟性。待实际丹方开放后再启用；已有等级和当前炼丹收益保留。";
+    public const string AlchemyLegacyLevelTooltip = "旧档炼丹 Lv4 保留，当前继续享有 Lv3 的炼丹收益；高阶丹方尚未开放，不重复扣费或补发奖励。";
     public const string BackpackEquipWeapon = "装备背包武器";
     public const string BackpackEquipArmor = "装备背包护具";
     public const string BackpackEquipAccessory = "装备背包饰品";
@@ -174,7 +176,7 @@ public static class UiText
         "cultivation_breakthrough_exp_reduction" => $"突破经验需求 -{effectValue * 100:0}%",
         "alchemy_unlock_juling_san" => "解锁聚灵散",
         "alchemy_bonus_output" => $"炼丹额外产出 +{effectValue:0}",
-        "alchemy_high_tier_formula" => "预留高阶丹方入口",
+        "alchemy_high_tier_formula" => "旧档等级保留；高阶丹方尚未开放，当前沿用 Lv3 炼丹收益",
         "smithing_max_enhance_level" => $"强化上限提升至 +{effectValue:0}",
         "smithing_material_discount" => $"强化材料消耗 -{effectValue * 100:0}%",
         SubsystemMasteryRules.TalismanSecondRecipeUnlockEffectId => "解锁疾风符",
@@ -197,7 +199,7 @@ public static class UiText
         SubsystemMasteryRules.CookingExtraEffectId => "解锁凝神鱼羹、铁壁鱼膳",
         SubsystemMasteryRules.FormationEffectBonusEffectId => $"阵法效果 +{effectValue * 100:0}%",
         SubsystemMasteryRules.FormationDualSlotEffectId => "解锁副阵槽（效果 50%）",
-        SubsystemMasteryRules.FormationSelfRepairEffectId => "阵盘自修复",
+        SubsystemMasteryRules.FormationCraftRecipeUnlockEffectId => "解锁工巧阵盘，激活后加工速度 +12%（精通加成另计）",
         _ => effectId,
     };
     public static string ExploreFrame(int frame) => $"探索中 | 帧 {frame}";

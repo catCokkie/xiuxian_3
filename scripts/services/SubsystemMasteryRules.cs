@@ -26,7 +26,7 @@ namespace Xiuxian.Scripts.Services
         public const string CookingExtraEffectId = "cooking_extra_effect";
         public const string FormationEffectBonusEffectId = "formation_effect_bonus";
         public const string FormationDualSlotEffectId = "formation_dual_slot";
-        public const string FormationSelfRepairEffectId = "formation_self_repair";
+        public const string FormationCraftRecipeUnlockEffectId = "formation_craft_recipe_unlock";
         public const string BodyCultivationSecondTechniqueUnlockEffectId = "body_cultivation_second_technique_unlock";
         public const string BodyCultivationMaterialDiscountEffectId = "body_cultivation_material_discount";
         public const string BodyCultivationExtraCapEffectId = "body_cultivation_extra_cap";
@@ -38,7 +38,8 @@ namespace Xiuxian.Scripts.Services
             int RequiredRealmLevel,
             string EffectId,
             string DisplayName,
-            double EffectValue);
+            double EffectValue,
+            bool IsAvailable = true);
 
         private static readonly string[] OrderedSystemIds =
         {
@@ -99,6 +100,7 @@ namespace Xiuxian.Scripts.Services
         {
             MasteryDefinition? next = GetNextDefinition(systemId, currentLevel);
             return next.HasValue
+                && next.Value.IsAvailable
                 && currentInsight >= next.Value.InsightCost
                 && currentRealmLevel >= next.Value.RequiredRealmLevel;
         }
@@ -108,7 +110,7 @@ namespace Xiuxian.Scripts.Services
             nextLevel = Math.Clamp(currentLevel, 1, 4);
             remainingInsight = currentInsight;
             MasteryDefinition? next = GetNextDefinition(systemId, currentLevel);
-            if (!next.HasValue)
+            if (!next.HasValue || !next.Value.IsAvailable)
             {
                 return false;
             }
@@ -190,7 +192,7 @@ namespace Xiuxian.Scripts.Services
                 Def(PlayerActionState.ModeAlchemy, 1, 0, 1, "alchemy_base", "炼丹精通 Lv1", 0.0),
                 Def(PlayerActionState.ModeAlchemy, 2, 20, 1, "alchemy_unlock_juling_san", "炼丹精通 Lv2", 1.0),
                 Def(PlayerActionState.ModeAlchemy, 3, 45, 2, "alchemy_bonus_output", "炼丹精通 Lv3", 1.0),
-                Def(PlayerActionState.ModeAlchemy, 4, 75, 3, "alchemy_high_tier_formula", "炼丹精通 Lv4", 1.0),
+                Def(PlayerActionState.ModeAlchemy, 4, 75, 3, "alchemy_high_tier_formula", "炼丹精通 Lv4", 1.0, available: false),
 
                 Def(PlayerActionState.ModeSmithing, 1, 0, 1, "smithing_max_enhance_level", "炼器精通 Lv1", 3.0),
                 Def(PlayerActionState.ModeSmithing, 2, 25, 1, "smithing_max_enhance_level", "炼器精通 Lv2", 6.0),
@@ -225,7 +227,7 @@ namespace Xiuxian.Scripts.Services
                 Def(PlayerActionState.ModeFormation, 1, 0, 1, "formation_base", "阵法精通 Lv1", 0.0),
                 Def(PlayerActionState.ModeFormation, 2, 30, 1, FormationEffectBonusEffectId, "阵法精通 Lv2", 0.10),
                 Def(PlayerActionState.ModeFormation, 3, 60, 2, FormationDualSlotEffectId, "阵法精通 Lv3", 2.0),
-                Def(PlayerActionState.ModeFormation, 4, 100, 3, FormationSelfRepairEffectId, "阵法精通 Lv4", 1.0),
+                Def(PlayerActionState.ModeFormation, 4, 100, 3, FormationCraftRecipeUnlockEffectId, "阵法精通 Lv4", 1.0),
 
                 Def(PlayerActionState.ModeBodyCultivation, 1, 0, 1, "body_cultivation_base", "体修精通 Lv1", 0.0),
                 Def(PlayerActionState.ModeBodyCultivation, 2, 30, 1, BodyCultivationSecondTechniqueUnlockEffectId, "体修精通 Lv2", 1.0),
@@ -234,9 +236,9 @@ namespace Xiuxian.Scripts.Services
             };
         }
 
-        private static MasteryDefinition Def(string systemId, int level, double cost, int requiredRealmLevel, string effectId, string displayName, double effectValue)
+        private static MasteryDefinition Def(string systemId, int level, double cost, int requiredRealmLevel, string effectId, string displayName, double effectValue, bool available = true)
         {
-            return new MasteryDefinition(systemId, level, cost, requiredRealmLevel, effectId, displayName, effectValue);
+            return new MasteryDefinition(systemId, level, cost, requiredRealmLevel, effectId, displayName, effectValue, available);
         }
     }
 }

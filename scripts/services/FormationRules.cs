@@ -104,11 +104,6 @@ namespace Xiuxian.Scripts.Services
             return dualSlot >= 2.0 ? 2 : 1;
         }
 
-        public static bool HasSelfRepair(int masteryLevel)
-        {
-            return SubsystemMasteryRules.GetEffectValue(PlayerActionState.ModeFormation, masteryLevel, SubsystemMasteryRules.FormationSelfRepairEffectId) >= 1.0;
-        }
-
         public static FormationEffectProfile ScaleEffectProfile(FormationEffectProfile profile, double ratio)
         {
             if (!profile.IsKnownFormation || ratio <= 0.0)

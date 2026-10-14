@@ -186,6 +186,27 @@ public partial class LayoutSmokeTest : Node
                     scenario + ": reserve editor leaves visible space for backpack grid");
                 if (dimensions.X == 800) await Capture("small_material_reserve");
                 reserveToggle.ButtonPressed = false; await Settle();
+                s.SubsystemMasteryState!.FromDictionary(new() { ["alchemy"] = 3, ["formation"] = 3 });
+                s.ResourceWalletState!.AddInsight(1000); await Select("CultivationTab");
+                var masteryToggle = (Button)_tabs.FindChild("MasteryToggle", true, false); masteryToggle.ButtonPressed = true; await Settle();
+                var alchemyUpgrade = (Button)_tabs.FindChild("MasteryUpgrade_alchemy", true, false);
+                var formationUpgrade = (Button)_tabs.FindChild("MasteryUpgrade_formation", true, false);
+                var masteryDetails = (Control)_tabs.FindChild("MasteryDetails", true, false);
+                Check(alchemyUpgrade.Disabled && alchemyUpgrade.Text.Contains("尚未开放"), scenario + ": alchemy reserved upgrade visibly disabled");
+                Check(formationUpgrade.TooltipText.Contains("工巧阵盘") && !formationUpgrade.TooltipText.Contains("自修复"), scenario + ": formation explains its available recipe");
+                Check(Inside(masteryDetails.GetGlobalRect(), alchemyUpgrade.GetGlobalRect()) && Inside(masteryDetails.GetGlobalRect(), formationUpgrade.GetGlobalRect()),
+                    scenario + ": mastery availability labels fit the wrapping panel");
+                if (dimensions.X == 800)
+                {
+                    var scroll = (ScrollContainer)PageRoot("CultivationScroll");
+                    scroll.ScrollVertical = (int)(alchemyUpgrade.GetGlobalRect().Position.Y - scroll.GetGlobalRect().Position.Y + scroll.ScrollVertical - 40);
+                    await Settle(); await Capture("small_mastery_availability");
+                    s.SubsystemMasteryState.FromDictionary(new() { ["alchemy"] = 4, ["formation"] = 4 }); _tabs.RestoreActiveTabs("CultivationTab", "BugTab"); await Settle();
+                    Check(alchemyUpgrade.Text.Contains("旧档保留") && alchemyUpgrade.Disabled, "legacy mastery: retained level has no purchase action");
+                    scroll.ScrollVertical = (int)(alchemyUpgrade.GetGlobalRect().Position.Y - scroll.GetGlobalRect().Position.Y + scroll.ScrollVertical - 40);
+                    await Settle(); await Capture("small_mastery_legacy"); scroll.ScrollVertical = 0;
+                }
+                masteryToggle.ButtonPressed = false; await Settle();
                 foreach (string page in Pages.Append("SettingsTab").Append("BugTab"))
                 {
                     await Select(page);

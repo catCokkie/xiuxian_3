@@ -947,10 +947,12 @@ public partial class BookTabsController : Control
     private string BuildNextMasteryUnlockDescription(string systemId, int currentLevel)
     {
         int nextLevel = currentLevel + 1;
-        if (!SubsystemMasteryRules.TryGetDefinition(systemId, nextLevel, out var nextDefinition))
+        if (currentLevel >= 4 || !SubsystemMasteryRules.TryGetDefinition(systemId, nextLevel, out var nextDefinition))
         {
             return "已满级";
         }
+
+        if (!nextDefinition.IsAvailable) return $"Lv{nextDefinition.Level} 尚未开放，暂不接受研习";
 
         return $"Lv{nextDefinition.Level}（{nextDefinition.InsightCost:0}悟性，炼气{nextDefinition.RequiredRealmLevel}层）";
     }
@@ -1018,7 +1020,7 @@ public partial class BookTabsController : Control
 
         if (CanUnlockMastery(PlayerActionState.ModeAlchemy))
         {
-            return "状态：可用于参悟高阶丹方";
+            return "状态：可用于研习下一等级的炼丹收益";
         }
 
         return _playerProgressState.CanBreakthrough ? "状态：可作为突破后的下阶段储备" : "状态：继续积累，兼顾突破与参悟";
@@ -1139,7 +1141,7 @@ public partial class BookTabsController : Control
     {
         if (CanUnlockMastery(PlayerActionState.ModeAlchemy))
         {
-            return "状态：当前悟性已经足够支撑一次高阶丹方参悟。";
+            return "状态：当前悟性足够研习下一等级的炼丹收益。";
         }
 
         int dungeonMasteryLevel = _subsystemMasteryState?.GetLevel(PlayerActionState.ModeDungeon) ?? 1;
@@ -1267,11 +1269,20 @@ public partial class BookTabsController : Control
             int currentLevel = GetMasteryLevel(systemId);
             if (_masteryProgressBars.TryGetValue(systemId, out var masteryBar)) { masteryBar.Value = currentLevel; masteryBar.TooltipText = $"{UiText.MasterySystemName(systemId)} Lv{currentLevel}/4"; }
             int nextLevel = currentLevel + 1;
-            if (!SubsystemMasteryRules.TryGetDefinition(systemId, nextLevel, out var nextDefinition))
+            if (currentLevel >= 4 || !SubsystemMasteryRules.TryGetDefinition(systemId, nextLevel, out var nextDefinition))
             {
-                button.Text = UiText.MasteryUnlockButton(systemId, currentLevel);
+                bool legacy = SubsystemMasteryRules.TryGetDefinition(systemId, currentLevel, out var currentDefinition) && !currentDefinition.IsAvailable;
+                button.Text = UiText.MasteryUnlockButton(systemId, currentLevel) + (legacy ? " · 旧档保留" : "");
                 button.Disabled = true;
-                button.TooltipText = UiText.MasteryMaxLevelTooltip;
+                button.TooltipText = legacy ? UiText.AlchemyLegacyLevelTooltip : UiText.MasteryMaxLevelTooltip;
+                continue;
+            }
+
+            if (!nextDefinition.IsAvailable)
+            {
+                button.Text = UiText.MasteryUnlockButton(systemId, nextDefinition.Level) + " · 尚未开放";
+                button.Disabled = true;
+                button.TooltipText = systemId == PlayerActionState.ModeAlchemy ? UiText.AlchemyAdvancedUnavailableTooltip : "该研习尚未开放，暂不接受解锁，也不会扣除悟性。";
                 continue;
             }
 
@@ -1283,6 +1294,7 @@ public partial class BookTabsController : Control
             button.TooltipText = canUnlock
                 ? UiText.MasteryUnlockTooltip(systemId, currentLevel, nextDefinition.Level, nextDefinition.InsightCost, nextDefinition.RequiredRealmLevel)
                 : UiText.MasteryUnavailableTooltip;
+            button.TooltipText += "\n" + UiText.MasteryEffectDescription(nextDefinition.EffectId, nextDefinition.EffectValue);
         }
     }
 
@@ -2831,7 +2843,7 @@ public partial class BookTabsController : Control
         _cultivationRoot.AddChild(masteryRow);
         foreach (string systemId in GetTrackedMasterySystems())
         {
-            Button button = new();
+            Button button = new() { Name = "MasteryUpgrade_" + systemId };
             button.Pressed += () => OnMasteryUnlockPressed(systemId);
             VBoxContainer masteryCell = new() { CustomMinimumSize = new Vector2(130, 40) };
             ProgressBar progress = new() { MinValue = 1, MaxValue = 4, Value = GetMasteryLevel(systemId), ShowPercentage = false, CustomMinimumSize = new Vector2(130, 12) };

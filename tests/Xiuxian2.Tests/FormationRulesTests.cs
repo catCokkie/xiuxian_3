@@ -49,10 +49,13 @@ public sealed class FormationRulesTests
     }
 
     [Fact]
-    public void HasSelfRepair_FalseAtLevel3_TrueAtLevel4()
+    public void Level4AdvertisesTheImplementedCraftArrayUnlock()
     {
-        Assert.False(FormationRules.HasSelfRepair(3));
-        Assert.True(FormationRules.HasSelfRepair(4));
+        Assert.True(SubsystemMasteryRules.TryGetDefinition(PlayerActionState.ModeFormation, 4, out var definition));
+        Assert.True(definition.IsAvailable);
+        Assert.Equal(SubsystemMasteryRules.FormationCraftRecipeUnlockEffectId, definition.EffectId);
+        Assert.Contains("工巧阵盘", UiText.MasteryEffectDescription(definition.EffectId, definition.EffectValue));
+        Assert.DoesNotContain("自修复", UiText.MasteryEffectDescription(definition.EffectId, definition.EffectValue));
     }
 
     [Fact]
