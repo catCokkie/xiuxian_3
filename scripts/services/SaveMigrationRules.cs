@@ -11,7 +11,7 @@ namespace Xiuxian.Scripts.Services
     /// </summary>
     public static class SaveMigrationRules
     {
-        public const int LatestVersion = 20;
+        public const int LatestVersion = 21;
 
         private const string DefaultLeftTab = "CultivationTab";
         private const string DefaultRightTab = "BugTab";
@@ -201,6 +201,10 @@ namespace Xiuxian.Scripts.Services
                         case 19:
                             if (!cfg.HasSectionKey("challenge_goal", "state")) cfg.SetValue("challenge_goal", "state", new ChallengeGoalPlan().ToPlainDictionary());
                             version = 20;
+                            break;
+                        case 20:
+                            MigrateV20ToV21(cfg);
+                            version = 21;
                             break;
                         default:
                             version = LatestVersion;
@@ -781,6 +785,16 @@ namespace Xiuxian.Scripts.Services
             var usage = new MealUsagePlan(); usage.Restore(null, active);
             cooking.TryAdd("meal_usage", usage.ToPlainDictionary());
             cfg.SetValue("cooking", "state", cooking);
+        }
+
+        private static void MigrateV20ToV21(IMigrationStore cfg)
+        {
+            var goal = EnsureDictionaryValue(cfg, "challenge_goal", "state");
+            goal.TryAdd("last_boss_report", new Dictionary<string, object>());
+            cfg.SetValue("challenge_goal", "state", goal);
+            var explore = EnsureDictionaryValue(cfg, "explore", "runtime");
+            explore.TryAdd("boss_attempt", new Dictionary<string, object>());
+            cfg.SetValue("explore", "runtime", explore);
         }
 
         private static Dictionary<string, object> EnsureDictionaryValue(IMigrationStore cfg, string section, string key)

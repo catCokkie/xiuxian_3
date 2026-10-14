@@ -972,6 +972,7 @@ namespace Xiuxian.Scripts.Game
             _battleConsumableModifier = default;
             _consumedPotionsThisBattle.Clear();
             _battleTalismans.Clear();
+            _bossAttempt.Clear();
             ApplyAutoConsumables(isBattleStart: true);
             SyncLogicFromControllerState();
             _battleInfoLabel.Text = UiText.Encounter(_battleMonsterName);
@@ -1015,6 +1016,7 @@ namespace Xiuxian.Scripts.Game
             _battleConsumableModifier = default;
             _consumedPotionsThisBattle.Clear();
             _battleTalismans.Clear();
+            _bossAttempt.Begin(_levelConfigLoader.ActiveLevelId, bossMonsterId);
             ApplyAutoConsumables(isBattleStart: true);
             SyncLogicFromControllerState();
             _battleInfoLabel.Text = $"Boss 挑战 · {UiText.ZoneName(_levelConfigLoader.ActiveLevelId, _currentZone)}";
@@ -1069,7 +1071,8 @@ namespace Xiuxian.Scripts.Game
                 criticalRoll: Random.Shared.NextDouble,
                 healPerRound: activeMeal.HealPerRound,
                 incomingDamageReduction: activeMeal.Id == "food_iron_fish_meal" && IsBossChallengeBattle() ? .15 : 0,
-                extraModifiers: modifiers);
+                extraModifiers: modifiers,
+                roundObserved: _bossAttempt.Observe);
             SyncControllerStateFromLogic();
             if (progress.RoundsResolved <= 0)
             {
@@ -1108,6 +1111,7 @@ namespace Xiuxian.Scripts.Game
         private void HandleBattleDefeat()
         {
             bool isBossBattle = IsBossChallengeBattle();
+            CaptureBossReport(_lastBattleEndedByBossTimeout ? "timeout" : _enemyHp <= 0 && _playerHp <= 0 ? "double_knockout" : "death");
             int defeatedMonsterIndex = _battleMonsterIndex;
 
             string defeatResult = _lastBattleEndedByBossTimeout ? "超时" : "失败";
@@ -1184,6 +1188,7 @@ namespace Xiuxian.Scripts.Game
         private void CompleteBattle()
         {
             bool isBossBattle = IsBossChallengeBattle();
+            CaptureBossReport("victory");
             int defeatedMonsterIndex = _battleMonsterIndex;
             string rewardMonsterId = _battleMonsterId;
             string rewardMonsterName = _battleMonsterName;
@@ -1608,6 +1613,7 @@ namespace Xiuxian.Scripts.Game
                 ["explore_progress"] = logicState.ExploreProgress,
                 ["battle_state"] = battleState,
                 ["battle_talismans"] = new Godot.Collections.Array<string>(_battleTalismans),
+                ["boss_attempt"] = SaveValueConversionRules.ToVariantDictionary(_bossAttempt.ToPlainDictionary()),
                 ["progress_rate_remainders"] = rateRemainders,
                 ["used_heal_potion"] = _usedHealPotionThisBattle,
                 ["has_lingqi_drop_buff"] = _hasLingqiDropBuffThisBattle,
@@ -1732,6 +1738,8 @@ namespace Xiuxian.Scripts.Game
                 _battleMonsterId = _battleTrackVisualizer.GetMonsterId(_battleMonsterIndex);
             }
             SyncLogicFromControllerState();
+
+            RestoreBossAttempt(data);
 
             _zoneLabel.Text = _currentZone;
             _progressBar.Value = _exploreProgress;
@@ -2975,6 +2983,7 @@ namespace Xiuxian.Scripts.Game
                 _playerStatsState?.RecordBattlePotionConsumption();
 
                 _consumedPotionsThisBattle.Add(UiText.BackpackItemName(usage.PotionId));
+                int hpBeforePotion = _playerHp;
                 if (usage.PotionId == "potion_huiqi_dan")
                 {
                     _usedHealPotionThisBattle = true;
@@ -2985,6 +2994,7 @@ namespace Xiuxian.Scripts.Game
                 {
                     _hasLingqiDropBuffThisBattle = true;
                 }
+                _bossAttempt.RecordPotion(usage.PotionId, _playerHp - hpBeforePotion);
             }
 
             if (_backpackState == null)
@@ -3011,7 +3021,9 @@ namespace Xiuxian.Scripts.Game
                 var effect = TalismanRules.GetBattleEffect(usage.ItemId, ResolveCurrentMonsterProfile()?.StrategyTag ?? "");
                 if (effect.ForceFirst) _battleConsumableModifier = new CharacterStatModifier(SpeedFlat: 10000);
                 if (effect.RoundAcceleration > 0) _inputsPerBattleRoundRuntime = Math.Max(1, (int)Math.Ceiling(_inputsPerBattleRoundRuntime * (1 - effect.RoundAcceleration)));
+                int hpBeforeTalisman = _enemyHp;
                 if (effect.FirstHitHpRate > 0) _enemyHp = Math.Max(0, _enemyHp - (int)Math.Round(_enemyMaxHp * effect.FirstHitHpRate));
+                _bossAttempt.RecordTalisman(usage.ItemId, hpBeforeTalisman - _enemyHp);
                 _consumedPotionsThisBattle.Add(UiText.BackpackItemName(usage.ItemId));
             }
         }

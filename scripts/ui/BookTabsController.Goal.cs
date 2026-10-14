@@ -31,6 +31,7 @@ public partial class BookTabsController
         };
         _challengeGoalCancel.Pressed += () => _challengeGoalState?.Cancel();
         _challengeGoalSkip.Pressed += () => _challengeGoalState?.SkipPreparation();
+        BuildBossReviewUi(card);
     }
     private bool TryGetPreparationContext(out string levelId, out string bossId, out MonsterStatProfile boss)
     {
@@ -50,6 +51,7 @@ public partial class BookTabsController
     private void RefreshChallengeGoalUi(bool hasBoss, string levelId, MonsterStatProfile boss)
     {
         if (_challengeGoalSummary == null) return;
+        RefreshBossReviewUi();
         var loader = ServiceLocator.Instance?.LevelConfigLoader; var goal = _challengeGoalState?.Goal;
         bool tracking = goal?.HasGoal == true;
         bool completed = tracking && goal!.Completed;

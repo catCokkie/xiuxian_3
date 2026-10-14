@@ -47,7 +47,7 @@ public class ChallengeGoalPlanTests
         store.SetValue("backpack", "items", items); store.SetValue("progress", "player", new Dictionary<string, object> { ["realm_level"] = 10 });
         SaveMigrationRules.MigrateToLatest(store, 19);
         var goal = new ChallengeGoalPlan(); goal.Restore((Dictionary<string, object>)store.GetValue("challenge_goal", "state", null!));
-        Assert.False(goal.HasGoal); Assert.Equal(8, items["spirit_herb"]); Assert.Equal(20, store.GetValue("meta", "version", 0));
+        Assert.False(goal.HasGoal); Assert.Equal(8, items["spirit_herb"]); Assert.Equal(SaveMigrationRules.LatestVersion, store.GetValue("meta", "version", 0));
         goal.Start("zone", "boss", new Dictionary<string, int> { ["recipe_huiqi_dan"] = 2 }); var saved = goal.ToPlainDictionary(); store.SetValue("challenge_goal", "state", saved);
         SaveMigrationRules.MigrateToLatest(store, 19); Assert.Same(saved, store.GetValue("challenge_goal", "state", null!));
     }

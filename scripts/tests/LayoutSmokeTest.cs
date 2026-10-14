@@ -270,6 +270,37 @@ public partial class LayoutSmokeTest : Node
                     await Capture("small_goal_complete"); scroll.ScrollVertical = 0;
                 }
                 goalState.Cancel(); await Settle();
+                var reviewBefore = goalState.ToDictionary();
+                var reviewAttempt = new BossChallengeAttempt(); reviewAttempt.Begin(loader.ActiveLevelId, loader.GetBossMonsterId());
+                reviewAttempt.Observe(new(120, 45, 3)); reviewAttempt.RecordPotion("potion_huiqi_dan", 12); reviewAttempt.RecordTalisman("talisman_fire_charm", 10);
+                var report = reviewAttempt.Finish("death", 12, 88, 240, 1); goalState.RecordBossReport(report); await Settle();
+                var reviewToggle = (Button)_tabs.FindChild("BossReviewToggle", true, false);
+                Check(reviewToggle.Visible && !reviewToggle.ButtonPressed, scenario + ": Boss review starts collapsed and remains optional");
+                reviewToggle.ButtonPressed = true; await Settle();
+                var reviewDetails = (Control)_tabs.FindChild("BossReviewDetails", true, false);
+                var reviewSummary = (Label)_tabs.FindChild("BossReviewSummary", true, false);
+                Check(reviewSummary.Text.Contains("敌方实际回血45") && reviewSummary.Text.Contains("调整2") && reviewSummary.Text.Contains("尚无可制作的禁疗配方"),
+                    scenario + ": Boss review shows actual recovery and at most two honest adjustment directions");
+                Check(reviewSummary.Size.X <= reviewDetails.Size.X && reviewSummary.IsVisibleInTree(), scenario + ": long Boss review wraps inside the scrollable home");
+                foreach (Control control in reviewDetails.GetNode<Control>("BossReviewActions").GetChildren())
+                    if (control.Visible) Check(Inside(reviewDetails.GetGlobalRect(), control.GetGlobalRect()), scenario + ": Boss review recovery action fits wrapping row");
+                var reviewHeadline = (Label)_tabs.FindChild("BossReviewHeadline", true, false);
+                Check(reviewHeadline.Size.X <= goalCard.Size.X, scenario + ": Boss review headline wraps independently of its toggle button");
+                if (dimensions.X == 800)
+                {
+                    var scroll = (ScrollContainer)PageRoot("CultivationScroll");
+                    scroll.ScrollVertical = (int)(reviewHeadline.GetGlobalRect().Position.Y - scroll.GetGlobalRect().Position.Y + scroll.ScrollVertical - 10);
+                    await Settle(); await Capture("small_boss_review_death");
+                    goalState.RecordBossReport(report with { Result = "timeout", Rounds = 100, StatisticsComplete = false }); await Settle();
+                    Check(reviewSummary.Text.Contains("统计不完整") && reviewSummary.Text.Contains("优先比较武器") && !reviewSummary.Text.Contains("调整2"), "legacy Boss review does not turn partial counters into full-fight advice");
+                    await Capture("small_boss_review_legacy");
+                    goalState.RecordBossReport(report with { Result = "victory", Rounds = 3, EnemyHp = 0 }); await Settle();
+                    Check(reviewSummary.Text.Contains("胜利") && !reviewSummary.Text.Contains("调整1"), "victory review does not display defeat advice");
+                    await Capture("small_boss_review_victory"); scroll.ScrollVertical = 0;
+                }
+                goalState.RecordBossReport(report with { LevelId = "historical_region", BossId = "historical_boss" }); await Settle();
+                Check(reviewSummary.Text.Contains("其他目标") && !reviewSummary.Text.Contains("调整1"), scenario + ": unrelated archived Boss never supplies current-goal advice");
+                reviewToggle.ButtonPressed = false; goalState.FromDictionary(reviewBefore); _tabs.RestoreActiveTabs("CultivationTab", "BugTab"); await Settle();
                 foreach (string page in Pages.Append("SettingsTab").Append("BugTab"))
                 {
                     await Select(page);

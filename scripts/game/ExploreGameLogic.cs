@@ -196,7 +196,8 @@ namespace Xiuxian.Scripts.Game
             int suppressMonsterHealingRounds = 0,
             int healPerRound = 0,
             double incomingDamageReduction = 0,
-            IReadOnlyList<CharacterStatModifier>? extraModifiers = null)
+            IReadOnlyList<CharacterStatModifier>? extraModifiers = null,
+            Action<BattleRoundObservation>? roundObserved = null)
         {
             BattleInputProgress progress = BattleRules.ConsumeBattleInputs(PendingBattleInputEvents, inputEvents, InputsPerBattleRoundRuntime);
             PendingBattleInputEvents = progress.RemainingInputs;
@@ -221,6 +222,7 @@ namespace Xiuxian.Scripts.Game
                     EnemyDamageDividerRuntime,
                     EnemyMinDamageRuntime, criticalRoll?.Invoke() ?? 1.0, criticalRoll?.Invoke() ?? 1.0);
 
+                int actualDamage = Math.Max(0, EnemyHp - roundResult.Monster.CurrentHp);
                 EnemyHp = roundResult.Monster.CurrentHp;
                 PlayerHp = roundResult.Player.CurrentHp;
                 if (roundResult.Outcome == BattleOutcome.Ongoing)
@@ -228,6 +230,8 @@ namespace Xiuxian.Scripts.Game
                     if (BattleRoundCounter > Math.Max(0, suppressMonsterHealingRounds)) EnemyHp = Math.Min(EnemyMaxHp, EnemyHp + Math.Max(0, monsterProfile?.HealPerRound ?? 0));
                     PlayerHp = Math.Min(roundResult.Player.MaxHp, PlayerHp + Math.Max(0, healPerRound));
                 }
+                roundObserved?.Invoke(new BattleRoundObservation(actualDamage,
+                    Math.Max(0, EnemyHp - roundResult.Monster.CurrentHp), Math.Max(0, PlayerHp - roundResult.Player.CurrentHp)));
                 if (roundResult.Outcome == BattleOutcome.Ongoing
                     && !(isBossBattle && BattleRoundCounter >= maxBossBattleRounds)) afterRoundResolved?.Invoke();
 
