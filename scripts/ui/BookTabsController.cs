@@ -672,6 +672,7 @@ public partial class BookTabsController : Control
     private void RefreshDynamicTabContent()
     {
         RefreshUnlockedTabs();
+        RefreshProductionControls();
 
         if (ActivePageName == "SettingsTab")
         {
@@ -1453,10 +1454,10 @@ public partial class BookTabsController : Control
             return;
         }
 
-        if (!AlchemyRules.CanStartRecipe(_alchemyState.SelectedRecipeId, _resourceWalletState.Lingqi, _backpackState.GetItemEntries(), GetAlchemyMasteryLevel()))
+        if (!CraftingProgressionService.CheckRecipe(_alchemyState.SelectedRecipeId, _backpackState, _resourceWalletState, GetAlchemyMasteryLevel()).CanProduce)
         {
             RefreshCultivationPanelContent();
-            _cultivationStatusLabel.Text = "材料不足或灵气不足，无法开始当前丹方。";
+            _cultivationStatusLabel.Text = ProductionBlockRules.Summary(CraftingProgressionService.CheckRecipe(_alchemyState.SelectedRecipeId, _backpackState, _resourceWalletState, GetAlchemyMasteryLevel()));
             return;
         }
 
@@ -1780,7 +1781,7 @@ public partial class BookTabsController : Control
 
         bool canStart = _alchemyState != null
             && _alchemyState.HasSelectedRecipe
-            && AlchemyRules.CanStartRecipe(_alchemyState.SelectedRecipeId, _resourceWalletState!.Lingqi, _backpackState!.GetItemEntries(), GetAlchemyMasteryLevel());
+            && CraftingProgressionService.CheckRecipe(_alchemyState.SelectedRecipeId, _backpackState, _resourceWalletState, GetAlchemyMasteryLevel()).CanProduce;
         _cultivationAlchemyStartButton.Disabled = !canStart;
         _cultivationAlchemyStartButton.TooltipText = canStart
             ? "满足材料后，切到炼丹模式即可推进当前批次。"
@@ -2877,9 +2878,14 @@ public partial class BookTabsController : Control
         _equipmentRoot.AddThemeConstantOverride("separation", 10);
         _leftPage.AddChild(_equipmentRoot);
 
-        HBoxContainer actionRow = new();
-        actionRow.AddThemeConstantOverride("separation", 8);
-        _equipmentRoot.AddChild(actionRow);
+        ScrollContainer equipmentScroll = new() { Name = "EquipmentScroll", SizeFlagsVertical = Control.SizeFlags.ExpandFill,
+            SizeFlagsHorizontal = Control.SizeFlags.ExpandFill, HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled };
+        _equipmentRoot.AddChild(equipmentScroll);
+        VBoxContainer content = new() { Name = "EquipmentContent", SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
+        content.AddThemeConstantOverride("separation", 10); equipmentScroll.AddChild(content);
+        HFlowContainer actionRow = new();
+        actionRow.AddThemeConstantOverride("h_separation", 8); actionRow.AddThemeConstantOverride("v_separation", 8);
+        content.AddChild(actionRow);
 
         Button backpackButton = new() { Text = "前往背包换装" };
         backpackButton.Pressed += () => SetActiveLeftTab("BackpackTab");
@@ -2894,19 +2900,19 @@ public partial class BookTabsController : Control
         _equipmentSmithingStartButton.Pressed += OnSmithingStartPressed;
         actionRow.AddChild(_equipmentSmithingStartButton);
         _equipmentSmithingStartButton.Hide();
-        BuildProductionControls(_equipmentRoot, "smithing");
+        BuildProductionControls(content, "smithing");
 
         Label hint = new();
         hint.AutowrapMode = TextServer.AutowrapMode.WordSmart;
         hint.Text = UiText.EquipmentPageHint;
-        _equipmentRoot.AddChild(hint);
+        content.AddChild(hint);
 
         _equipmentContentLabel = new RichTextLabel();
         _equipmentContentLabel.BbcodeEnabled = true;
-        _equipmentContentLabel.FitContent = false;
-        _equipmentContentLabel.ScrollActive = true;
-        _equipmentContentLabel.SizeFlagsVertical = Control.SizeFlags.ExpandFill;
-        _equipmentRoot.AddChild(_equipmentContentLabel);
+        _equipmentContentLabel.FitContent = true;
+        _equipmentContentLabel.ScrollActive = false;
+        _equipmentContentLabel.SizeFlagsVertical = Control.SizeFlags.ShrinkBegin;
+        content.AddChild(_equipmentContentLabel);
     }
 
     private void BuildBackpackUi()
@@ -4142,6 +4148,7 @@ public partial class BookTabsController : Control
 
     private void RefreshCurrentPageContent()
     {
+        RefreshProductionControls();
         if (ActivePageName == "SettingsTab")
         {
             _leftTitleLabel.Text = UiText.SettingsTitle;

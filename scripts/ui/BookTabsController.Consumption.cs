@@ -117,4 +117,13 @@ public partial class BookTabsController
             if (_backpackRoot?.FindChild("ReserveToggle", true, false) is Button toggle) { toggle.ButtonPressed = true; }
         };
     }
+    private void OpenMaterialReserve(string itemId)
+    {
+        SetActiveLeftTab("BackpackTab");
+        if (_backpackRoot?.FindChild("ReserveToggle", true, false) is Button toggle) toggle.ButtonPressed = true;
+        RefreshMaterialReserveControls();
+        if (_reserveChoice == null) return;
+        for (int i = 0; i < _reserveChoice.ItemCount; i++)
+            if (_reserveChoice.GetItemMetadata(i).AsString() == itemId) { _reserveChoice.Select(i); SyncReserveCount(); RefreshMaterialReserveControls(); break; }
+    }
 }

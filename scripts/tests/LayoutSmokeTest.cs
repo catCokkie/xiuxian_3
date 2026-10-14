@@ -158,6 +158,46 @@ public partial class LayoutSmokeTest : Node
                     await Settle(); await Capture("small_production");
                     ((ScrollContainer)PageRoot("CultivationScroll")).ScrollVertical = 0;
                 }
+                var inventoryBefore = s.BackpackState!.ToDictionary(); var walletBefore = s.ResourceWalletState!.ToDictionary();
+                s.BackpackState.FromDictionary(new()); s.BackpackState.AddItem("spirit_herb", 1); s.BackpackState.SetReservedCount("spirit_herb", 1);
+                s.ResourceWalletState.FromDictionary(new() { ["lingqi"] = 0.0 }); await Select("CultivationTab");
+                var blockToggle = productionPanel.GetNode<Button>("ProductionRecovery/ProductionDetailsToggle");
+                blockToggle.ButtonPressed = true; await Settle();
+                var blockDetails = productionPanel.GetNode<Label>("ProductionDetails");
+                Check(productionPanel.GetNode<Label>("ProductionStatus").Text.Contains("材料不足") && blockDetails.Text.Contains("灵气不足") && blockDetails.Text.Contains("保留1 / 可用0"),
+                    scenario + ": exact primary and secondary blockers render with owned reserved and spendable counts");
+                Check(blockDetails.IsVisibleInTree() && blockDetails.Size.X <= productionPanel.Size.X, scenario + ": multiline production conditions wrap inside the panel");
+                foreach (Control control in productionPanel.GetNode<Control>("ProductionRecovery").GetChildren())
+                    if (control.Visible) Check(Inside(productionPanel.GetGlobalRect(), control.GetGlobalRect()), scenario + ": production recovery button fits wrapping row");
+                if (dimensions.X == 800)
+                {
+                    var scroll = (ScrollContainer)PageRoot("CultivationScroll");
+                    scroll.ScrollVertical = (int)(productionPanel.GetGlobalRect().Position.Y - scroll.GetGlobalRect().Position.Y + scroll.ScrollVertical - 20);
+                    await Settle(); await Capture("small_production_blockers"); scroll.ScrollVertical = 0;
+                }
+                blockToggle.ButtonPressed = false;
+                s.BackpackState.FromDictionary(inventoryBefore); s.ResourceWalletState.FromDictionary(walletBefore); await Select("CultivationTab");
+                var equipmentBefore = s.EquippedItemsState!.ToDictionary(); var smithingBefore = s.SmithingState!.ToDictionary();
+                var weapon = s.EquippedItemsState.GetEquippedProfiles().First();
+                s.EquippedItemsState.Equip(weapon with { EnhanceLevel = 3, Rarity = 1 }); s.SmithingState.SelectTarget(weapon.EquipmentId, 3); s.SmithingState.Production.Start(true, 1);
+                await Select("EquipmentTab");
+                var forge = (Control)_tabs.FindChild("EquipmentProduction", true, false);
+                var forgeToggle = forge.GetNode<Button>("ProductionRecovery/ProductionDetailsToggle"); forgeToggle.ButtonPressed = true; await Settle();
+                Check(forge.GetNode<Label>("ProductionStatus").Text.Contains("强化已达当前上限") && forge.GetNode<Button>("ProductionRecovery/ProductionHelp").Text == "比较其他装备",
+                    scenario + ": equipment rarity cap and its real recovery option are visible");
+                var equipmentScroll = PageRoot("EquipmentRoot").GetNode<ScrollContainer>("EquipmentScroll");
+                Check(Inside(PageRoot("EquipmentRoot").GetGlobalRect(), equipmentScroll.GetGlobalRect()), scenario + ": expanded equipment production stays inside scrollable page");
+                foreach (Control control in forge.GetNode<Control>("ProductionRecovery").GetChildren())
+                    if (control.Visible) Check(Inside(forge.GetGlobalRect(), control.GetGlobalRect()), scenario + ": equipment recovery control fits wrapping row");
+                if (dimensions.X == 800) { equipmentScroll.EnsureControlVisible(forge); await Settle(); await Capture("small_production_cap"); }
+                s.EquippedItemsState.Equip(weapon with { EnhanceLevel = 0, Rarity = 3 }); s.SmithingState.SelectTarget(weapon.EquipmentId, 0);
+                s.BackpackState.FromDictionary(new()); s.ResourceWalletState.FromDictionary(new() { ["lingqi"] = 0.0 }); await Select("EquipmentTab");
+                Check(forge.GetNode<Label>("ProductionDetails").Text.Contains("灵气不足") && forge.GetNode<Label>("ProductionDetails").Text.Contains("碎片"), scenario + ": expanded smithing conditions show all material and qi blockers");
+                Check(forge.GetNode<Label>("ProductionDetails").Size.X <= forge.Size.X, scenario + ": detailed smithing shortages wrap inside scroll content");
+                if (dimensions.X == 800) { equipmentScroll.EnsureControlVisible(forge); await Settle(); await Capture("small_production_smithing"); }
+                forgeToggle.ButtonPressed = false; equipmentScroll.ScrollVertical = 0;
+                s.EquippedItemsState.FromDictionary(equipmentBefore); s.SmithingState.FromDictionary(smithingBefore);
+                s.BackpackState.FromDictionary(inventoryBefore); s.ResourceWalletState.FromDictionary(walletBefore);
                 s.PlayerActionState!.SetAction("cooking"); await Select("CultivationTab");
                 var mealUsage = (Control)_tabs.FindChild("MealUsage", true, false);
                 var mealMode = (OptionButton)_tabs.FindChild("MealMode", true, false);

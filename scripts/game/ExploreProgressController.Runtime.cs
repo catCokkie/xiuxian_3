@@ -1912,7 +1912,7 @@ namespace Xiuxian.Scripts.Game
 
             if (GetCurrentProductionPlan() is { CanProduce: false })
             {
-                _roundInfoLabel.Text = GetCurrentProductionPlan()!.Summary;
+                ShowProductionBlock("alchemy");
                 return;
             }
             inputEvents = ApplyFormationCraftSpeed(inputEvents);
@@ -1925,10 +1925,7 @@ namespace Xiuxian.Scripts.Game
             }
 
             while (_alchemyState.Production.CanProduce && _alchemyState.CurrentProgress >= _alchemyState.RequiredProgress && TryCompleteAlchemyBatch()) _alchemyState.CompleteBatch();
-            if (!AlchemyRules.CanStartRecipe(_alchemyState.SelectedRecipeId, _resourceWalletState.Lingqi, _backpackState.GetSpendableItemEntries(), _subsystemMasteryState?.GetLevel(PlayerActionState.ModeAlchemy) ?? 1))
-            {
-                _battleInfoLabel.Text = "材料或灵气不足，炼丹暂停并保留进度"; _battleInfoLabel.Show(); return;
-            }
+            if (ShowProductionBlock("alchemy")) return;
             bool completedBatch = CraftingProgressionService.AdvanceAlchemy(_alchemyState, inputEvents, out float percent);
             _progressBar.Value = percent;
             _roundInfoLabel.Text = BuildAlchemyProgressText();
@@ -1939,11 +1936,7 @@ namespace Xiuxian.Scripts.Game
             }
 
             while (_alchemyState.Production.CanProduce && _alchemyState.CurrentProgress >= _alchemyState.RequiredProgress && TryCompleteAlchemyBatch()) _alchemyState.CompleteBatch();
-            if (_alchemyState.CurrentProgress >= _alchemyState.RequiredProgress)
-            {
-                _battleInfoLabel.Text = "材料或灵气不足，炼丹已暂停";
-                _battleInfoLabel.Visible = true;
-            }
+            ShowProductionBlock("alchemy");
         }
 
         private bool TryCompleteAlchemyBatch()
@@ -1977,7 +1970,7 @@ namespace Xiuxian.Scripts.Game
 
             if (GetCurrentProductionPlan() is { CanProduce: false })
             {
-                _roundInfoLabel.Text = GetCurrentProductionPlan()!.Summary;
+                ShowProductionBlock("smithing");
                 return;
             }
             inputEvents = ApplyFormationCraftSpeed(inputEvents);
@@ -1994,8 +1987,7 @@ namespace Xiuxian.Scripts.Game
                 && _equippedItemsState.TryGetEquippedProfileById(_smithingState.TargetEquipmentId, out targetProfile)
                 && TryCompleteSmithingBatch(targetProfile)) { }
             _equippedItemsState.TryGetEquippedProfileById(_smithingState.TargetEquipmentId, out targetProfile);
-            if (!SmithingRules.CanEnhance(targetProfile, _backpackState, _resourceWalletState, _subsystemMasteryState?.GetLevel(PlayerActionState.ModeSmithing) ?? 1))
-            { _battleInfoLabel.Text = "强化已暂停，材料不足或达到上限，保留当前进度"; _battleInfoLabel.Show(); return; }
+            if (ShowProductionBlock("smithing")) return;
             bool completed = CraftingProgressionService.AdvanceSmithing(_smithingState, inputEvents, out float percent);
             _progressBar.Value = percent;
             _roundInfoLabel.Text = BuildSmithingProgressText(targetProfile);
@@ -2007,11 +1999,7 @@ namespace Xiuxian.Scripts.Game
             while (_smithingState.Production.CanProduce && _smithingState.CurrentProgress >= _smithingState.RequiredProgress
                 && _equippedItemsState.TryGetEquippedProfileById(_smithingState.TargetEquipmentId, out targetProfile)
                 && TryCompleteSmithingBatch(targetProfile)) { }
-            if (_smithingState.CurrentProgress >= _smithingState.RequiredProgress)
-            {
-                _battleInfoLabel.Text = "材料不足、灵气不足或强化已达上限";
-                _battleInfoLabel.Visible = true;
-            }
+            ShowProductionBlock("smithing");
         }
 
         private bool TryCompleteSmithingBatch(EquipmentStatProfile targetProfile)
@@ -2214,7 +2202,7 @@ namespace Xiuxian.Scripts.Game
 
             if (GetCurrentProductionPlan() is { CanProduce: false })
             {
-                _roundInfoLabel.Text = GetCurrentProductionPlan()!.Summary;
+                ShowProductionBlock(GetActiveGenericSystemId());
                 return;
             }
             inputEvents = ApplyFormationCraftSpeed(inputEvents);
@@ -2228,9 +2216,7 @@ namespace Xiuxian.Scripts.Game
             }
 
             while ((!CraftingProductionPlan.Supports(GetActiveGenericSystemId()) || state.Production.CanProduce) && state.CurrentProgress >= state.RequiredProgress && TryCompleteGenericRecipeBatch(state.SelectedRecipeId)) state.CompleteBatch();
-            if (!CraftingProgressionService.CanAffordGenericRecipe(state.SelectedRecipeId, _backpackState, _resourceWalletState,
-                _subsystemMasteryState?.GetLevel(GetActiveGenericSystemId()) ?? 1))
-            { _battleInfoLabel.Text = "材料或灵气不足，暂停并保留进度"; _battleInfoLabel.Show(); return; }
+            if (ShowProductionBlock(GetActiveGenericSystemId())) return;
             bool completedBatch = state.AdvanceProgress(inputEvents);
             _progressBar.Value = state.RequiredProgress > 0.0f ? state.CurrentProgress / state.RequiredProgress * 100.0f : 0.0f;
             _roundInfoLabel.Text = BuildGenericRecipeProgressText();
@@ -2245,6 +2231,7 @@ namespace Xiuxian.Scripts.Game
                 _progressBar.Value = state.CurrentProgress / state.RequiredProgress * 100;
                 _roundInfoLabel.Text = BuildGenericRecipeProgressText();
             }
+            ShowProductionBlock(GetActiveGenericSystemId());
         }
 
         private void EnsureGenericRecipeSelected(IRecipeProgressState state, string systemId)
@@ -2261,8 +2248,7 @@ namespace Xiuxian.Scripts.Game
             {
                 IRecipeDefinition? selectedRecipe = ActivityRegistry.GetRecipe(state.SelectedRecipeId);
                 if (selectedRecipe != null
-                    && selectedRecipe.SystemId == systemId
-                    && selectedRecipe.RequiredMasteryLevel <= masteryLevel)
+                    && selectedRecipe.SystemId == systemId)
                 {
                     return;
                 }
@@ -2305,9 +2291,10 @@ namespace Xiuxian.Scripts.Game
             }
 
             int outputMultiplier = GetShopOutputMultiplier();
-            if (!Xiuxian.Scripts.Game.CraftingProgressionService.TryCompleteGenericBatch(recipeId, _backpackState, _resourceWalletState, masteryLevel, outputMultiplier, out string rewardText))
+            if (!Xiuxian.Scripts.Game.CraftingProgressionService.TryCompleteGenericBatch(recipeId, _backpackState, _resourceWalletState, masteryLevel, outputMultiplier, out string rewardText,
+                CraftingProductionPlan.Supports(recipe.SystemId) ? GetActiveGenericRecipeState()?.Production : null))
             {
-                _battleInfoLabel.Text = "材料不足或灵气不足，当前流程已暂停";
+                _battleInfoLabel.Text = ProductionBlockRules.Summary(GetProductionCheck(recipe.SystemId)) + " 保留当前进度。";
                 _battleInfoLabel.Visible = true;
                 return false;
             }

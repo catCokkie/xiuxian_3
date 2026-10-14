@@ -36,7 +36,8 @@ namespace Xiuxian.Scripts.Game
                 return false;
             }
 
-            if (!AlchemyRules.CanStartRecipe(alchemyState.SelectedRecipeId, resourceWalletState.Lingqi, backpackState.GetSpendableItemEntries(), alchemyMasteryLevel))
+            if (!CheckRecipe(alchemyState.SelectedRecipeId, backpackState, resourceWalletState, alchemyMasteryLevel,
+                alchemyState.Production, ServiceLocator.Instance?.PlayerProgressState?.RealmLevel ?? int.MaxValue).CanProduce)
             {
                 return false;
             }
@@ -93,7 +94,8 @@ namespace Xiuxian.Scripts.Game
                 return false;
             }
 
-            if (!SmithingRules.CanEnhance(targetProfile, backpackState, resourceWalletState, smithingMasteryLevel))
+            if (!CheckSmithing(targetProfile, backpackState, resourceWalletState, smithingMasteryLevel,
+                smithingState.Production, ServiceLocator.Instance?.PlayerProgressState?.RealmLevel ?? int.MaxValue).CanProduce)
             {
                 return false;
             }
@@ -165,7 +167,8 @@ namespace Xiuxian.Scripts.Game
             ResourceWalletState? resourceWalletState,
             int masteryLevel,
             int outputMultiplier,
-            out string rewardText)
+            out string rewardText,
+            CraftingProductionPlan? production = null)
         {
             rewardText = string.Empty;
             IRecipeDefinition? recipe = ActivityRegistry.GetRecipe(recipeId);
@@ -174,25 +177,9 @@ namespace Xiuxian.Scripts.Game
                 return false;
             }
 
-            if (masteryLevel < recipe.RequiredMasteryLevel)
-            {
-                return false;
-            }
-
+            if (!CheckRecipe(recipeId, backpackState, resourceWalletState, masteryLevel, production,
+                realmLevel: ServiceLocator.Instance?.PlayerProgressState?.RealmLevel ?? int.MaxValue).CanProduce) return false;
             MaterialCost[] effectiveInputs = GetEffectiveInputs(recipe, masteryLevel);
-
-            if (resourceWalletState.Lingqi < recipe.LingqiCost)
-            {
-                return false;
-            }
-
-            for (int i = 0; i < effectiveInputs.Length; i++)
-            {
-                if (backpackState.GetSpendableItemCount(effectiveInputs[i].ItemId) < effectiveInputs[i].Count)
-                {
-                    return false;
-                }
-            }
 
             if (!resourceWalletState.SpendLingqi(recipe.LingqiCost))
             {
@@ -233,27 +220,26 @@ namespace Xiuxian.Scripts.Game
             ResourceWalletState? resourceWalletState,
             int masteryLevel)
         {
-            IRecipeDefinition? recipe = ActivityRegistry.GetRecipe(recipeId);
-            if (recipe == null || backpackState == null || resourceWalletState == null || masteryLevel < recipe.RequiredMasteryLevel)
-            {
-                return false;
-            }
+            return CheckRecipe(recipeId, backpackState, resourceWalletState, masteryLevel).CanProduce;
+        }
 
-            if (resourceWalletState.Lingqi < recipe.LingqiCost)
-            {
-                return false;
-            }
-
-            MaterialCost[] effectiveInputs = GetEffectiveInputs(recipe, masteryLevel);
-            for (int i = 0; i < effectiveInputs.Length; i++)
-            {
-                if (backpackState.GetSpendableItemCount(effectiveInputs[i].ItemId) < effectiveInputs[i].Count)
-                {
-                    return false;
-                }
-            }
-
-            return true;
+        public static ProductionCheck CheckRecipe(string recipeId, BackpackState? backpack, ResourceWalletState? wallet,
+            int mastery, CraftingProductionPlan? plan = null, int realmLevel = int.MaxValue)
+        {
+            var recipe = ActivityRegistry.GetRecipe(recipeId);
+            if (recipe == null || backpack == null || wallet == null) return ProductionBlockRules.Unavailable(recipeId);
+            int requiredRealm = ProgressiveUnlockRules.IsActionModeUnlocked(recipe.SystemId, realmLevel) ? 0 : ProgressiveUnlockRules.GetRequiredRealmLevel(recipe.SystemId);
+            return recipe.SystemId == "alchemy"
+                ? ProductionBlockRules.Alchemy(recipeId, wallet.Lingqi, backpack.GetItemEntries(), backpack.GetReservedEntries(), mastery, plan, requiredRealm)
+                : ProductionBlockRules.Check(GetEffectiveInputs(recipe, mastery), recipe.LingqiCost, wallet.Lingqi,
+                    backpack.GetItemEntries(), backpack.GetReservedEntries(), mastery, recipe.RequiredMasteryLevel, plan, requiredRealm);
+        }
+        public static ProductionCheck CheckSmithing(EquipmentStatProfile profile, BackpackState? backpack, ResourceWalletState? wallet,
+            int mastery, CraftingProductionPlan? plan = null, int realmLevel = int.MaxValue)
+        {
+            if (backpack == null || wallet == null) return ProductionBlockRules.Unavailable(profile.EquipmentId);
+            int requiredRealm = ProgressiveUnlockRules.IsActionModeUnlocked("smithing", realmLevel) ? 0 : ProgressiveUnlockRules.GetRequiredRealmLevel("smithing");
+            return ProductionBlockRules.Smithing(profile, wallet.Lingqi, backpack.GetItemEntries(), backpack.GetReservedEntries(), mastery, plan, requiredRealm);
         }
 
         public static MaterialCost[] GetEffectiveInputs(IRecipeDefinition recipe, int masteryLevel)

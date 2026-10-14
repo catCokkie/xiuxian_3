@@ -51,18 +51,7 @@ namespace Xiuxian.Scripts.Services
 
         public static bool CanStartRecipe(string recipeId, double lingqi, IReadOnlyDictionary<string, int> backpackItems, int masteryLevel = 1)
         {
-            if (!TryGetRecipe(recipeId, out RecipeSpec recipe))
-            {
-                return false;
-            }
-
-            if (masteryLevel < recipe.RequiredMasteryLevel)
-            {
-                return false;
-            }
-
-            int itemCount = backpackItems != null && backpackItems.TryGetValue(recipe.MaterialItemId, out int count) ? count : 0;
-            return lingqi >= recipe.LingqiCost && itemCount >= recipe.MaterialCount;
+            return ProductionBlockRules.Alchemy(recipeId, lingqi, backpackItems ?? new Dictionary<string, int>(), null, masteryLevel).CanProduce;
         }
 
         public static AlchemyProgressDecision AdvanceProgress(float currentProgress, int inputEvents, int requiredInputs)

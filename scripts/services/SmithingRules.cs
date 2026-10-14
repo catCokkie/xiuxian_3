@@ -41,16 +41,7 @@ namespace Xiuxian.Scripts.Services
 
         public static bool CanEnhance(EquipmentStatProfile equipment, BackpackState backpack, ResourceWalletState wallet, int masteryLevel = 1)
         {
-            int maxLevel = GetMaxEnhanceLevel(masteryLevel, equipment.Rarity);
-            if (equipment.EnhanceLevel >= maxLevel)
-            {
-                return false;
-            }
-
-            SmithingCost cost = GetCost(equipment.EnhanceLevel, masteryLevel);
-            return backpack.GetSpendableItemCount("lingqi_shard") >= cost.Shards
-                && backpack.GetSpendableItemCount("broken_talisman") >= cost.Talismans
-                && wallet.Lingqi >= cost.Lingqi;
+            return ProductionBlockRules.Smithing(equipment, wallet.Lingqi, backpack.GetItemEntries(), backpack.GetReservedEntries(), masteryLevel).CanProduce;
         }
 
         private static int ApplyDiscount(int amount, bool discounted)

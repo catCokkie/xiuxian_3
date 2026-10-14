@@ -15,6 +15,11 @@ public partial class BookTabsController
         public required Label Status;
         public required Button Start;
         public required Button Stop;
+        public required Button DetailsToggle;
+        public required Label Details;
+        public required Button Help;
+        public required Button Reserve;
+        public ProductionCheck? Check;
         public string FixedSystem = "";
         public string LastTarget = "";
         public CraftingProductionPlan? LastPlan;
@@ -58,8 +63,21 @@ public partial class BookTabsController
         Button start = new() { Name = "ProductionStart", Text = "开始 / 继续" }; row.AddChild(start);
         Button stop = new() { Name = "ProductionStop", Text = "停止" }; row.AddChild(stop);
         Label status = new() { Name = "ProductionStatus", AutowrapMode = TextServer.AutowrapMode.WordSmart }; root.AddChild(status);
-        ProductionView view = new() { Root = root, Mode = mode, Rounds = rounds, Start = start, Stop = stop, Status = status, FixedSystem = fixedSystem };
+        HFlowContainer helpRow = new() { Name = "ProductionRecovery" }; helpRow.AddThemeConstantOverride("h_separation", 8); helpRow.AddThemeConstantOverride("v_separation", 8); root.AddChild(helpRow);
+        Button toggle = new() { Name = "ProductionDetailsToggle", Text = "查看生产条件", ToggleMode = true }; helpRow.AddChild(toggle);
+        Button help = new() { Name = "ProductionHelp" }; helpRow.AddChild(help);
+        Button reserve = new() { Name = "ProductionReserve", Text = "修改此项保留" }; helpRow.AddChild(reserve);
+        Label details = new() { Name = "ProductionDetails", Visible = false, AutowrapMode = TextServer.AutowrapMode.WordSmart }; root.AddChild(details);
+        toggle.Toggled += shown => { details.Visible = shown; toggle.Text = shown ? "收起生产条件" : "查看生产条件"; };
+        ProductionView view = new() { Root = root, Mode = mode, Rounds = rounds, Start = start, Stop = stop, Status = status, FixedSystem = fixedSystem,
+            DetailsToggle = toggle, Details = details, Help = help, Reserve = reserve };
         _productionViews.Add(view);
+        help.Pressed += () => ResolveProductionBlock(view);
+        reserve.Pressed += () =>
+        {
+            string system = view.FixedSystem == "" ? _playerActionState?.ActionId ?? "" : view.FixedSystem;
+            if (RecoveryBlock(_exploreProgressController?.GetProductionCheck(system))?.ItemId is { Length: > 0 } id) OpenMaterialReserve(id);
+        };
         start.Pressed += () =>
         {
             string system = fixedSystem == "" ? _playerActionState?.ActionId ?? "" : fixedSystem;
@@ -109,24 +127,108 @@ public partial class BookTabsController
             view.Start.Disabled = target == "";
             view.Stop.Disabled = target == "" || !plan.CanProduce;
             view.Start.Text = plan.Finished ? "开始新计划" : plan.Paused ? "继续生产" : "开始 / 继续";
-            bool funded = false;
+            view.Check = _exploreProgressController?.GetProductionCheck(system) ?? ProductionBlockRules.Unavailable(target);
             string output = "";
             if (system == "smithing")
             {
                 output = "每轮强化一次；达到强化上限时暂停。";
-                funded = _equippedItemsState?.TryGetEquippedProfileById(target, out EquipmentStatProfile profile) == true
-                    && SmithingRules.CanEnhance(profile, _backpackState!, _resourceWalletState!, GetSmithingMasteryLevel());
             }
             else if (ActivityRegistry.GetRecipe(target) is { } recipe)
             {
                 output = "每轮基础产出：" + string.Join("、", recipe.Outputs.Select(x => $"{UiText.BackpackItemName(x.ItemId)} ×{x.Count}")) + "（额外产量加成另计）。";
-                funded = system == "alchemy"
-                    ? _resourceWalletState != null && _backpackState != null && AlchemyRules.CanStartRecipe(target, _resourceWalletState.Lingqi, _backpackState.GetSpendableItemEntries(), GetAlchemyMasteryLevel())
-                    : CraftingProgressionService.CanAffordGenericRecipe(target, _backpackState, _resourceWalletState, GetMasteryLevel(system));
             }
-            view.Status.Text = target == "" ? "先选择制作项目。" : plan.Summary + (plan.CanProduce && !funded ? " · 可用材料不足或达到上限，保留进度" : "") + "\n" + output
+            view.Status.Text = (target == "" ? "" : plan.Summary + "\n") + ProductionBlockRules.Summary(view.Check) + "\n" + output
                 + (system == "formation" ? " 同名阵法重复持有不叠加效果。" : "");
+            if (view.Check.CanProduce && system != _playerActionState?.ActionId)
+                view.Status.Text += "\n当前活动不推进此项目；开始/继续会切换到对应加工活动。";
+            view.Details.Text = ProductionBlockRules.Details(view.Check);
+            RefreshProductionRecovery(view);
             view.Start.TooltipText = "相同设置继续剩余轮数；修改设置或完成后开始新计划。停止保留当前批次进度；离线共用轮数。";
         }
+    }
+
+    private static ProductionBlock? RecoveryBlock(ProductionCheck? check) => check?.Primary?.Kind == ProductionBlockKind.Finished ? null
+        : check?.Blocks.FirstOrDefault(x => x.Kind != ProductionBlockKind.Paused);
+    private void RefreshProductionRecovery(ProductionView view)
+    {
+        var block = RecoveryBlock(view.Check);
+        view.Help.Visible = block != null;
+        view.Help.Disabled = false;
+        view.Reserve.Visible = block?.Kind == ProductionBlockKind.Material && (_backpackState?.GetReservedCount(block.ItemId) ?? 0) > 0;
+        if (block == null) return;
+        view.Help.Text = block.Kind switch
+        {
+            ProductionBlockKind.Reserve => "修改此项保留",
+            ProductionBlockKind.Material => "找该材料",
+            ProductionBlockKind.Lingqi => "切到修炼补充灵气",
+            ProductionBlockKind.ActivityLocked => "查看开放条件",
+            ProductionBlockKind.Mastery => "查看研习",
+            ProductionBlockKind.EnhanceCap => block.RequiredLevel > 0 ? "查看研习" : "比较其他装备",
+            _ => "选择制作项目"
+        };
+        view.Help.TooltipText = ProductionBlockRules.Describe(view.Check!, block);
+        if (block.Kind == ProductionBlockKind.Material)
+        {
+            var source = FindProductionMaterialSource(block.ItemId);
+            view.Help.Disabled = source.System == "";
+            view.Help.TooltipText = source.Hint;
+            view.Details.Text += "\n" + source.Hint;
+        }
+    }
+    private void ResolveProductionBlock(ProductionView view)
+    {
+        string system = view.FixedSystem == "" ? _playerActionState?.ActionId ?? "" : view.FixedSystem;
+        // Recheck after inventory, mastery or target edits; a stale button must not act on the old blocker.
+        view.Check = _exploreProgressController?.GetProductionCheck(system);
+        var block = RecoveryBlock(view.Check); if (block == null) return;
+        if (block.Kind == ProductionBlockKind.Reserve) { OpenMaterialReserve(block.ItemId); return; }
+        if (block.Kind == ProductionBlockKind.Material) { NavigateProductionMaterial(block.ItemId); return; }
+        if (block.Kind == ProductionBlockKind.Lingqi) { _playerActionState?.SetAction("cultivation"); return; }
+        if (block.Kind is ProductionBlockKind.Mastery or ProductionBlockKind.ActivityLocked || block.Kind == ProductionBlockKind.EnhanceCap && block.RequiredLevel > 0)
+        {
+            SetActiveLeftTab("CultivationTab"); _masteryToggle!.ButtonPressed = true;
+            if (_cultivationRoot.GetParent() is ScrollContainer scroll)
+            {
+                Control target = _cultivationMasteryButtons.GetValueOrDefault(system) ?? (Control)_masteryDetails!;
+                Callable.From(() => scroll.EnsureControlVisible(target)).CallDeferred();
+            }
+            return;
+        }
+        if (system == "smithing") SetActiveLeftTab("EquipmentTab");
+        else (system switch { "alchemy" => _cultivationAlchemyRecipeOption, "talisman" => _cultivationTalismanOption,
+            "cooking" => _productionCookingRecipeOption, "formation" => _cultivationFormationOption, _ => null })?.GrabFocus();
+    }
+    private (string System, string Target, string Hint) FindProductionMaterialSource(string itemId)
+    {
+        int realm = _playerProgressState?.RealmLevel ?? 1;
+        if (ProgressiveUnlockRules.IsActionModeUnlocked("garden", realm))
+            foreach (var crop in GardenRules.GetCrops())
+                if (crop.OutputItemId == itemId && GardenRules.CanPlantCrop(crop.RecipeId, GetMasteryLevel("garden")))
+                    return ("garden", crop.RecipeId, $"来源：灵田{crop.DisplayName}；选择后仍需手动播种并准备种子与灵石。");
+        if (ProgressiveUnlockRules.IsActionModeUnlocked("mining", realm))
+            foreach (var node in MiningRules.GetNodes())
+                if (node.OutputItemId == itemId && MiningRules.CanMineNode(node.RecipeId, GetMasteryLevel("mining")))
+                    return ("mining", node.RecipeId, $"来源：矿脉{node.DisplayName}；正常输入推进采集。");
+        if (ProgressiveUnlockRules.IsActionModeUnlocked("fishing", realm))
+            foreach (var pond in FishingRules.GetPonds())
+                if (ServiceLocator.Instance?.FishingState?.CanSelectPond(pond.RecipeId) == true
+                    && Enumerable.Range(0, 100).Any(roll => FishingRules.CatchFish(pond.RecipeId, GetMasteryLevel("fishing"), roll).ItemId == itemId))
+                    return ("fishing", pond.RecipeId, $"来源：灵渔{pond.DisplayName}，产物随机；仍受鱼群容量限制。");
+        var loader = ServiceLocator.Instance?.LevelConfigLoader;
+        var regions = loader?.GetUnlockedLevelIds().Where(id => loader.GetOfflineAverageItemDropsPerVictory(id).GetValueOrDefault(itemId) > 0).ToArray() ?? Array.Empty<string>();
+        if (regions.Length > 0)
+            return ("dungeon", "", "副本来源：" + string.Join("、", regions.Select(id => UiText.ZoneName(id, loader!.GetLevelName(id))))
+                + "；进入副本后从底栏选择来源区域，切区会重置当前探索。");
+        return ("", "", "当前没有已开放且可用的来源；请查看采集精通、鱼塘许可或后续区域，不会自动采购材料。");
+    }
+    private void NavigateProductionMaterial(string itemId)
+    {
+        var source = FindProductionMaterialSource(itemId); if (source.System == "") return;
+        var services = ServiceLocator.Instance;
+        if (source.System == "garden") services?.GardenState?.SelectCrop(source.Target);
+        else if (source.System == "mining" && services?.MiningState?.SelectedRecipeId != source.Target) services?.MiningState?.SelectNode(source.Target);
+        else if (source.System == "fishing" && services?.FishingState?.SelectedRecipeId != source.Target) services?.FishingState?.SelectPond(source.Target);
+        _playerActionState?.SetAction(source.System); SetActiveLeftTab("CultivationTab");
+        _cultivationStatusLabel.Text = source.Hint;
     }
 }

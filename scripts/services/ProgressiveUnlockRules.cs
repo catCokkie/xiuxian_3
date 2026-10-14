@@ -82,6 +82,13 @@ namespace Xiuxian.Scripts.Services
             return false;
         }
 
+        public static int GetRequiredRealmLevel(string modeId)
+        {
+            for (int realm = 1; realm <= 5; realm++)
+                if (IsActionModeUnlocked(modeId, realm)) return realm;
+            return int.MaxValue;
+        }
+
         public static bool IsStatsTabUnlocked(int realmLevel)
         {
             return realmLevel >= 3;
