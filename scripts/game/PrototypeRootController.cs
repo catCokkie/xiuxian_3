@@ -155,6 +155,7 @@ namespace Xiuxian.Scripts.Game
             {
                 _potionInventoryState.PotionInventoryChanged += OnPotionInventoryChanged;
             }
+            if (_backpackState != null) _backpackState.ReserveChanged += OnInventoryReserveChanged;
             if (_smithingState != null)
             {
                 _smithingState.SmithingChanged += OnSmithingChanged;
@@ -292,6 +293,7 @@ namespace Xiuxian.Scripts.Game
             {
                 _potionInventoryState.PotionInventoryChanged -= OnPotionInventoryChanged;
             }
+            if (_backpackState != null) _backpackState.ReserveChanged -= OnInventoryReserveChanged;
             if (_smithingState != null)
             {
                 _smithingState.SmithingChanged -= OnSmithingChanged;
@@ -446,6 +448,8 @@ namespace Xiuxian.Scripts.Game
         {
             MarkDirty();
         }
+
+        private void OnInventoryReserveChanged() => MarkDirty();
 
         private void OnPotionInventoryChanged(string potionId, int amount, int newTotal)
         {

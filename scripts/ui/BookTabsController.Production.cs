@@ -50,6 +50,7 @@ public partial class BookTabsController
     {
         VBoxContainer root = new() { Name = fixedSystem == "" ? "HomeProduction" : "EquipmentProduction", SizeFlagsHorizontal = SizeFlags.ExpandFill };
         parent.AddChild(root);
+        AddReserveLink(root);
         HFlowContainer row = new() { Name = "ProductionActions" }; row.AddThemeConstantOverride("h_separation", 8); row.AddThemeConstantOverride("v_separation", 8); root.AddChild(row);
         OptionButton mode = new() { Name = "ProductionMode" }; mode.AddItem("指定轮数"); mode.AddItem("一直生产"); row.AddChild(mode);
         SpinBox rounds = new() { Name = "ProductionRounds", MinValue = 1, MaxValue = CraftingProductionPlan.MaxRounds, Step = 1, Value = 1, Suffix = "轮", CustomMinimumSize = new Vector2(105, 0) }; row.AddChild(rounds);
@@ -120,10 +121,10 @@ public partial class BookTabsController
             {
                 output = "每轮基础产出：" + string.Join("、", recipe.Outputs.Select(x => $"{UiText.BackpackItemName(x.ItemId)} ×{x.Count}")) + "（额外产量加成另计）。";
                 funded = system == "alchemy"
-                    ? _resourceWalletState != null && _backpackState != null && AlchemyRules.CanStartRecipe(target, _resourceWalletState.Lingqi, _backpackState.GetItemEntries(), GetAlchemyMasteryLevel())
+                    ? _resourceWalletState != null && _backpackState != null && AlchemyRules.CanStartRecipe(target, _resourceWalletState.Lingqi, _backpackState.GetSpendableItemEntries(), GetAlchemyMasteryLevel())
                     : CraftingProgressionService.CanAffordGenericRecipe(target, _backpackState, _resourceWalletState, GetMasteryLevel(system));
             }
-            view.Status.Text = target == "" ? "先选择制作项目。" : plan.Summary + (plan.CanProduce && !funded ? " · 缺料或达到上限，保留进度" : "") + "\n" + output
+            view.Status.Text = target == "" ? "先选择制作项目。" : plan.Summary + (plan.CanProduce && !funded ? " · 可用材料不足或达到上限，保留进度" : "") + "\n" + output
                 + (system == "formation" ? " 同名阵法重复持有不叠加效果。" : "");
             view.Start.TooltipText = "相同设置继续剩余轮数；修改设置或完成后开始新计划。停止保留当前批次进度；离线共用轮数。";
         }

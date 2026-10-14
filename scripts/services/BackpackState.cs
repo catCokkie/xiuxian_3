@@ -8,6 +8,28 @@ namespace Xiuxian.Scripts.Services
     /// </summary>
     public partial class BackpackState : Node, IDictionaryPersistable
     {
+        private readonly Dictionary<string, int> _reservedCounts = new();
+        public int GetReservedCount(string itemId) => _reservedCounts.TryGetValue(itemId, out int count) ? count : 0;
+        public int GetSpendableItemCount(string itemId) => InventoryReserveRules.Spendable(GetItemCount(itemId), GetReservedCount(itemId));
+        public Dictionary<string, int> GetReservedEntries() => new(_reservedCounts);
+        public Dictionary<string, int> GetSpendableItemEntries()
+        {
+            var entries = GetItemEntries();
+            foreach (string id in new List<string>(entries.Keys)) entries[id] = GetSpendableItemCount(id);
+            return entries;
+        }
+        public void SetReservedCount(string itemId, int count)
+        {
+            if (string.IsNullOrWhiteSpace(itemId) || itemId.StartsWith("__", System.StringComparison.Ordinal)) return;
+            count = System.Math.Clamp(count, 0, InventoryReserveRules.MaxReserve);
+            if (count == GetReservedCount(itemId)) return;
+            if (count == 0) _reservedCounts.Remove(itemId); else _reservedCounts[itemId] = count;
+            // A policy edit changes neither inventory nor buffs, but must dirty the save and refresh consumers.
+            EmitSignal(SignalName.InventoryChanged, itemId, 0, GetItemCount(itemId));
+            EmitSignal(SignalName.ReserveChanged);
+        }
+        [Signal]
+        public delegate void ReserveChangedEventHandler();
         [Signal]
         public delegate void InventoryChangedEventHandler(string itemId, int amount, int newTotal);
 
@@ -48,7 +70,7 @@ namespace Xiuxian.Scripts.Services
             }
 
             int current = GetItemCount(itemId);
-            if (current < amount)
+            if (GetSpendableItemCount(itemId) < amount)
             {
                 return false;
             }
@@ -149,7 +171,7 @@ namespace Xiuxian.Scripts.Services
             BackpackPersistenceRules.BackpackSnapshot snapshot = new(
                 GetItemEntries(),
                 GetEquipmentProfiles(),
-                GetEquipmentInstances());
+                GetEquipmentInstances(), GetReservedEntries());
             return SaveValueConversionRules.ToVariantDictionary(BackpackPersistenceRules.ToPlainDictionary(snapshot));
         }
 
@@ -160,6 +182,9 @@ namespace Xiuxian.Scripts.Services
             _items.Clear();
             _equipmentProfiles.Clear();
             _equipmentInstances.Clear();
+            _reservedCounts.Clear();
+            if (snapshot.ReservedCounts != null)
+                foreach (var entry in snapshot.ReservedCounts) _reservedCounts[entry.Key] = entry.Value;
 
             foreach (KeyValuePair<string, int> kv in snapshot.Items)
             {

@@ -168,9 +168,9 @@ namespace Xiuxian.Scripts.Services
                 return false;
             }
 
-            if (backpackState.GetItemCount(crop.SeedItemId) <= 0)
+            if (backpackState.GetSpendableItemCount(crop.SeedItemId) <= 0)
             {
-                reason = $"{UiText.BackpackItemName(crop.SeedItemId)}不足";
+                reason = $"{UiText.BackpackItemName(crop.SeedItemId)}可用量不足（持有{backpackState.GetItemCount(crop.SeedItemId)}，保留{backpackState.GetReservedCount(crop.SeedItemId)}）";
                 return false;
             }
             if ((ServiceLocator.Instance?.ResourceWalletState?.SpiritStones ?? 0) < GardenRules.PlantingSpiritStones)

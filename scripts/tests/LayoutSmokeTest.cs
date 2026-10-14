@@ -158,6 +158,34 @@ public partial class LayoutSmokeTest : Node
                     await Settle(); await Capture("small_production");
                     ((ScrollContainer)PageRoot("CultivationScroll")).ScrollVertical = 0;
                 }
+                s.PlayerActionState!.SetAction("cooking"); await Select("CultivationTab");
+                var mealUsage = (Control)_tabs.FindChild("MealUsage", true, false);
+                var mealMode = (OptionButton)_tabs.FindChild("MealMode", true, false);
+                mealMode.Select(1); mealMode.EmitSignal(OptionButton.SignalName.ItemSelected, 1L);
+                ((SpinBox)_tabs.FindChild("MealPortions", true, false)).Value = 5;
+                await Settle();
+                Check(mealUsage.IsVisibleInTree(), scenario + ": cooking exposes the separate meal usage budget");
+                foreach (Control control in mealUsage.GetNode<Control>("MealUsageActions").GetChildren())
+                    if (control.Visible) Check(Inside(mealUsage.GetGlobalRect(), control.GetGlobalRect()), scenario + ": meal control fits wrapping row");
+                if (dimensions.X == 800)
+                {
+                    var scroll = (ScrollContainer)PageRoot("CultivationScroll");
+                    scroll.ScrollVertical = (int)(mealUsage.GetGlobalRect().Position.Y - scroll.GetGlobalRect().Position.Y + scroll.ScrollVertical - 36);
+                    await Settle(); await Capture("small_meal_budget"); scroll.ScrollVertical = 0;
+                }
+                await Select("BackpackTab");
+                var reserveToggle = (Button)_tabs.FindChild("ReserveToggle", true, false);
+                Check(!reserveToggle.ButtonPressed, scenario + ": material reserve starts collapsed");
+                reserveToggle.ButtonPressed = true; await Settle();
+                var reserveRoot = (Control)_tabs.FindChild("MaterialReserve", true, false);
+                Check(reserveRoot.IsVisibleInTree() && Inside(PageRoot("BackpackRoot").GetGlobalRect(), reserveRoot.GetGlobalRect()), scenario + ": expanded reserve fits backpack page");
+                foreach (Control control in reserveRoot.GetNode<Control>("ReserveActions").GetChildren())
+                    Check(Inside(reserveRoot.GetGlobalRect(), control.GetGlobalRect()), scenario + ": reserve action fits wrapping row");
+                var backpackGrid = (Control)_tabs.FindChild("BackpackGrid", true, false);
+                Check(backpackGrid.GetGlobalRect().Position.Y >= reserveRoot.GetGlobalRect().End.Y && backpackGrid.Size.Y >= 80,
+                    scenario + ": reserve editor leaves visible space for backpack grid");
+                if (dimensions.X == 800) await Capture("small_material_reserve");
+                reserveToggle.ButtonPressed = false; await Settle();
                 foreach (string page in Pages.Append("SettingsTab").Append("BugTab"))
                 {
                     await Select(page);

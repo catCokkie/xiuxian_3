@@ -11,7 +11,7 @@ namespace Xiuxian.Scripts.Services
     /// </summary>
     public static class SaveMigrationRules
     {
-        public const int LatestVersion = 18;
+        public const int LatestVersion = 19;
 
         private const string DefaultLeftTab = "CultivationTab";
         private const string DefaultRightTab = "BugTab";
@@ -193,6 +193,10 @@ namespace Xiuxian.Scripts.Services
                         case 17:
                             MigrateV17ToV18(cfg);
                             version = 18;
+                            break;
+                        case 18:
+                            MigrateV18ToV19(cfg);
+                            version = 19;
                             break;
                         default:
                             version = LatestVersion;
@@ -759,6 +763,20 @@ namespace Xiuxian.Scripts.Services
                 state["projects"] = projects;
                 cfg.SetValue(section, "state", state);
             }
+        }
+
+        private static void MigrateV18ToV19(IMigrationStore cfg)
+        {
+            var items = EnsureDictionaryValue(cfg, "backpack", "items");
+            items.TryAdd(InventoryReserveRules.SaveKey, new Dictionary<string, object>());
+            cfg.SetValue("backpack", "items", items);
+            var cooking = EnsureDictionaryValue(cfg, "cooking", "state");
+            string id = MealRules.NormalizeId(ReadString(GetDictionaryValue(cooking, "active_meal_id"), ""));
+            bool active = !string.IsNullOrEmpty(MealRules.Get(id).Id) && ReadDouble(GetDictionaryValue(cooking, "active_meal_remaining_seconds"), 0) > 0;
+            cooking.TryAdd("planned_meal_id", active ? id : "");
+            var usage = new MealUsagePlan(); usage.Restore(null, active);
+            cooking.TryAdd("meal_usage", usage.ToPlainDictionary());
+            cfg.SetValue("cooking", "state", cooking);
         }
 
         private static Dictionary<string, object> EnsureDictionaryValue(IMigrationStore cfg, string section, string key)

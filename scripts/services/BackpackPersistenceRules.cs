@@ -7,7 +7,8 @@ namespace Xiuxian.Scripts.Services
         public readonly record struct BackpackSnapshot(
             IReadOnlyDictionary<string, int> Items,
             IReadOnlyList<EquipmentStatProfile> EquipmentProfiles,
-            IReadOnlyList<EquipmentInstanceData> EquipmentInstances);
+            IReadOnlyList<EquipmentInstanceData> EquipmentInstances,
+            IReadOnlyDictionary<string, int>? ReservedCounts = null);
 
         public static Dictionary<string, object> ToPlainDictionary(BackpackSnapshot snapshot)
         {
@@ -31,6 +32,10 @@ namespace Xiuxian.Scripts.Services
 
             result["__equipment_profiles"] = equipmentProfiles;
             result["__equipment_instances"] = equipmentInstances;
+            var reserves = new Dictionary<string, object>();
+            if (snapshot.ReservedCounts != null)
+                foreach (var entry in snapshot.ReservedCounts) reserves[entry.Key] = entry.Value;
+            result[InventoryReserveRules.SaveKey] = reserves;
             return result;
         }
 
@@ -39,7 +44,7 @@ namespace Xiuxian.Scripts.Services
             var items = new Dictionary<string, int>();
             foreach (KeyValuePair<string, object> kv in data)
             {
-                if (kv.Key == "__equipment_profiles" || kv.Key == "__equipment_instances")
+                if (kv.Key == "__equipment_profiles" || kv.Key == "__equipment_instances" || kv.Key == InventoryReserveRules.SaveKey)
                 {
                     continue;
                 }
@@ -69,7 +74,9 @@ namespace Xiuxian.Scripts.Services
                 equipmentInstances.Add(EquipmentInstanceCodec.FromPlainDictionary(dict) with { IsEquipped = false });
             }
 
-            return new BackpackSnapshot(items, equipmentProfiles, equipmentInstances);
+            var reserved = data.TryGetValue(InventoryReserveRules.SaveKey, out var value) && value is IDictionary<string, object> dictReserves
+                ? InventoryReserveRules.Read(dictReserves) : new Dictionary<string, int>();
+            return new BackpackSnapshot(items, equipmentProfiles, equipmentInstances, reserved);
         }
     }
 }

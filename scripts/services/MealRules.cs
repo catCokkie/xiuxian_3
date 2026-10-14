@@ -29,8 +29,9 @@ namespace Xiuxian.Scripts.Services
         public static TickResult Advance(double remaining, double activeSeconds, int inventory, double duration)
         {
             double next = remaining - Math.Max(0, activeSeconds);
-            int consumed = 0;
-            while (next <= 0 && consumed < Math.Max(0, inventory) && duration > 0) { next += duration; consumed++; }
+            int consumed = next <= 0 && inventory > 0 && duration > 0
+                ? (int)Math.Min(inventory, Math.Floor(-next / duration) + 1) : 0;
+            next += duration * consumed;
             return new(Math.Max(0, next), consumed);
         }
     }

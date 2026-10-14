@@ -1923,7 +1923,7 @@ namespace Xiuxian.Scripts.Game
             }
 
             while (_alchemyState.Production.CanProduce && _alchemyState.CurrentProgress >= _alchemyState.RequiredProgress && TryCompleteAlchemyBatch()) _alchemyState.CompleteBatch();
-            if (!AlchemyRules.CanStartRecipe(_alchemyState.SelectedRecipeId, _resourceWalletState.Lingqi, _backpackState.GetItemEntries(), _subsystemMasteryState?.GetLevel(PlayerActionState.ModeAlchemy) ?? 1))
+            if (!AlchemyRules.CanStartRecipe(_alchemyState.SelectedRecipeId, _resourceWalletState.Lingqi, _backpackState.GetSpendableItemEntries(), _subsystemMasteryState?.GetLevel(PlayerActionState.ModeAlchemy) ?? 1))
             {
                 _battleInfoLabel.Text = "材料或灵气不足，炼丹暂停并保留进度"; _battleInfoLabel.Show(); return;
             }
@@ -2164,7 +2164,7 @@ namespace Xiuxian.Scripts.Game
                 return false;
             }
 
-            bool baitActive = _backpackState.GetItemCount("fishing_bait") > 0;
+            bool baitActive = _backpackState.GetSpendableItemCount("fishing_bait") > 0;
             int finalCount = result.ItemCount * GetShopOutputMultiplier();
             double doubleChance = IsMiningMode() ? MiningRules.GetDoubleOutputChance(_subsystemMasteryState?.GetLevel(PlayerActionState.ModeMining) ?? 1)
                 : FishingRules.GetDoubleOutputChance(_subsystemMasteryState?.GetLevel(PlayerActionState.ModeFishing) ?? 1);
@@ -3006,7 +3006,7 @@ namespace Xiuxian.Scripts.Game
             int talismanMasteryLevel = _subsystemMasteryState?.GetLevel(PlayerActionState.ModeTalisman) ?? 1;
             List<BackpackConsumableUsage> backpackUsages = ActivityEffectRules.DetermineAutoUseBackpackConsumables(
                 state,
-                _backpackState.GetItemEntries(),
+                _backpackState.GetSpendableItemEntries(),
                 TalismanRules.GetMaxTalismansPerBattle(talismanMasteryLevel), ResolveCurrentMonsterProfile()?.StrategyTag ?? "");
             for (int i = 0; i < backpackUsages.Count; i++)
             {

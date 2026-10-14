@@ -46,7 +46,7 @@ public partial class BookTabsController
             : _backpackState?.GetItemCount(recipe.Outputs[0].ItemId) ?? 0;
         return ChallengePreparationRules.Build(view.Recipe, (int)view.Target.Value, owned, GetMasteryLevel(recipe.SystemId),
             ServiceLocator.Instance?.ShopState?.DoubleYieldMultiplier >= 2 ? 2 : 1, ServiceLocator.Instance?.CookingState?.ActiveMeal.ExtraOutput ?? 0,
-            _backpackState?.GetItemEntries() ?? new Dictionary<string, int>());
+            _backpackState?.GetItemEntries() ?? new Dictionary<string, int>(), _backpackState?.GetReservedEntries());
     }
     private string MaterialSource(string itemId)
     {
@@ -85,9 +85,9 @@ public partial class BookTabsController
             var recommendation = BuildRecommendation(view)!;
             view.Arrange.Disabled = recommendation.Rounds == 0;
             string unit = recipe.SystemId == "alchemy" ? "颗" : "张";
-            view.Detail.Text = $"持有{recommendation.Owned}{unit}，目标{recommendation.Target}{unit}，缺{recommendation.Missing}{unit}；当前每轮{recommendation.PerBatch}{unit}，建议{recommendation.Rounds}轮。"
+            view.Detail.Text = $"持有{recommendation.Owned}{unit}，保留{recommendation.Reserved}{unit}，可用{recommendation.Spendable}{unit}；目标{recommendation.Target}{unit}，缺{recommendation.Missing}{unit}。当前每轮{recommendation.PerBatch}{unit}，建议{recommendation.Rounds}轮。"
                 + (recommendation.Rounds == 0 ? "\n库存已满足，不必重复制作。" : $"\n需要灵气{recommendation.LingqiCost:0}（缺{Math.Max(0, recommendation.LingqiCost - (_resourceWalletState?.Lingqi ?? 0)):0}）。\n"
-                    + string.Join("\n", recommendation.Materials.Where(x => x.Required > 0).Select(x => $"{UiText.BackpackItemName(x.ItemId)}：需{x.Required} / 有{x.Owned} / 缺{x.Missing}；{MaterialSource(x.ItemId)}")))
+                    + string.Join("\n", recommendation.Materials.Where(x => x.Required > 0).Select(x => $"{UiText.BackpackItemName(x.ItemId)}：需{x.Required} / 持有{x.Owned} / 保留{x.Reserved} / 可用{x.Spendable} / 缺{x.Missing}；{MaterialSource(x.ItemId)}")))
                 + (ServiceLocator.Instance?.CookingState?.ActiveMeal.ExtraOutput > 0 ? "\n产量按当前灵膳估算，效果结束后可重新计算。" : "");
         }
         _preparationDetails.FindChild("PreparationGarden", true, false).Set("disabled", !ProgressiveUnlockRules.IsActionModeUnlocked("garden", _playerProgressState?.RealmLevel ?? 1));

@@ -151,7 +151,7 @@ public partial class BookTabsController
         var oldChildren = _cultivationRoot.GetChildren().ToArray();
         var oldActionRow = (Control)_cultivationBreakthroughButton.GetParent();
         var oldGatheringRow = (Control)_cultivationGardenOption.GetParent();
-        var oldMealRow = _cultivationRoot.GetChildren().OfType<HFlowContainer>().First(x => x.GetChildren().OfType<Button>().Any(b => b.Text == "用餐"));
+        var oldMealRow = _cultivationRoot.GetChildren().OfType<HFlowContainer>().First(x => x.Name == "CookingRecipeRow");
         var oldMasteryRow = (Control)_cultivationMasteryButtons.Values.First().GetParent().GetParent();
         foreach (var child in oldChildren) _cultivationRoot.RemoveChild(child);
         _cultivationScroll!.HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled;
@@ -200,6 +200,7 @@ public partial class BookTabsController
         _cultivationAlchemyStartButton.Hide();
         _cultivationTalismanStartButton.Hide();
         BuildProductionControls(activity);
+        BuildMealUsageControls(activity);
 
         VBoxContainer next = HomeSection("下一步");
         _homeNextStep = new Label { AutowrapMode = TextServer.AutowrapMode.WordSmart }; next.AddChild(_homeNextStep);
@@ -250,6 +251,8 @@ public partial class BookTabsController
         _refreshingHomeMode = false;
         foreach (var row in _homeActions) row.Value.Visible = row.Key == action;
         RefreshProductionControls();
+        RefreshMealUsageControls();
+        RefreshMaterialReserveControls();
         RefreshPreparationUi();
         RefreshChapterUi();
     }

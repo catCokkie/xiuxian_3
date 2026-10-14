@@ -144,7 +144,7 @@ namespace Xiuxian.Scripts.Tests
                     && s.LevelConfigLoader.GetLastGeneratedFirstClearEquipmentRewards().Any(x => x.EquipmentTemplateId == "eq_armor_qi_outer_moss_robe" && x.RarityTier == EquipmentRarityTier.Artifact), "first region guarantees the designed artifact robe");
                 var book = root.GetNode<Control>("SubmenuBookWindow");
                 Check(Descendants(book).OfType<ProgressBar>().Count() >= 11, "all subsystem mastery bars exist in the loaded UI");
-                Check(Descendants(book).OfType<Button>().Any(x => x.Text == "用餐"), "cooking exposes a meal activation control");
+                Check(Descendants(book).OfType<Button>().Any(x => x.Name == "MealUse"), "cooking exposes a meal activation control");
                 Check(s.LevelConfigLoader.ValidationIssueCount == 0, "merged level and equipment configuration validates");
                 var sunken = s.LevelConfigLoader.RollSunkenEquipment();
                 Check(sunken != null && sunken.SourceStage == EquipmentSourceStage.Fishing && (sunken.RarityTier == EquipmentRarityTier.Artifact || sunken.RarityTier == EquipmentRarityTier.Spirit), "fishing rare reward creates a real artifact or spirit equipment instance");
@@ -162,6 +162,7 @@ namespace Xiuxian.Scripts.Tests
                 RunReturnAndRecoveryChecks((PrototypeRootController)root, controller, s);
                 RunProductionChecks((PrototypeRootController)root, controller, s);
                 RunPreparationAndProjectChecks((PrototypeRootController)root, controller, s);
+                RunConsumptionChecks((PrototypeRootController)root, controller, s);
                 GD.Print($"SMOKE SUCCESS: {_checks} checks");
                 if (Array.IndexOf(OS.GetCmdlineUserArgs(), "--render-smoke") >= 0) CaptureUi(root);
                 else GetTree().Quit(0);

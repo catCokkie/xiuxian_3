@@ -813,6 +813,7 @@ public partial class BookTabsController : Control
 
     private void RefreshBackpackGrid()
     {
+        RefreshMaterialReserveControls();
         _backpackGrid.Refresh();
         _backpackGrid.UpdateGridColumns();
     }
@@ -2806,7 +2807,7 @@ public partial class BookTabsController : Control
         _cultivationBodyCultivationStartButton.Pressed += OnBodyCultivationStartPressed;
         bodyRow.AddChild(_cultivationBodyCultivationStartButton);
 
-        HFlowContainer mealRow = new();
+        HFlowContainer mealRow = new() { Name = "CookingRecipeRow" };
         _cultivationRoot.AddChild(mealRow);
         OptionButton cookingRecipe = new();
         _productionCookingRecipeOption = cookingRecipe;
@@ -2819,12 +2820,6 @@ public partial class BookTabsController : Control
         mealRow.AddChild(cookButton);
         cookButton.Hide();
         if (ServiceLocator.Instance?.CookingState is { HasSelectedRecipe: false } cooking) cooking.SelectRecipe(cookingRecipes[0].RecipeId);
-        OptionButton mealChoice = new();
-        foreach (var meal in MealRules.Meals) mealChoice.AddItem(meal.Name);
-        mealRow.AddChild(mealChoice);
-        Button activateMeal = new() { Text = "用餐", TooltipText = "同时激活一种灵膳，按活跃输入时间计时；到期自动续杯。" };
-        activateMeal.Pressed += () => ServiceLocator.Instance?.CookingState?.TryActivateMeal(MealRules.Meals[Math.Max(0, mealChoice.Selected)].Id);
-        mealRow.AddChild(activateMeal);
 
         _cultivationMasteryLabel = new RichTextLabel();
         _cultivationMasteryLabel.FitContent = true;
@@ -2912,6 +2907,7 @@ public partial class BookTabsController : Control
         _backpackRoot.AddThemeConstantOverride("separation", 10);
         _leftPage.AddChild(_backpackRoot);
 
+        BuildMaterialReserveControls(_backpackRoot);
         _backpackGrid = new BackpackGridController();
         _backpackGrid.Name = "BackpackGrid";
         _backpackGrid.SizeFlagsVertical = SizeFlags.ExpandFill;

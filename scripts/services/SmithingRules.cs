@@ -48,8 +48,8 @@ namespace Xiuxian.Scripts.Services
             }
 
             SmithingCost cost = GetCost(equipment.EnhanceLevel, masteryLevel);
-            return backpack.GetItemCount("lingqi_shard") >= cost.Shards
-                && backpack.GetItemCount("broken_talisman") >= cost.Talismans
+            return backpack.GetSpendableItemCount("lingqi_shard") >= cost.Shards
+                && backpack.GetSpendableItemCount("broken_talisman") >= cost.Talismans
                 && wallet.Lingqi >= cost.Lingqi;
         }
 

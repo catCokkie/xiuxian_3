@@ -36,7 +36,7 @@ namespace Xiuxian.Scripts.Game
                 return false;
             }
 
-            if (!AlchemyRules.CanStartRecipe(alchemyState.SelectedRecipeId, resourceWalletState.Lingqi, backpackState.GetItemEntries(), alchemyMasteryLevel))
+            if (!AlchemyRules.CanStartRecipe(alchemyState.SelectedRecipeId, resourceWalletState.Lingqi, backpackState.GetSpendableItemEntries(), alchemyMasteryLevel))
             {
                 return false;
             }
@@ -188,7 +188,7 @@ namespace Xiuxian.Scripts.Game
 
             for (int i = 0; i < effectiveInputs.Length; i++)
             {
-                if (backpackState.GetItemCount(effectiveInputs[i].ItemId) < effectiveInputs[i].Count)
+                if (backpackState.GetSpendableItemCount(effectiveInputs[i].ItemId) < effectiveInputs[i].Count)
                 {
                     return false;
                 }
@@ -247,7 +247,7 @@ namespace Xiuxian.Scripts.Game
             MaterialCost[] effectiveInputs = GetEffectiveInputs(recipe, masteryLevel);
             for (int i = 0; i < effectiveInputs.Length; i++)
             {
-                if (backpackState.GetItemCount(effectiveInputs[i].ItemId) < effectiveInputs[i].Count)
+                if (backpackState.GetSpendableItemCount(effectiveInputs[i].ItemId) < effectiveInputs[i].Count)
                 {
                     return false;
                 }
