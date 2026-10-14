@@ -245,6 +245,8 @@ public partial class BookTabsController : Control
         _playerActionState = services?.PlayerActionState;
         _equippedItemsState = services?.EquippedItemsState;
         _subsystemMasteryState = services?.SubsystemMasteryState;
+        _challengeGoalState = services?.ChallengeGoalState;
+        if (_challengeGoalState != null) _challengeGoalState.GoalChanged += OnChallengeGoalChanged;
         _levelConfigLoader = services?.LevelConfigLoader;
         _exploreProgressController = GetNodeOrNull<ExploreProgressController>("../../ExploreProgressController");
         _simulationLevelFilterId = _levelConfigLoader?.ActiveLevelId ?? "";
@@ -371,6 +373,7 @@ public partial class BookTabsController : Control
 
     public override void _ExitTree()
     {
+        if (_challengeGoalState != null) _challengeGoalState.GoalChanged -= OnChallengeGoalChanged;
         if (_playerActionState != null) _playerActionState.ActionChanged -= OnHomeActionChanged;
         if (_activityState != null)
         {

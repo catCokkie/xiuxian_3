@@ -126,6 +126,9 @@ namespace Xiuxian.Scripts.Game
             var guideState = ServiceLocator.Instance?.GuideState;
             _persistenceManager.Register("guide", "state", guideState);
             if (guideState != null) guideState.NoticeReady += OnGuideNotice;
+            var challengeGoal = ServiceLocator.Instance?.ChallengeGoalState;
+            _persistenceManager.Register("challenge_goal", "state", challengeGoal);
+            if (challengeGoal != null) challengeGoal.GoalChanged += OnChallengeGoalChanged;
             _persistenceManager.Register("mastery", "levels", _subsystemMasteryState);
             _persistenceManager.Register("action", "mode", _playerActionState);
             _persistenceManager.Register("equipment", "equipped", _equippedItemsState);
@@ -271,6 +274,7 @@ namespace Xiuxian.Scripts.Game
             _mainBar.LayoutChanged -= OnMainBarLayoutChanged;
             _submenu.VisibilityChanged -= OnSubmenuVisibilityChanged;
             if (ServiceLocator.Instance?.GuideState is GuideState guide) guide.NoticeReady -= OnGuideNotice;
+            if (ServiceLocator.Instance?.ChallengeGoalState is ChallengeGoalState goal) goal.GoalChanged -= OnChallengeGoalChanged;
             _bookTabs.ActiveTabsChanged -= OnBookTabsActiveTabsChanged;
             _bookTabs.SaveSlotSaveRequested -= OnSaveSlotSaveRequested;
             _bookTabs.SaveSlotLoadRequested -= OnSaveSlotLoadRequested;
@@ -449,6 +453,7 @@ namespace Xiuxian.Scripts.Game
             MarkDirty();
         }
 
+        private void OnChallengeGoalChanged() => MarkDirty();
         private void OnInventoryReserveChanged() => MarkDirty();
 
         private void OnPotionInventoryChanged(string potionId, int amount, int newTotal)

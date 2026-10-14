@@ -27,6 +27,7 @@ namespace Xiuxian.Scripts.Services
         public ShopState? ShopState { get; private set; }
         public EventLogState? EventLogState { get; private set; }
         public GuideState? GuideState { get; private set; }
+        public ChallengeGoalState? ChallengeGoalState { get; private set; }
         public PlayerActionState? PlayerActionState { get; private set; }
         public EquippedItemsState? EquippedItemsState { get; private set; }
         public SubsystemMasteryState? SubsystemMasteryState { get; private set; }
@@ -75,6 +76,7 @@ namespace Xiuxian.Scripts.Services
             ShopState = GetNodeOrNull<ShopState>("/root/ShopState");
             EventLogState = GetNodeOrNull<EventLogState>("/root/EventLogState");
             GuideState = GetNodeOrNull<GuideState>("/root/GuideState");
+            ChallengeGoalState = GetNodeOrNull<ChallengeGoalState>("/root/ChallengeGoalState");
             PlayerActionState = GetNodeOrNull<PlayerActionState>("/root/PlayerActionState");
             EquippedItemsState = GetNodeOrNull<EquippedItemsState>("/root/EquippedItemsState");
             SubsystemMasteryState = GetNodeOrNull<SubsystemMasteryState>("/root/SubsystemMasteryState");

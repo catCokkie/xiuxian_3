@@ -11,7 +11,7 @@ namespace Xiuxian.Scripts.Services
     /// </summary>
     public static class SaveMigrationRules
     {
-        public const int LatestVersion = 19;
+        public const int LatestVersion = 20;
 
         private const string DefaultLeftTab = "CultivationTab";
         private const string DefaultRightTab = "BugTab";
@@ -197,6 +197,10 @@ namespace Xiuxian.Scripts.Services
                         case 18:
                             MigrateV18ToV19(cfg);
                             version = 19;
+                            break;
+                        case 19:
+                            if (!cfg.HasSectionKey("challenge_goal", "state")) cfg.SetValue("challenge_goal", "state", new ChallengeGoalPlan().ToPlainDictionary());
+                            version = 20;
                             break;
                         default:
                             version = LatestVersion;

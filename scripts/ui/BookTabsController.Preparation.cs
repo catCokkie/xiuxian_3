@@ -15,27 +15,28 @@ public partial class BookTabsController
 
     private void BuildPreparationUi(VBoxContainer parent)
     {
+        BuildChallengeGoalUi(parent);
         Button toggle = new() { Name = "PreparationToggle", Text = "查看挑战准备", ToggleMode = true }; parent.AddChild(toggle);
         _preparationDetails = new() { Name = "PreparationDetails", Visible = false }; parent.AddChild(_preparationDetails);
         _preparationSummary = new() { Name = "PreparationSummary", AutowrapMode = TextServer.AutowrapMode.WordSmart }; _preparationDetails.AddChild(_preparationSummary);
         toggle.Toggled += shown => { _preparationDetails.Visible = shown; toggle.Text = shown ? "收起挑战准备" : "查看挑战准备"; RefreshPreparationUi(); };
-        foreach (string recipeId in new[] { "recipe_huiqi_dan", "talisman_fire_charm", "talisman_shield_charm" })
+        foreach (string recipeId in ChallengeGoalPlan.Recipes)
         {
             VBoxContainer root = new() { Name = "Preparation_" + recipeId }; _preparationDetails.AddChild(root);
             HFlowContainer row = new(); row.AddThemeConstantOverride("h_separation", 8); root.AddChild(row);
             Label name = new() { Text = ActivityRegistry.GetRecipe(recipeId)!.DisplayName + "目标库存" }; row.AddChild(name);
-            SpinBox target = new() { Name = "StockTarget", MinValue = 1, MaxValue = 99, Value = 1, Step = 1, Suffix = recipeId == "recipe_huiqi_dan" ? "颗" : "张", CustomMinimumSize = new Vector2(105, 0) }; row.AddChild(target);
+            SpinBox target = new() { Name = "StockTarget", MinValue = 0, MaxValue = 99, Value = 1, Step = 1, Suffix = recipeId == "recipe_huiqi_dan" ? "颗" : "张", TooltipText = "0表示跳过本项准备；数量不作为挑战门槛。", CustomMinimumSize = new Vector2(105, 0) }; row.AddChild(target);
             Button arrange = new() { Name = "ArrangeProduction", Text = "安排制作" }; row.AddChild(arrange);
             Label detail = new() { Name = "PreparationDetail", AutowrapMode = TextServer.AutowrapMode.WordSmart }; root.AddChild(detail);
             var view = new PreparationView(recipeId, root, target, detail, arrange); _preparationViews.Add(view);
-            target.ValueChanged += _ => RefreshPreparationUi();
+            target.ValueChanged += value => { if (_refreshingGoalTargets) return; _challengeGoalState?.SetTarget(recipeId, (int)value); RefreshPreparationUi(); };
             arrange.Pressed += () => ArrangePreparation(view);
         }
         HFlowContainer sources = new(); _preparationDetails.AddChild(sources);
         Button dungeon = new() { Text = "前往副本找材料" }; sources.AddChild(dungeon);
         dungeon.Pressed += () => { _playerActionState?.SetAction("dungeon"); RefreshDynamicTabContent(); };
         Button garden = new() { Name = "PreparationGarden", Text = "前往灵田种灵草" }; sources.AddChild(garden);
-        garden.Pressed += () => { if (ProgressiveUnlockRules.IsActionModeUnlocked("garden", _playerProgressState?.RealmLevel ?? 1)) { _playerActionState?.SetAction("garden"); RefreshDynamicTabContent(); } };
+        garden.Pressed += () => { if (ProgressiveUnlockRules.IsActionModeUnlocked("garden", _playerProgressState?.RealmLevel ?? 1)) { ServiceLocator.Instance?.GardenState?.SelectCrop("garden_spirit_herb"); _playerActionState?.SetAction("garden"); RefreshDynamicTabContent(); } };
         Button equipment = new() { Name = "PreparationEquipment", Text = "比较装备与强化" }; sources.AddChild(equipment);
         equipment.Pressed += () => SetActiveLeftTab("EquipmentTab");
     }
@@ -60,10 +61,8 @@ public partial class BookTabsController
     {
         if (_preparationSummary == null || _preparationDetails == null) return;
         var loader = ServiceLocator.Instance?.LevelConfigLoader;
-        string bossId = loader?.GetBossMonsterId() ?? "";
-        bool hasBoss = loader?.TryGetMonsterStatProfile(bossId, out _) == true;
-        MonsterStatProfile boss = default;
-        if (hasBoss) loader!.TryGetMonsterStatProfile(bossId, out boss);
+        bool hasBoss = TryGetPreparationContext(out string levelId, out _, out MonsterStatProfile boss);
+        RefreshChallengeGoalUi(hasBoss, levelId, boss);
         var stats = _exploreProgressController?.GetPreparationStats() ?? default;
         string threat = boss.HealPerRound > 0 ? $"每回合恢复{boss.HealPerRound}气血，需要足够持续伤害；当前尚无可制作的禁疗配方。"
             : boss.StrategyTag == "armor" ? "护甲型，可用破甲符削减防御。"
@@ -75,18 +74,20 @@ public partial class BookTabsController
             + (estimate > roundLimit ? " 输出偏紧，可优先比较武器、强化或战术符箓。" : "") : "基础输出难以压过回血，可优先比较装备攻击。";
         _preparationSummary.Text = hasBoss ? $"当前目标：{UiText.LocalizeGameNames(boss.DisplayName)} · 攻击{boss.BaseStats.Attack} / 防御{boss.BaseStats.Defense}\n{threat}\n当前攻击{stats.Attack} / 防御{stats.Defense}，Boss上限{roundLimit}回合。可按自己的路线选择准备。\n{outputHint}"
             + (consumes ? "\n回气丹仅在低血量时使用，单战最多一颗；目标库存可修改。" : "\n自动消耗已关闭，当前不推荐消耗品备货；可先比较装备与气血。") : "当前没有可用的Boss目标。";
-        string counter = ChallengePreparationRules.ChooseTalisman(boss.StrategyTag, GetMasteryLevel("talisman"));
+        string counter = ChallengePreparationRules.ChooseTalisman(boss.StrategyTag, _challengeGoalState?.Goal.HasGoal == true ? 4 : GetMasteryLevel("talisman"));
         foreach (var view in _preparationViews)
         {
             var recipe = ActivityRegistry.GetRecipe(view.Recipe)!;
-            view.Root.Visible = hasBoss && consumes && ProgressiveUnlockRules.IsActionModeUnlocked(recipe.SystemId, _playerProgressState?.RealmLevel ?? 1)
-                && (view.Recipe == "recipe_huiqi_dan" || view.Recipe == counter) && GetMasteryLevel(recipe.SystemId) >= recipe.RequiredMasteryLevel;
+            bool unlocked = ProgressiveUnlockRules.IsActionModeUnlocked(recipe.SystemId, _playerProgressState?.RealmLevel ?? 1) && GetMasteryLevel(recipe.SystemId) >= recipe.RequiredMasteryLevel;
+            view.Root.Visible = hasBoss && consumes && (view.Recipe == "recipe_huiqi_dan" || view.Recipe == counter)
+                && (unlocked || _challengeGoalState?.Goal.HasGoal == true);
             if (!view.Root.Visible) continue;
+            if (!unlocked) { view.Arrange.Disabled = true; view.Detail.Text = $"需开放{UiText.MasterySystemName(recipe.SystemId)}活动及精通Lv{recipe.RequiredMasteryLevel}；可将数量设为0跳过准备。"; continue; }
             var recommendation = BuildRecommendation(view)!;
-            view.Arrange.Disabled = recommendation.Rounds == 0;
+            view.Arrange.Disabled = recommendation.Rounds == 0 || _challengeGoalState?.Goal.Completed == true;
             string unit = recipe.SystemId == "alchemy" ? "颗" : "张";
             view.Detail.Text = $"持有{recommendation.Owned}{unit}，保留{recommendation.Reserved}{unit}，可用{recommendation.Spendable}{unit}；目标{recommendation.Target}{unit}，缺{recommendation.Missing}{unit}。当前每轮{recommendation.PerBatch}{unit}，建议{recommendation.Rounds}轮。"
-                + (recommendation.Rounds == 0 ? "\n库存已满足，不必重复制作。" : $"\n需要灵气{recommendation.LingqiCost:0}（缺{Math.Max(0, recommendation.LingqiCost - (_resourceWalletState?.Lingqi ?? 0)):0}）。\n"
+                + (recommendation.Target == 0 ? "\n本项准备已跳过，不限制挑战。" : recommendation.Rounds == 0 ? "\n库存已满足，不必重复制作。" : $"\n需要灵气{recommendation.LingqiCost:0}（缺{Math.Max(0, recommendation.LingqiCost - (_resourceWalletState?.Lingqi ?? 0)):0}）。\n"
                     + string.Join("\n", recommendation.Materials.Where(x => x.Required > 0).Select(x => $"{UiText.BackpackItemName(x.ItemId)}：需{x.Required} / 持有{x.Owned} / 保留{x.Reserved} / 可用{x.Spendable} / 缺{x.Missing}；{MaterialSource(x.ItemId)}")))
                 + (ServiceLocator.Instance?.CookingState?.ActiveMeal.ExtraOutput > 0 ? "\n产量按当前灵膳估算，效果结束后可重新计算。" : "");
         }
@@ -96,6 +97,7 @@ public partial class BookTabsController
     private void ArrangePreparation(PreparationView view)
     {
         view.Target.Apply();
+        if (_challengeGoalState?.Goal.Completed == true || !TryGetPreparationContext(out _, out _, out _) || _playerActionState?.ConsumablePolicy == "none") return;
         var recommendation = BuildRecommendation(view);
         if (recommendation == null || recommendation.Rounds == 0) return;
         string system = ActivityRegistry.GetRecipe(view.Recipe)!.SystemId;

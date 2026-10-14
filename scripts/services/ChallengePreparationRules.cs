@@ -37,7 +37,7 @@ namespace Xiuxian.Scripts.Services
             if (recipe == null || recipe.Outputs.Count == 0 || masteryLevel < recipe.RequiredMasteryLevel) return null;
             int baseOutput = recipe.SystemId == "alchemy" ? AlchemyRules.CompleteRecipe(recipeId, masteryLevel).PotionCount : recipe.Outputs[0].Count;
             int output = Math.Max(1, baseOutput * Math.Max(1, yieldMultiplier) + Math.Max(0, extraOutput));
-            int desired = Math.Clamp(target, 1, 99), have = Math.Max(0, owned);
+            int desired = Math.Clamp(target, 0, 99), have = Math.Max(0, owned);
             int reserve = recipe.SystemId == "alchemy" ? 0 : Math.Max(0, reserves?.GetValueOrDefault(recipe.Outputs[0].ItemId) ?? 0);
             int rounds = (int)Math.Ceiling(Math.Max(0, desired - InventoryReserveRules.Spendable(have, reserve)) / (double)output);
             var materials = new List<PreparationMaterial>();

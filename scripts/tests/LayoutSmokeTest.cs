@@ -207,6 +207,29 @@ public partial class LayoutSmokeTest : Node
                     await Settle(); await Capture("small_mastery_legacy"); scroll.ScrollVertical = 0;
                 }
                 masteryToggle.ButtonPressed = false; await Settle();
+                var goalState = s.ChallengeGoalState!;
+                var loader = s.LevelConfigLoader!;
+                goalState.TryStart(loader.ActiveLevelId, loader.GetBossMonsterId(), new System.Collections.Generic.Dictionary<string, int> { ["recipe_huiqi_dan"] = 99, ["talisman_fire_charm"] = 99, ["talisman_shield_charm"] = 99 });
+                await Settle();
+                var goalCard = (Control)_tabs.FindChild("ChallengeGoalCard", true, false);
+                var goalSummary = (Label)_tabs.FindChild("ChallengeGoalSummary", true, false);
+                Check(goalState.Goal.HasGoal && goalSummary.Text.Contains("追踪目标"), scenario + ": pinned goal exposes live preparation purpose");
+                foreach (Control control in goalCard.GetNode<Control>("ChallengeGoalActions").GetChildren())
+                    if (control.Visible) Check(Inside(goalCard.GetGlobalRect(), control.GetGlobalRect()), scenario + ": goal action fits wrapping card");
+                Check(goalSummary.Size.X <= goalCard.Size.X && goalSummary.Size.Y > 0, scenario + ": long goal summary wraps inside its card");
+                if (dimensions.X == 800)
+                {
+                    var scroll = (ScrollContainer)PageRoot("CultivationScroll");
+                    scroll.ScrollVertical = (int)(goalCard.GetGlobalRect().Position.Y - scroll.GetGlobalRect().Position.Y + scroll.ScrollVertical - 20);
+                    await Settle(); await Capture("small_goal_pending");
+                    ((Button)_tabs.FindChild("ChallengeGoalSkip", true, false)).EmitSignal(Button.SignalName.Pressed); await Settle();
+                    Check(goalSummary.Text.Contains("跳过"), "goal: skip preparation keeps challenge optional");
+                    await Capture("small_goal_skipped");
+                    goalState.RecordBossVictory(loader.ActiveLevelId, loader.GetBossMonsterId()); await Settle();
+                    Check(goalSummary.Text.Contains("目标已完成"), "goal: completion record renders a distinct state");
+                    await Capture("small_goal_complete"); scroll.ScrollVertical = 0;
+                }
+                goalState.Cancel(); await Settle();
                 foreach (string page in Pages.Append("SettingsTab").Append("BugTab"))
                 {
                     await Select(page);

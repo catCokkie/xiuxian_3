@@ -6,6 +6,12 @@ namespace Xiuxian.Tests;
 public sealed class PreparationAndProjectTests
 {
     [Fact]
+    public void SkippingPreparationHasNoDeficitOrCraftingBudget()
+    {
+        var result = ChallengePreparationRules.Build("recipe_huiqi_dan", 0, 0, 1, 1, 0, new Dictionary<string, int>())!;
+        Assert.Equal(0, result.Target); Assert.Equal(0, result.Missing); Assert.Equal(0, result.Rounds); Assert.Equal(0, result.LingqiCost);
+    }
+    [Fact]
     public void ArchivedProjects_RetainIndependentProgressAndPlans()
     {
         var projects = new CraftingProjectRecords(); var plan = new CraftingProductionPlan();

@@ -1195,6 +1195,8 @@ namespace Xiuxian.Scripts.Game
             ServiceLocator.Instance?.GuideState?.Complete("first_victory");
             _battleInfoLabel.Visible = true;
             _playerStatsState?.RecordBattle(won: true, isBoss: isBossBattle, isElite: IsEliteBattle());
+            if (victory.ShouldTryBossUnlock)
+                ServiceLocator.Instance?.ChallengeGoalState?.RecordBossVictory(victory.ActiveLevelId, rewardMonsterId);
 
             string nextLevelId = string.Empty;
             if (_levelConfigLoader != null &&

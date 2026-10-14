@@ -164,6 +164,7 @@ namespace Xiuxian.Scripts.Tests
                 RunPreparationAndProjectChecks((PrototypeRootController)root, controller, s);
                 RunConsumptionChecks((PrototypeRootController)root, controller, s);
                 RunMasteryAvailabilityChecks((PrototypeRootController)root, controller, s);
+                RunChallengeGoalChecks((PrototypeRootController)root, controller, s);
                 GD.Print($"SMOKE SUCCESS: {_checks} checks");
                 if (Array.IndexOf(OS.GetCmdlineUserArgs(), "--render-smoke") >= 0) CaptureUi(root);
                 else GetTree().Quit(0);

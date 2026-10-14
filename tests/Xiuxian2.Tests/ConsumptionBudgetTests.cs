@@ -81,7 +81,7 @@ public class ConsumptionBudgetTests
         var cooking = new Dictionary<string, object> { ["active_meal_id"] = "food_clear_fish_soup", ["active_meal_remaining_seconds"] = 321.5 };
         store.SetValue("cooking", "state", cooking); store.SetValue("backpack", "items", new Dictionary<string, object> { ["food_clear_fish_soup"] = 7 });
         SaveMigrationRules.MigrateToLatest(store, 18);
-        Assert.Equal(19, store.GetValue("meta", "version", 0));
+        Assert.Equal(SaveMigrationRules.LatestVersion, store.GetValue("meta", "version", 0));
         var usage = (Dictionary<string, object>)cooking["meal_usage"];
         Assert.Equal(0, usage["portion_limit"]); Assert.Equal(1, usage["consumed_portions"]); Assert.Equal(321.5, cooking["active_meal_remaining_seconds"]);
         var backpack = (Dictionary<string, object>)store.GetValue("backpack", "items", null!);
