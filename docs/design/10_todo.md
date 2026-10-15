@@ -54,7 +54,7 @@
 - **素材与扩展**：12角色采用32单位网格、96px SVG、少色平涂和一致轮廓；Boss靠体形/翼/腹/冠/根肢区分。原PNG保留，稳定key和配置同步替换，首次未导入SVG可原生加载。镇灵符用紫色方印图标；源构形脚本/分类规范/简报、离线图库与80/24px图鉴同步，未来优先延续源形状而非拼接复杂生成图。
 - **快速验证**：`powershell -NoProfile -ExecutionPolicy Bypass -File tools/verify_supply.ps1`；未自动发现Godot时加`-GodotPath <Godot.NET_console.exe>`。运行专项单元与原生38项链路、素材校验，加`-RenderArt`生成`docs/art/asset_contact_sheet.png`；均跳过真实存档与全局Hook，不需要等待挂机。
 - **验收**：498/498单元、344/344原生玩法（含38专项）、650/650四分辨率OpenGL布局、234/234素材场景及105索引通过。已查看80/24px图鉴、实际战斗、800px回收页面/准备滚动截图，原图未删除；`git diff --check`通过。环境既有证书/OpenGL初始化提示仍在，不宣称日志零错误。真实玩家存档/全局Hook、导出包、长期投入/胜率对比仍未验证。
-- **Git**：本批63文件已整理为本地提交，不含原有`fix_todo.js`、`plan.md`、`xiuxian2.csproj.old`。直接推送被自动审批拦截，要求用户明确确认`https://github.com/catCokkie/xiuxian_3.git`及本批范围；确认前不上传，问题已发出。
+- **Git**：实现提交`ef2b7a9`（63文件）已推送至`https://github.com/catCokkie/xiuxian_3.git`的`main`，不含原有`fix_todo.js`、`plan.md`、`xiuxian2.csproj.old`。首次推送被自动审批要求确认目标/范围；用户明确确认后重试成功，本条随后补记上传结果。
 
 #### 2026-10-14：闭环后的下一步优先级（REVIEW-6）
 
