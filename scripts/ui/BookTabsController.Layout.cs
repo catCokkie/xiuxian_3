@@ -10,6 +10,7 @@ public partial class BookTabsController
     private ScrollContainer? _settingsScroll;
     private Label? _homeRealm;
     private Label? _homeResources;
+    private Label? _homeBasicGrowth;
     private Label? _homeActivity;
     private Label? _homeNextStep;
     private ProgressBar? _homeRealmProgress;
@@ -166,6 +167,9 @@ public partial class BookTabsController
         _homeRealmProgress = new ProgressBar { Name = "HomeRealmProgress", CustomMinimumSize = new Vector2(0, 12), ShowPercentage = false };
         summary.AddChild(_homeRealmProgress);
         _homeResources = new Label { AutowrapMode = TextServer.AutowrapMode.WordSmart }; summary.AddChild(_homeResources);
+        _homeBasicGrowth = new Label { Name = "HomeBasicGrowth", AutowrapMode = TextServer.AutowrapMode.WordSmart,
+            TooltipText = "阅读、思考时也积累灵气、悟性与经验，每10秒自动结算。静修每24小时一轮：前30分钟3.36经验/分钟，随后至4小时2.24、至8小时1.68，其余0.84。线上线下延续同一轮，重启不刷新；真实输入另有收益和活动推进，静修不代做配方或挑战。时间倒退时等待时钟恢复，输入收益照常。" };
+        _homeBasicGrowth.AddThemeFontSizeOverride("font_size", 13); summary.AddChild(_homeBasicGrowth);
         summary.AddChild(_cultivationStatusLabel);
         BuildChapterUi();
 
@@ -230,6 +234,9 @@ public partial class BookTabsController
         _cultivationBreakthroughButton.Visible = !capped;
         _homeRealmProgress!.Value = Math.Clamp(percent, 0, 100);
         _homeResources!.Text = $"灵气 {_resourceWalletState?.Lingqi ?? 0:N0}    悟性 {_resourceWalletState?.Insight ?? 0:N0}    灵石 {_resourceWalletState?.SpiritStones ?? 0:N0}";
+        double basicRate = (ServiceLocator.Instance?.ActivityConversionService?.GrowthClock.InputsPerMinute ?? 12) * GameBalanceConstants.ResourceConversion.BaseExpPerInput;
+        bool clockPending = (ServiceLocator.Instance?.ActivityConversionService?.GrowthClock.LastSettledUnix ?? 0) > Time.GetUnixTimeFromSystem() + 1;
+        _homeBasicGrowth!.Text = clockPending ? "静修等待时间恢复 · 输入收益照常" : $"静修持续 · 基础经验约 {basicRate:0.##}/分钟 · 线上线下共用";
         _cultivationStatusLabel.AddThemeColorOverride("font_color", new Color("705334"));
         if (capped) _cultivationStatusLabel.Text = "本篇境界已达上限，继续修行的经验会保留；可查看篇章回顾与收藏。";
         else if (!_playerProgressState.HasRequiredBossClear) _cultivationStatusLabel.Text = "突破筑基前，需要击败当前阶段的最终 Boss。";

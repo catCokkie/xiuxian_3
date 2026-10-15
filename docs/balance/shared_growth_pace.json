@@ -1,0 +1,187 @@
+{
+  "Model": "shared_basic_growth_budget",
+  "Scope": "Formula scenarios using the runtime growth clock, resource conversion and realm thresholds; not player testing or a full chapter playthrough",
+  "Assumptions": [
+    "8h online / 16h offline per day",
+    "keyboard AP=1; non-cultivation input rate0.28",
+    "no meals, shops, mastery purchases, spending or equipment",
+    "realm estimate assumes breakthrough is confirmed whenever affordable; stops at realm9 without final Boss clear",
+    "no claims about first Boss time, win rate, farming or UI management count",
+    "real input and shared time growth are counted separately once"
+  ],
+  "Samples": [
+    {
+      "Day": 1,
+      "InputsPerMinute": 0,
+      "OldExperience": 1377.6000000000001,
+      "Experience": 1780.8000000000002,
+      "RealmIfBreakthroughConfirmed": 4,
+      "BankedExperience": 309.5408617367507,
+      "BasicInputs": 6360,
+      "RealInputs": 0
+    },
+    {
+      "Day": 3,
+      "InputsPerMinute": 0,
+      "OldExperience": 4132.8,
+      "Experience": 5342.400000000001,
+      "RealmIfBreakthroughConfirmed": 7,
+      "BankedExperience": 301.49841352249905,
+      "BasicInputs": 19080,
+      "RealInputs": 0
+    },
+    {
+      "Day": 7,
+      "InputsPerMinute": 0,
+      "OldExperience": 9643.2,
+      "Experience": 12465.599999999999,
+      "RealmIfBreakthroughConfirmed": 9,
+      "BankedExperience": 3631.493317355411,
+      "BasicInputs": 44520,
+      "RealInputs": 0
+    },
+    {
+      "Day": 1,
+      "InputsPerMinute": 2,
+      "OldExperience": 1646.4,
+      "Experience": 2049.6000000000004,
+      "RealmIfBreakthroughConfirmed": 4,
+      "BankedExperience": 578.3408617367509,
+      "BasicInputs": 6360,
+      "RealInputs": 960
+    },
+    {
+      "Day": 3,
+      "InputsPerMinute": 2,
+      "OldExperience": 4939.200000000001,
+      "Experience": 6148.800000000001,
+      "RealmIfBreakthroughConfirmed": 7,
+      "BankedExperience": 1107.8984135225,
+      "BasicInputs": 19080,
+      "RealInputs": 2880
+    },
+    {
+      "Day": 7,
+      "InputsPerMinute": 2,
+      "OldExperience": 11524.800000000001,
+      "Experience": 14347.200000000003,
+      "RealmIfBreakthroughConfirmed": 9,
+      "BankedExperience": 5513.093317355413,
+      "BasicInputs": 44520,
+      "RealInputs": 6720
+    },
+    {
+      "Day": 1,
+      "InputsPerMinute": 30,
+      "OldExperience": 5409.6,
+      "Experience": 5812.800000000001,
+      "RealmIfBreakthroughConfirmed": 7,
+      "BankedExperience": 771.8984135225005,
+      "BasicInputs": 6360,
+      "RealInputs": 14400
+    },
+    {
+      "Day": 3,
+      "InputsPerMinute": 30,
+      "OldExperience": 16228.800000000001,
+      "Experience": 17438.4,
+      "RealmIfBreakthroughConfirmed": 9,
+      "BankedExperience": 8604.293317355412,
+      "BasicInputs": 19080,
+      "RealInputs": 43200
+    },
+    {
+      "Day": 7,
+      "InputsPerMinute": 30,
+      "OldExperience": 37867.200000000004,
+      "Experience": 40689.60000000001,
+      "RealmIfBreakthroughConfirmed": 9,
+      "BankedExperience": 31855.493317355416,
+      "BasicInputs": 44520,
+      "RealInputs": 100800
+    },
+    {
+      "Day": 1,
+      "InputsPerMinute": 90,
+      "OldExperience": 13473.600000000002,
+      "Experience": 13876.800000000003,
+      "RealmIfBreakthroughConfirmed": 9,
+      "BankedExperience": 5042.693317355413,
+      "BasicInputs": 6360,
+      "RealInputs": 43200
+    },
+    {
+      "Day": 3,
+      "InputsPerMinute": 90,
+      "OldExperience": 40420.8,
+      "Experience": 41630.40000000001,
+      "RealmIfBreakthroughConfirmed": 9,
+      "BankedExperience": 32796.29331735542,
+      "BasicInputs": 19080,
+      "RealInputs": 129600
+    },
+    {
+      "Day": 7,
+      "InputsPerMinute": 90,
+      "OldExperience": 94315.20000000001,
+      "Experience": 97137.60000000002,
+      "RealmIfBreakthroughConfirmed": 9,
+      "BankedExperience": 88303.49331735543,
+      "BasicInputs": 44520,
+      "RealInputs": 302400
+    }
+  ],
+  "FirstRealmBreakthrough": [
+    {
+      "InputsPerMinute": 0,
+      "OldMinutes": null,
+      "NewMinutes": 119
+    },
+    {
+      "InputsPerMinute": 2,
+      "OldMinutes": 536,
+      "NewMinutes": 96
+    },
+    {
+      "InputsPerMinute": 30,
+      "OldMinutes": 36,
+      "NewMinutes": 26
+    },
+    {
+      "InputsPerMinute": 90,
+      "OldMinutes": 12,
+      "NewMinutes": 11
+    }
+  ],
+  "FirstHour": [
+    {
+      "InputsPerMinute": 0,
+      "OldExperience": 0,
+      "Experience": 168.00000000000003
+    },
+    {
+      "InputsPerMinute": 2,
+      "OldExperience": 33.6,
+      "Experience": 201.60000000000002
+    },
+    {
+      "InputsPerMinute": 30,
+      "OldExperience": 504.00000000000006,
+      "Experience": 672.0000000000001
+    },
+    {
+      "InputsPerMinute": 90,
+      "OldExperience": 1512.0000000000002,
+      "Experience": 1680.0000000000002
+    }
+  ],
+  "RestartCheck": {
+    "WholeDayInputs": 6360,
+    "ReconnectedInputs": 6360,
+    "OldFreshBudgetEveryTenMinutes": 17280
+  },
+  "LongAbsenceCheck": {
+    "OneWeekSingleClaimInputs": 6360,
+    "SevenDailyClaimsInputs": 44520
+  }
+}

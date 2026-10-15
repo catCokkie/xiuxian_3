@@ -120,6 +120,7 @@ namespace Xiuxian.Scripts.Game
             _persistenceManager.Register("resource", "wallet", _resourceWalletState);
             _persistenceManager.Register("stats", "player", _playerStatsState);
             _persistenceManager.Register("progress", "player", _playerProgressState);
+            _persistenceManager.Register("growth", "baseline", services?.ActivityConversionService);
             _persistenceManager.Register("rhythm", "state", _cultivationRhythmState);
             _persistenceManager.Register("shop", "state", _shopState);
             _persistenceManager.Register("event_log", "state", _eventLogState);
@@ -813,10 +814,12 @@ namespace Xiuxian.Scripts.Game
             }
 
             _exploreProgressController?.AdvanceHealthRecovery(evaluation.EffectiveOfflineSeconds);
-            ActionSettlementResult result = OfflineActionSettlementRules.BuildShared(evaluation.EffectiveOfflineSeconds,
-                _playerProgressState.GetRealmMultiplier(), _playerActionState.ActionId, _playerActionState.ActionTargetId);
+            ActionSettlementResult result = ServiceLocator.Instance?.ActivityConversionService?.ClaimBasicGrowth(nowUnix, _lastLoadedSavedUnix)
+                ?? OfflineActionSettlementRules.BuildShared(evaluation.EffectiveOfflineSeconds,
+                    _playerProgressState.GetRealmMultiplier(), _playerActionState.ActionId, _playerActionState.ActionTargetId);
+            double sharedInputs = result.ApConsumed / GameBalanceConstants.Offline.ApPerInput;
             if (isDungeon) result = OfflineActionSettlementRules.WithDungeonRewards(result,
-                BuildOfflineDungeonSettlement(evaluation.EffectiveOfflineSeconds));
+                BuildOfflineDungeonSettlement(evaluation.EffectiveOfflineSeconds, sharedInputBudget: sharedInputs));
 
             if (!result.HasAnyReward)
             {
@@ -826,7 +829,7 @@ namespace Xiuxian.Scripts.Game
             _resourceWalletState.AddLingqi(result.LingqiGain);
             _resourceWalletState.AddInsight(result.InsightGain);
             _playerProgressState.AddRealmExp(result.RealmExpGain);
-            int craftingBudget = OfflineCraftingRules.InputBudget(evaluation.EffectiveOfflineSeconds, _playerActionState.ActionId);
+            int craftingBudget = OfflineCraftingRules.InputBudgetFromShared(sharedInputs, _playerActionState.ActionId);
             string craftDetail = craftingBudget > 0 && _exploreProgressController != null
                 ? "\n加工：" + _exploreProgressController.AdvanceOfflineCrafting(craftingBudget) : string.Empty;
             if (isDungeon)
@@ -852,7 +855,8 @@ namespace Xiuxian.Scripts.Game
                     }
                 }
             }
-            string summary = OfflineSummaryPresentationRules.BuildBody(result) + craftDetail;
+            string summary = OfflineSummaryPresentationRules.BuildBody(result) + craftDetail
+                + "\n静修按已过时间继续，线上线下不会重复领取；离线最多结算24小时，重启不刷新静修效率。";
             _exploreProgressController?.ShowOfflineSummary(OfflineSummaryPresentationRules.BuildTitle(result), summary);
             _bookTabs?.ShowReturnCard(OfflineSummaryPresentationRules.BuildTitle(result), summary);
             _eventLogState?.AddEvent(EventLogState.CategorySystem, OfflineSummaryPresentationRules.BuildTitle(result), summary);
@@ -899,14 +903,14 @@ namespace Xiuxian.Scripts.Game
             return hadRest;
         }
 
-        internal ActionSettlementResult BuildOfflineDungeonSettlement(double offlineSeconds, double? equipmentRoll = null)
+        internal ActionSettlementResult BuildOfflineDungeonSettlement(double offlineSeconds, double? equipmentRoll = null, double? sharedInputBudget = null)
         {
             if (_levelConfigLoader == null || _equippedItemsState == null || _playerProgressState == null)
             {
                 return new ActionSettlementResult(PlayerActionState.ActionDungeon, _playerActionState?.ActionTargetId ?? string.Empty, "offline_dungeon", 0, 0, 0, 0, 0, 0, new Dictionary<string, int>(), Array.Empty<EquipmentInstanceData>());
             }
 
-            double offlineInputBudget = OfflineSettlementRules.CalculateOfflineInputBudget(offlineSeconds);
+            double offlineInputBudget = sharedInputBudget ?? OfflineSettlementRules.CalculateOfflineInputBudget(offlineSeconds);
             CharacterStatBlock playerStats = BuildOfflinePlayerStats();
             string targetLevelId = _playerActionState?.ActionTargetId ?? string.Empty;
             if (string.IsNullOrEmpty(targetLevelId)) targetLevelId = _levelConfigLoader.ActiveLevelId;

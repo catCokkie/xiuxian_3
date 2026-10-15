@@ -30,6 +30,10 @@ namespace Xiuxian.Scripts.Tests
                 var s = ServiceLocator.Instance!;
                 var root = GetNode<PrototypeRootController>("PrototypeRoot");
                 var controller = root.GetNode<ExploreProgressController>("ExploreProgressController");
+                if (Array.IndexOf(OS.GetCmdlineUserArgs(), "--growth-smoke") >= 0)
+                {
+                    RunSharedGrowthChecks(root, controller, s); GD.Print($"GROWTH SUCCESS: {_checks} checks"); GetTree().Quit(0); return;
+                }
                 if (Array.IndexOf(OS.GetCmdlineUserArgs(), "--supply-smoke") >= 0)
                 {
                     RunSupplyChecks(root, controller, s); GD.Print($"SUPPLY SUCCESS: {_checks} checks"); GetTree().Quit(0); return;
@@ -172,6 +176,7 @@ namespace Xiuxian.Scripts.Tests
                 RunProductionBlockChecks((PrototypeRootController)root, controller, s);
                 RunBossReportChecks((PrototypeRootController)root, controller, s);
                 RunSupplyChecks(root, controller, s);
+                RunSharedGrowthChecks(root, controller, s);
                 GD.Print($"SMOKE SUCCESS: {_checks} checks");
                 if (Array.IndexOf(OS.GetCmdlineUserArgs(), "--render-smoke") >= 0) CaptureUi(root);
                 else GetTree().Quit(0);
@@ -205,6 +210,8 @@ namespace Xiuxian.Scripts.Tests
                 s.PlayerActionState.SetAction(mode);
                 float mining = s.MiningState!.CurrentProgress, fishing = s.FishingState!.CurrentProgress, body = s.BodyCultivationState!.CurrentProgress;
                 double before = s.PlayerProgressState!.RealmExp;
+                // Each case represents a separately loaded legacy save, including its absent time ledger.
+                s.ActivityConversionService!.FromDictionary(new());
                 savedAt.SetValue(root, (long)Time.GetUnixTimeFromSystem() - 600);
                 applied.SetValue(root, false);
                 Check((bool)settle.Invoke(root, null)! && s.PlayerProgressState.RealmExp - before >= 33.6 - .001

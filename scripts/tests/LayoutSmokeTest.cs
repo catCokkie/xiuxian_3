@@ -149,6 +149,9 @@ public partial class LayoutSmokeTest : Node
                 await Settle();
                 string scenario = dimensions.ToString();
                 Check(Inside(GetViewport().GetVisibleRect(), _book.GetGlobalRect()), scenario + ": book fits viewport");
+                var basicGrowth = (Label)_tabs.FindChild("HomeBasicGrowth", true, false);
+                Check(basicGrowth.Text.Contains("线上线下共用") && basicGrowth.Size.X <= basicGrowth.GetParent<Control>().Size.X,
+                    scenario + ": quiet growth explanation wraps within the existing home card");
                 s.PlayerActionState!.SetAction("mining"); s.MiningState!.SetRecycling(true); await Select("CultivationTab");
                 Check(productionPanel.IsVisibleInTree() && productionPanel.GetNode<Label>("ProductionStatus").Text.Contains("每轮固定1"), scenario + ": recycling shows fixed yield and shared production controls");
                 foreach (Control control in ((Control)_tabs.FindChild("HomeAction_mining", true, false)).GetChildren())

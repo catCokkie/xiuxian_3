@@ -35,6 +35,7 @@ namespace Xiuxian.Scripts.Services
 
         public override void _Ready()
         {
+            _automaticGrowthEnabled = System.Array.IndexOf(OS.GetCmdlineUserArgs(), "--smoke-test") < 0;
             _activityState = GetNodeOrNull<InputActivityState>(ActivityStatePath);
             _walletState = GetNodeOrNull<ResourceWalletState>(WalletStatePath);
             _progressState = GetNodeOrNull<PlayerProgressState>(ProgressStatePath);
@@ -62,6 +63,7 @@ namespace Xiuxian.Scripts.Services
 
         public override void _Process(double delta)
         {
+            AdvanceBasicGrowthClock();
             if (_walletState == null || _activityState == null || _rhythmState?.InRest != true
                 || _activityState.SecondsSinceLastInput <= 5.0) return;
             // Rest is real time recovery and does not create input experience or an active cycle.

@@ -88,6 +88,14 @@ powershell -NoProfile -ExecutionPolicy Bypass -File tools/verify_supply.ps1 -God
 
 Add `-RenderArt` to render the 80px/24px character and inventory contact sheet to `docs/art/asset_contact_sheet.png`. The checks skip real player saves and global input hooks. Open `docs/art/asset_gallery.html` for a searchable offline asset preview; task status and validation records live only in `docs/design/10_todo.md`.
 
+Quiet-time growth and the shared online/offline time budget have a separate quick check:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File tools/verify_growth.ps1 -GodotPath "path/to/Godot.NET_console.exe" -WriteReport
+```
+
+`-WriteReport` regenerates `docs/balance/shared_growth_pace.json` from runtime formulas for 1/3/7-day scenarios. It is a budget model, not a full playthrough or player study.
+
 ## Documentation
 
 - design hub & agent guide: `docs/design/AGENT_PROMPT.md`

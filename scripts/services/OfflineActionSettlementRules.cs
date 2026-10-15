@@ -1,9 +1,18 @@
 namespace Xiuxian.Scripts.Services
 {
-    // The common input channel pays once. Activity progress uses that same budget,
-    // like online crafting; a paused recipe never cancels basic character growth.
+    // Shared time growth pays once. Offline activity progress reuses the same budget;
+    // a paused recipe never cancels basic character growth. Real input remains separate.
     public static class OfflineActionSettlementRules
     {
+        public static ActionSettlementResult BuildSharedFromBudget(double inputs, double realmMultiplier, string actionId, string targetId = "")
+        {
+            inputs = double.IsFinite(inputs) ? System.Math.Max(0, inputs) : 0;
+            double ap = inputs * GameBalanceConstants.Offline.ApPerInput;
+            return ActionSettlementRules.BuildCultivationSettlement(targetId, ap,
+                ap * GameBalanceConstants.ResourceConversion.LingqiFactor * System.Math.Max(0, realmMultiplier),
+                ap * GameBalanceConstants.ResourceConversion.InsightFactor,
+                inputs * GameBalanceConstants.ResourceConversion.BaseExpPerInput) with { ActionId = actionId, SourceTag = "shared_basic_growth" };
+        }
         public static ActionSettlementResult BuildShared(double seconds, double realmMultiplier, string actionId, string targetId = "")
         {
             var result = OfflineSettlementRules.BuildCultivationOfflineSettlement(seconds,
