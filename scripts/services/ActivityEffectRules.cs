@@ -10,11 +10,11 @@ namespace Xiuxian.Scripts.Services
             BattleConsumableState state,
             IReadOnlyDictionary<string, int> items,
             int maxTalismansPerBattle = 1,
-            string strategyTag = "")
+            string strategyTag = "", int enemyHealPerRound = 0)
         {
             var result = new List<BackpackConsumableUsage>();
             if (state.IsBattleStart)
-                foreach (string talismanId in GetAutoUseTalismans(items, maxTalismansPerBattle, strategyTag))
+                foreach (string talismanId in GetAutoUseTalismans(items, maxTalismansPerBattle, strategyTag, enemyHealPerRound))
                     result.Add(new BackpackConsumableUsage(talismanId, "battle_start"));
 
             return result;
@@ -90,7 +90,7 @@ namespace Xiuxian.Scripts.Services
             return FormationRules.GetEffectProfile(formationId, masteryLevel);
         }
 
-        private static IEnumerable<string> GetAutoUseTalismans(IReadOnlyDictionary<string, int> items, int maxTalismansPerBattle, string strategyTag)
+        private static IEnumerable<string> GetAutoUseTalismans(IReadOnlyDictionary<string, int> items, int maxTalismansPerBattle, string strategyTag, int enemyHealPerRound)
         {
             if (items == null || maxTalismansPerBattle <= 0)
             {
@@ -106,6 +106,7 @@ namespace Xiuxian.Scripts.Services
 
             if (strategyTag == "armor") priority = new[] { "talisman_fire_charm", "talisman_burst_charm", "talisman_shield_charm" };
             if (strategyTag == "fast") priority = new[] { "talisman_shield_charm", "talisman_burst_charm", "talisman_fire_charm" };
+            if (enemyHealPerRound > 0) priority = System.Linq.Enumerable.ToArray(System.Linq.Enumerable.Prepend(priority, RecipeUnlockRules.Zhenling));
             int used = 0;
             for (int i = 0; i < priority.Length && used < maxTalismansPerBattle; i++)
             {

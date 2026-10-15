@@ -1070,13 +1070,14 @@ namespace Xiuxian.Scripts.Game
                 monsterProfile: ResolveCurrentMonsterProfile(),
                 criticalRoll: Random.Shared.NextDouble,
                 healPerRound: activeMeal.HealPerRound,
+                suppressMonsterHealingRounds: TalismanRules.GetSuppressionRounds(_battleTalismans),
                 incomingDamageReduction: activeMeal.Id == "food_iron_fish_meal" && IsBossChallengeBattle() ? .15 : 0,
                 extraModifiers: modifiers,
                 roundObserved: _bossAttempt.Observe);
             SyncControllerStateFromLogic();
             if (progress.RoundsResolved <= 0)
             {
-                _battleInfoLabel.Text = UiText.BattleInProgress(_battleMonsterName);
+                _battleInfoLabel.Text = UiText.BattleInProgress(_battleMonsterName) + BuildSuppressionSuffix();
                 _battleInfoLabel.Visible = true;
                 _roundInfoLabel.Text = $"蓄力 {progress.PendingInputs}/{progress.Threshold} | {UiText.BattleRound(_battleRoundCounter, _battleMonsterName, _enemyHp)}";
                 UpdateHpLabels();
@@ -1099,7 +1100,7 @@ namespace Xiuxian.Scripts.Game
                 return;
             }
 
-            _battleInfoLabel.Text = UiText.BattleInProgress(_battleMonsterName);
+            _battleInfoLabel.Text = UiText.BattleInProgress(_battleMonsterName) + BuildSuppressionSuffix();
             _battleInfoLabel.Visible = true;
             _roundInfoLabel.Text = $"{UiText.BattleRound(_battleRoundCounter, _battleMonsterName, _enemyHp)} | next {_pendingBattleInputEvents}/{progress.Threshold}";
             UpdateHpLabels();
@@ -1748,7 +1749,7 @@ namespace Xiuxian.Scripts.Game
 
             if (_inBattle)
             {
-                _battleInfoLabel.Text = UiText.BattleInProgress(_battleMonsterName) + BuildActiveFormationSuffix();
+                _battleInfoLabel.Text = UiText.BattleInProgress(_battleMonsterName) + BuildSuppressionSuffix() + BuildActiveFormationSuffix();
                 _battleInfoLabel.Visible = true;
                 int threshold = Mathf.Max(1, _inputsPerBattleRoundRuntime);
                 _roundInfoLabel.Text = $"{UiText.BattleRound(_battleRoundCounter, _battleMonsterName, _enemyHp)} | next {_pendingBattleInputEvents}/{threshold}";
@@ -2052,6 +2053,7 @@ namespace Xiuxian.Scripts.Game
                 return;
             }
 
+            if (_miningState.Recycling) { AdvanceRecycleByInput(inputEvents); return; }
             inputEvents = ApplyFormationGatherSpeed(inputEvents);
 
             if (!_miningState.HasSelectedNode)
@@ -2077,6 +2079,21 @@ namespace Xiuxian.Scripts.Game
                 _progressBar.Value = _miningState.CurrentProgress / _miningState.RequiredProgress * 100;
                 _roundInfoLabel.Text = BuildMiningProgressText();
             }
+        }
+
+        private void AdvanceRecycleByInput(int inputEvents)
+        {
+            if (_miningState == null || ShowProductionBlock("mining")) return;
+            _miningState.AdvanceRecycling(ApplyFormationCraftSpeed(inputEvents));
+            while (_miningState.RecycleProgress >= MiningState.RecycleRequired && GetProductionCheck("mining").CanProduce)
+            {
+                if (!CraftingProgressionService.TryCompleteGenericBatch(RecipeUnlockRules.Recycle, _backpackState, _resourceWalletState,
+                    _subsystemMasteryState?.GetLevel("mining") ?? 1, 1, out string reward, _miningState.RecyclingProduction)) break;
+                _miningState.CompleteRecycling(); RecordActivityCompletion(reward);
+            }
+            _progressBar.Value = _miningState.RecycleProgress / MiningState.RecycleRequired * 100;
+            _roundInfoLabel.Text = BuildMiningProgressText();
+            ShowProductionBlock("mining");
         }
 
         private bool TryCompleteMiningBatch()
@@ -2265,7 +2282,7 @@ namespace Xiuxian.Scripts.Game
             IReadOnlyList<IRecipeDefinition> recipes = activity.GetRecipes();
             for (int i = 0; i < recipes.Count; i++)
             {
-                if (recipes[i].RequiredMasteryLevel <= masteryLevel)
+                if (RecipeUnlockRules.Available(recipes[i], _playerProgressState?.RealmLevel ?? 1, masteryLevel, _levelConfigLoader?.GetBossDefeatedLevelIds()))
                 {
                     state.SelectRecipe(recipes[i].RecipeId);
                     return;
@@ -2582,8 +2599,15 @@ namespace Xiuxian.Scripts.Game
                 : 0.0;
         }
 
+        private string BuildSuppressionSuffix()
+        {
+            int rounds = TalismanRules.GetSuppressionRounds(_battleTalismans);
+            return rounds <= 0 ? "" : _battleRoundCounter < rounds ? $" · 镇灵：前{rounds}回合禁疗" : " · 镇灵已结束";
+        }
+
         private string BuildMiningProgressText()
         {
+            if (_miningState?.Recycling == true) return $"回收寒铁 {_miningState.RecycleProgress:0}/{MiningState.RecycleRequired:0} · {_miningState.RecyclingProduction.Summary}";
             if (_miningState == null || !_miningState.HasSelectedNode || !MiningRules.TryGetNode(_miningState.SelectedRecipeId, out MiningRules.NodeSpec node))
             {
                 return ExploreProgressPresentationRules.BuildMiningProgressText(string.Empty, 0.0f, 0.0f, MiningRules.DefaultNodeDurability);
@@ -3006,7 +3030,7 @@ namespace Xiuxian.Scripts.Game
             List<BackpackConsumableUsage> backpackUsages = ActivityEffectRules.DetermineAutoUseBackpackConsumables(
                 state,
                 _backpackState.GetSpendableItemEntries(),
-                TalismanRules.GetMaxTalismansPerBattle(talismanMasteryLevel), ResolveCurrentMonsterProfile()?.StrategyTag ?? "");
+                TalismanRules.GetMaxTalismansPerBattle(talismanMasteryLevel), ResolveCurrentMonsterProfile()?.StrategyTag ?? "", ResolveCurrentMonsterProfile()?.HealPerRound ?? 0);
             for (int i = 0; i < backpackUsages.Count; i++)
             {
                 BackpackConsumableUsage usage = backpackUsages[i];

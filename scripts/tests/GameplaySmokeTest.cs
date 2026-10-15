@@ -30,6 +30,10 @@ namespace Xiuxian.Scripts.Tests
                 var s = ServiceLocator.Instance!;
                 var root = GetNode<PrototypeRootController>("PrototypeRoot");
                 var controller = root.GetNode<ExploreProgressController>("ExploreProgressController");
+                if (Array.IndexOf(OS.GetCmdlineUserArgs(), "--supply-smoke") >= 0)
+                {
+                    RunSupplyChecks(root, controller, s); GD.Print($"SUPPLY SUCCESS: {_checks} checks"); GetTree().Quit(0); return;
+                }
                 s.PlayerProgressState!.FromDictionary(new() { ["realm_level"] = 5 });
                 s.SubsystemMasteryState!.FromDictionary(new() { ["dungeon"] = 4, ["cultivation"] = 3, ["alchemy"] = 4, ["talisman"] = 4, ["cooking"] = 4, ["garden"] = 4, ["fishing"] = 4 });
                 s.ResourceWalletState!.AddLingqi(100000);
@@ -167,6 +171,7 @@ namespace Xiuxian.Scripts.Tests
                 RunChallengeGoalChecks((PrototypeRootController)root, controller, s);
                 RunProductionBlockChecks((PrototypeRootController)root, controller, s);
                 RunBossReportChecks((PrototypeRootController)root, controller, s);
+                RunSupplyChecks(root, controller, s);
                 GD.Print($"SMOKE SUCCESS: {_checks} checks");
                 if (Array.IndexOf(OS.GetCmdlineUserArgs(), "--render-smoke") >= 0) CaptureUi(root);
                 else GetTree().Quit(0);

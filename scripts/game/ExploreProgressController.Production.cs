@@ -16,6 +16,7 @@ namespace Xiuxian.Scripts.Game
         }
         private CraftingProductionPlan? GetCurrentProductionPlan() => (_actionState?.ActionId ?? "") switch
         {
+            "mining" when _miningState?.Recycling == true => _miningState.RecyclingProduction,
             "alchemy" => _alchemyState?.Production,
             "smithing" => _smithingState?.Production,
             "talisman" => _talismanState?.Production,
@@ -28,6 +29,8 @@ namespace Xiuxian.Scripts.Game
         {
             int mastery = _subsystemMasteryState?.GetLevel(system) ?? 1;
             int realm = _playerProgressState?.RealmLevel ?? 1;
+            if (system == "mining" && _miningState?.Recycling == true)
+                return CraftingProgressionService.CheckRecipe(RecipeUnlockRules.Recycle, _backpackState, _resourceWalletState, mastery, _miningState.RecyclingProduction, realm);
             if (system == "smithing")
                 return _smithingState != null && _equippedItemsState?.TryGetEquippedProfileById(_smithingState.TargetEquipmentId, out EquipmentStatProfile profile) == true
                     ? CraftingProgressionService.CheckSmithing(profile, _backpackState, _resourceWalletState, mastery, _smithingState.Production, realm)

@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "style_family": "xianxia_parchment_pixel_v1",
+  "style_family": "xianxia_parchment_plain_v2",
   "palette": {
     "outline": "#4A3728",
     "ivory": "#FFF0CF",
@@ -571,6 +571,19 @@
       "variant": 42,
       "family": "consumables",
       "sha256": "bde3e8950078fcf9b261176e0a93f31abb1dea91304c89c5c0af186abcd6e465"
+    },
+    {
+      "key": "item:talisman_zhenling",
+      "path": "res://assets/items/consumables/talisman_zhenling_v1.svg",
+      "category": "item",
+      "source": {
+        "method": "project_vector",
+        "recipe": "seal",
+        "accent": "violet"
+      },
+      "variant": 43,
+      "family": "consumables",
+      "sha256": "9031123695e2a5277aa9e6722ec8f74d69e4c7164519f1a5ddcefa56e6eaa510"
     },
     {
       "key": "equipment:eq_weapon_qi_outer_moss_blade",
@@ -1173,134 +1186,159 @@
     },
     {
       "key": "player:cultivator_idle",
-      "path": "res://assets/characters/player/cultivator_idle_v1.png",
+      "path": "res://assets/characters/player/cultivator_idle_plain_v2.svg",
       "category": "player",
       "source": {
-        "method": "builtin_imagegen",
-        "prompt_id": "hero"
+        "method": "project_vector",
+        "recipe": "plain_actor_v2",
+        "grid": 32,
+        "max_palette_colors": 7
       },
-      "sha256": "01c34444dd3125c61cb1df43a03cb1ce6f08759e5ef6b8e53469794397c84a17"
+      "previous_path": "res://assets/characters/player/cultivator_idle_v1.png",
+      "sha256": "d65fcb8dfcfb598d2e3f17cb2e218a0d2822fff63f35a50948589294a0feb9c5"
     },
     {
       "key": "monster:monster_slime_moss",
-      "path": "res://assets/characters/monsters/monster_slime_moss_idle_v1.png",
+      "path": "res://assets/characters/monsters/monster_slime_moss_plain_v2.svg",
       "category": "monster",
       "source": {
-        "method": "builtin_imagegen",
-        "prompt_id": "monster_slime_moss",
-        "style_reference": "player:cultivator_idle"
+        "method": "project_vector",
+        "recipe": "plain_actor_v2",
+        "grid": 32,
+        "max_palette_colors": 7
       },
-      "sha256": "9b1d23ab31fc3a441e20c2012ea077167a3003d4a76257918627e81485bb16aa"
+      "previous_path": "res://assets/characters/monsters/monster_slime_moss_idle_v1.png",
+      "sha256": "3bb38d703325c6fb1c4fa36faf6deec1c726a2f7095a5ebab1369e67ab0d1c4d"
     },
     {
       "key": "monster:monster_bat_shadow",
-      "path": "res://assets/characters/monsters/monster_bat_shadow_idle_v1.png",
+      "path": "res://assets/characters/monsters/monster_bat_shadow_plain_v2.svg",
       "category": "monster",
       "source": {
-        "method": "builtin_imagegen",
-        "prompt_id": "monster_bat_shadow",
-        "style_reference": "player:cultivator_idle"
+        "method": "project_vector",
+        "recipe": "plain_actor_v2",
+        "grid": 32,
+        "max_palette_colors": 7
       },
-      "sha256": "dd56773fa7ded8c38efc2d9289898dac70f390b507f0e98889cd4e1e505fa669"
+      "previous_path": "res://assets/characters/monsters/monster_bat_shadow_idle_v1.png",
+      "sha256": "d51ecbabc50f7d6a030eddd459fa3ce4d36dcb59248c191449fcc0e7ff1999cb"
     },
     {
       "key": "monster:monster_spider_cave",
-      "path": "res://assets/characters/monsters/monster_spider_cave_idle_v1.png",
+      "path": "res://assets/characters/monsters/monster_spider_cave_plain_v2.svg",
       "category": "monster",
       "source": {
-        "method": "builtin_imagegen",
-        "prompt_id": "monster_spider_cave",
-        "style_reference": "player:cultivator_idle"
+        "method": "project_vector",
+        "recipe": "plain_actor_v2",
+        "grid": 32,
+        "max_palette_colors": 7
       },
-      "sha256": "ae1d215f8a54ff5cfa8a016704238ec698589600aca1b40045ca80ee2c09d25c"
+      "previous_path": "res://assets/characters/monsters/monster_spider_cave_idle_v1.png",
+      "sha256": "1911931c247f4b8aeb77aa4ccce67db0496453f3939d64d665c9f9db275b776d"
     },
     {
       "key": "monster:monster_yin_serpentling",
-      "path": "res://assets/characters/monsters/monster_yin_serpentling_idle_v1.png",
+      "path": "res://assets/characters/monsters/monster_yin_serpentling_plain_v2.svg",
       "category": "monster",
       "source": {
-        "method": "builtin_imagegen",
-        "prompt_id": "monster_yin_serpentling",
-        "style_reference": "player:cultivator_idle"
+        "method": "project_vector",
+        "recipe": "plain_actor_v2",
+        "grid": 32,
+        "max_palette_colors": 7
       },
-      "sha256": "685f7608f0662df249a2d09a1007142fa31741a1bc97da36eec28eeae2f6e7c2"
+      "previous_path": "res://assets/characters/monsters/monster_yin_serpentling_idle_v1.png",
+      "sha256": "ff5c77b3fb2e2ff36ecbac46c01d4edff9d166eee92e026b889496b1b7c730d0"
     },
     {
       "key": "monster:monster_sporeling",
-      "path": "res://assets/characters/monsters/monster_sporeling_idle_v1.png",
+      "path": "res://assets/characters/monsters/monster_sporeling_plain_v2.svg",
       "category": "monster",
       "source": {
-        "method": "builtin_imagegen",
-        "prompt_id": "monster_sporeling",
-        "style_reference": "player:cultivator_idle"
+        "method": "project_vector",
+        "recipe": "plain_actor_v2",
+        "grid": 32,
+        "max_palette_colors": 7
       },
-      "sha256": "2af320876fd5a8670bac8eece187093bb7974cbc46705f2ad878fddca0e54357"
+      "previous_path": "res://assets/characters/monsters/monster_sporeling_idle_v1.png",
+      "sha256": "1817c73bf28b25e2f7b7649b3cad7e8e252d8b313dc605ed78535a1c97d3cf19"
     },
     {
       "key": "monster:monster_bone_servant",
-      "path": "res://assets/characters/monsters/monster_bone_servant_idle_v1.png",
+      "path": "res://assets/characters/monsters/monster_bone_servant_plain_v2.svg",
       "category": "monster",
       "source": {
-        "method": "builtin_imagegen",
-        "prompt_id": "monster_bone_servant",
-        "style_reference": "player:cultivator_idle"
+        "method": "project_vector",
+        "recipe": "plain_actor_v2",
+        "grid": 32,
+        "max_palette_colors": 7
       },
-      "sha256": "93bb9f129a6bab021a2d9db8d9b1698b4b4ec14b4bc19df802b1e9a1d470b933"
+      "previous_path": "res://assets/characters/monsters/monster_bone_servant_idle_v1.png",
+      "sha256": "0f523894fc60df86c904cafb0405191e9417d54788853369ef0341f86c68dec6"
     },
     {
       "key": "monster:monster_spider_cave_queen",
-      "path": "res://assets/characters/monsters/monster_spider_cave_queen_idle_v1.png",
+      "path": "res://assets/characters/monsters/monster_spider_cave_queen_plain_v2.svg",
       "category": "monster",
       "source": {
-        "method": "builtin_imagegen",
-        "prompt_id": "monster_spider_cave_queen",
-        "style_reference": "player:cultivator_idle"
+        "method": "project_vector",
+        "recipe": "plain_actor_v2",
+        "grid": 32,
+        "max_palette_colors": 7
       },
-      "sha256": "d8bc47d2c3eac2d7dfe8bf57710c8e1b56e5a2a60e6d8d4157ab33c3dc16eb2a"
+      "previous_path": "res://assets/characters/monsters/monster_spider_cave_queen_idle_v1.png",
+      "sha256": "fc63e4fb958c3bb3cdc35e0fcb1da92dd600ef38ee38234537d4280b45febdab"
     },
     {
       "key": "monster:monster_bat_shadow_lord",
-      "path": "res://assets/characters/monsters/monster_bat_shadow_lord_idle_v1.png",
+      "path": "res://assets/characters/monsters/monster_bat_shadow_lord_plain_v2.svg",
       "category": "monster",
       "source": {
-        "method": "builtin_imagegen",
-        "prompt_id": "monster_bat_shadow_lord",
-        "style_reference": "player:cultivator_idle"
+        "method": "project_vector",
+        "recipe": "plain_actor_v2",
+        "grid": 32,
+        "max_palette_colors": 7
       },
-      "sha256": "e02a9c1a0071f9ce273caea7ff9756e3d97445253d09e1dc7cf21ae0a84b936f"
+      "previous_path": "res://assets/characters/monsters/monster_bat_shadow_lord_idle_v1.png",
+      "sha256": "4b363b13ce23ed01b6314b79c4ca8413b858c92e23a32cfaf6302413ec4ca5a1"
     },
     {
       "key": "monster:monster_yin_tide_serpent",
-      "path": "res://assets/characters/monsters/monster_yin_tide_serpent_idle_v1.png",
+      "path": "res://assets/characters/monsters/monster_yin_tide_serpent_plain_v2.svg",
       "category": "monster",
       "source": {
-        "method": "builtin_imagegen",
-        "prompt_id": "monster_yin_tide_serpent",
-        "style_reference": "player:cultivator_idle"
+        "method": "project_vector",
+        "recipe": "plain_actor_v2",
+        "grid": 32,
+        "max_palette_colors": 7
       },
-      "sha256": "a3db45cd46331d71d49821bd4163463bb923b1c160cf80b420ff473a021ffccd"
+      "previous_path": "res://assets/characters/monsters/monster_yin_tide_serpent_idle_v1.png",
+      "sha256": "ae8dc975463fe0712f9fca56f17b2833ab79e2e8fcfda35af5e7f48b24f51e1c"
     },
     {
       "key": "monster:monster_fungus_titan",
-      "path": "res://assets/characters/monsters/monster_fungus_titan_idle_v1.png",
+      "path": "res://assets/characters/monsters/monster_fungus_titan_plain_v2.svg",
       "category": "monster",
       "source": {
-        "method": "builtin_imagegen",
-        "prompt_id": "monster_fungus_titan",
-        "style_reference": "player:cultivator_idle"
+        "method": "project_vector",
+        "recipe": "plain_actor_v2",
+        "grid": 32,
+        "max_palette_colors": 7
       },
-      "sha256": "66308b7e488e1cc16531c3f3b9eaf527623ada3b5828050e488375e9c54a29e1"
+      "previous_path": "res://assets/characters/monsters/monster_fungus_titan_idle_v1.png",
+      "sha256": "7a2775ff4e88cac3716454d8cb889ad3b8b854684c85bab32de686506c802f7d"
     },
     {
       "key": "monster:monster_nether_bone_king",
-      "path": "res://assets/characters/monsters/monster_nether_bone_king_idle_v1.png",
+      "path": "res://assets/characters/monsters/monster_nether_bone_king_plain_v2.svg",
       "category": "monster",
       "source": {
-        "method": "builtin_imagegen",
-        "prompt_id": "monster_nether_bone_king",
-        "style_reference": "player:cultivator_idle"
+        "method": "project_vector",
+        "recipe": "plain_actor_v2",
+        "grid": 32,
+        "max_palette_colors": 7
       },
-      "sha256": "67c4b4f3bca89d594b2ac2ed3296b0dceb926473084b247d1aeaaeb5e5da27a9"
+      "previous_path": "res://assets/characters/monsters/monster_nether_bone_king_idle_v1.png",
+      "sha256": "64b426c66a24bab1cc1b29cfe79678d9d9a381b1e2a4182f7a4f724b6b6cc8f8"
     },
     {
       "key": "sfx:ui_soft",

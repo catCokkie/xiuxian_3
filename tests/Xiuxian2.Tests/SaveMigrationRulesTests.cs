@@ -5,6 +5,22 @@ namespace Xiuxian.Tests;
 public sealed class SaveMigrationRulesTests
 {
     [Fact]
+    public void RecyclingMigrationIsInactiveAndPreservesGatheringAndExistingPlans()
+    {
+        var cfg = new SaveMigrationRules.MigrationStore(); cfg.SetValue("meta", "version", 21);
+        cfg.SetValue("mining", "state", new Dictionary<string, object> { ["selected_recipe"] = "mining_cold_iron_ore", ["progress"] = 42f, ["current_durability"] = 2 });
+        SaveMigrationRules.MigrateToLatest(cfg, 21);
+        var mining = (Dictionary<string, object>)cfg.GetValue("mining", "state", new Dictionary<string, object>());
+        Assert.False((bool)mining["recycling"]); Assert.Equal(0f, mining["recycle_progress"]);
+        Assert.Equal(42f, mining["progress"]); Assert.Equal(2, mining["current_durability"]);
+        var plan = (Dictionary<string, object>)mining["recycle_production"]; Assert.True((bool)plan["paused"]);
+        mining["recycling"] = true; mining["recycle_progress"] = 50f; plan["round_limit"] = 9;
+        cfg.SetValue("mining", "state", mining); SaveMigrationRules.MigrateToLatest(cfg, 21);
+        mining = (Dictionary<string, object>)cfg.GetValue("mining", "state", new Dictionary<string, object>());
+        Assert.True((bool)mining["recycling"]); Assert.Equal(50f, mining["recycle_progress"]);
+        Assert.Equal(9, ((Dictionary<string, object>)mining["recycle_production"])["round_limit"]);
+    }
+    [Fact]
     public void RecoveryMigrationPreservesInjuriesAndExistingFractionsWithoutHealing()
     {
         var cfg = new SaveMigrationRules.MigrationStore();

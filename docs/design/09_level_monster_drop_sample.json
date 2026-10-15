@@ -397,7 +397,7 @@
         "phase_rules": []
       },
       "visual": {
-        "portrait": "res://assets/characters/monsters/monster_slime_moss_idle_v1.png",
+        "portrait": "res://assets/characters/monsters/monster_slime_moss_plain_v2.svg",
         "animation": "hover",
         "anim_speed": 2.2,
         "anim_amplitude": 2.0,
@@ -452,7 +452,7 @@
         ]
       },
       "visual": {
-        "portrait": "res://assets/characters/monsters/monster_bat_shadow_idle_v1.png",
+        "portrait": "res://assets/characters/monsters/monster_bat_shadow_plain_v2.svg",
         "animation": "pulse",
         "anim_speed": 4.8,
         "anim_amplitude": 0.06,
@@ -502,7 +502,7 @@
         ]
       },
       "visual": {
-        "portrait": "res://assets/characters/monsters/monster_spider_cave_idle_v1.png",
+        "portrait": "res://assets/characters/monsters/monster_spider_cave_plain_v2.svg",
         "animation": "hover",
         "anim_speed": 1.8,
         "anim_amplitude": 3.0,
@@ -558,7 +558,7 @@
         ]
       },
       "visual": {
-        "portrait": "res://assets/characters/monsters/monster_yin_serpentling_idle_v1.png",
+        "portrait": "res://assets/characters/monsters/monster_yin_serpentling_plain_v2.svg",
         "animation": "hover",
         "anim_speed": 2.0,
         "anim_amplitude": 3.0,
@@ -619,7 +619,7 @@
         ]
       },
       "visual": {
-        "portrait": "res://assets/characters/monsters/monster_sporeling_idle_v1.png",
+        "portrait": "res://assets/characters/monsters/monster_sporeling_plain_v2.svg",
         "animation": "pulse",
         "anim_speed": 2.5,
         "anim_amplitude": 0.05,
@@ -681,7 +681,7 @@
         ]
       },
       "visual": {
-        "portrait": "res://assets/characters/monsters/monster_bone_servant_idle_v1.png",
+        "portrait": "res://assets/characters/monsters/monster_bone_servant_plain_v2.svg",
         "animation": "hover",
         "anim_speed": 1.5,
         "anim_amplitude": 2.5,
@@ -744,7 +744,7 @@
         ]
       },
       "visual": {
-        "portrait": "res://assets/characters/monsters/monster_spider_cave_queen_idle_v1.png",
+        "portrait": "res://assets/characters/monsters/monster_spider_cave_queen_plain_v2.svg",
         "animation": "hover",
         "anim_speed": 1.4,
         "anim_amplitude": 4.0,
@@ -806,7 +806,7 @@
         ]
       },
       "visual": {
-        "portrait": "res://assets/characters/monsters/monster_bat_shadow_lord_idle_v1.png",
+        "portrait": "res://assets/characters/monsters/monster_bat_shadow_lord_plain_v2.svg",
         "animation": "pulse",
         "anim_speed": 5.2,
         "anim_amplitude": 0.08,
@@ -869,7 +869,7 @@
         ]
       },
       "visual": {
-        "portrait": "res://assets/characters/monsters/monster_yin_tide_serpent_idle_v1.png",
+        "portrait": "res://assets/characters/monsters/monster_yin_tide_serpent_plain_v2.svg",
         "animation": "hover",
         "anim_speed": 1.2,
         "anim_amplitude": 5.0,
@@ -936,7 +936,7 @@
         ]
       },
       "visual": {
-        "portrait": "res://assets/characters/monsters/monster_fungus_titan_idle_v1.png",
+        "portrait": "res://assets/characters/monsters/monster_fungus_titan_plain_v2.svg",
         "animation": "hover",
         "anim_speed": 1.0,
         "anim_amplitude": 3.5,
@@ -1005,7 +1005,7 @@
         ]
       },
       "visual": {
-        "portrait": "res://assets/characters/monsters/monster_nether_bone_king_idle_v1.png",
+        "portrait": "res://assets/characters/monsters/monster_nether_bone_king_plain_v2.svg",
         "animation": "hover",
         "anim_speed": 0.9,
         "anim_amplitude": 4.5,

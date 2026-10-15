@@ -87,6 +87,7 @@ namespace Xiuxian.Scripts.UI
             _playerHpLabel = host.GetNode<Label>(playerHpLabelPath);
             _enemyHpLabel = host.GetNode<Label>(enemyHpLabelPath);
             _playerSlotTexture = host.GetNodeOrNull<TextureRect>(playerSlotTexturePath);
+            if (_playerSlotTexture != null) _playerSlotTexture.Texture = GameArtCatalog.Get("player:cultivator_idle") ?? _playerSlotTexture.Texture;
             _playerSlotLabel = host.GetNodeOrNull<Label>(playerSlotLabelPath);
             _enemySlotTexture = host.GetNodeOrNull<TextureRect>(enemySlotTexturePath);
             _enemySlotLabel = host.GetNodeOrNull<Label>(enemySlotLabelPath);

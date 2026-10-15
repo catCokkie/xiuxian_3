@@ -51,6 +51,8 @@ def shape(kind, color=JADE, variant=0):
         return rect(12,3,8,4,GOLD,True) + poly('12,7 20,7 20,12 25,16 25,27 7,27 7,16 12,12',light) + rect(9,18,14,7,color) + rect(11,12,3,5,'#FFFFFF') + rect(14,20,4,3,GOLD)
     if kind == 'powder':
         return poly('7,5 25,5 21,12 26,18 26,27 6,27 6,18 11,12',light) + rect(8,9,16,3,GOLD) + poly('9,24 13,18 19,19 23,24',color,False)
+    if kind == 'seal':
+        return poly('7,3 23,3 26,7 26,29 6,29 6,7',light) + rect(8,5,15,3,color) + rect(10,12,12,12,color) + line('12,17 20,17',light,2) + line('16,14 16,22',light,2)
     if kind in ('token','talisman','page','ink'):
         if kind == 'ink':
             return poly('7,7 25,7 27,23 21,27 6,25',OUTLINE) + rect(10,10,12,10,color) + line('11,21 20,17',GOLD) + rect(23,2,3,13,GOLD)
@@ -175,6 +177,7 @@ def item_family(item):
 
 
 def main():
+    ITEMS['talisman_zhenling'] = ('seal', 'violet')
     entries=[]
     def add(key,relative,kind,accent,**extra):
         write_icon(relative,kind,accent,extra.get('variant',0),motif=extra.get('motif',''))
@@ -221,7 +224,9 @@ def main():
                               'font_file':'assets/fonts/NotoSansSC-Variable.ttf',
                               'font_file_sha256':hashlib.sha256((ROOT/'assets/fonts/NotoSansSC-Variable.ttf').read_bytes()).hexdigest(),
                               'weight':400}})
-    manifest={'schema_version':1,'style_family':'xianxia_parchment_pixel_v1','palette':{'outline':OUTLINE,'ivory':IVORY,**PALETTE},'entries':entries}
+    manifest={'schema_version':1,'style_family':'xianxia_parchment_plain_v2','palette':{'outline':OUTLINE,'ivory':IVORY,**PALETTE},'entries':entries}
+    from build_actor_assets import apply_to_manifest
+    apply_to_manifest(manifest)
     for entry in entries:
         path=ROOT/entry['path'].removeprefix('res://')
         if path.exists():

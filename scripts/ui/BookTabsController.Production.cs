@@ -30,12 +30,14 @@ public partial class BookTabsController
 
     private CraftingProductionPlan? GetProductionPlan(string system) => system switch
     {
+        "mining" when _miningState?.Recycling == true => _miningState.RecyclingProduction,
         "alchemy" => _alchemyState?.Production, "smithing" => _smithingState?.Production,
         "talisman" => _talismanState?.Production, "formation" => _formationState?.Production,
         "cooking" => ServiceLocator.Instance?.CookingState?.Production, _ => null,
     };
     private string GetProductionTarget(string system) => system switch
     {
+        "mining" when _miningState?.Recycling == true => RecipeUnlockRules.Recycle,
         "alchemy" => _alchemyState?.SelectedRecipeId ?? "", "smithing" => _smithingState?.TargetEquipmentId ?? "",
         "talisman" => _talismanState?.SelectedRecipeId ?? "", "formation" => _formationState?.SelectedRecipeId ?? "",
         "cooking" => ServiceLocator.Instance?.CookingState?.SelectedRecipeId ?? "", _ => "",
@@ -44,6 +46,7 @@ public partial class BookTabsController
     {
         switch (system)
         {
+            case "mining": _miningState?.NotifyProductionChanged(); break;
             case "alchemy": _alchemyState?.NotifyProductionChanged(); break;
             case "smithing": _smithingState?.NotifyProductionChanged(); break;
             case "talisman": _talismanState?.NotifyProductionChanged(); break;
@@ -135,7 +138,7 @@ public partial class BookTabsController
             }
             else if (ActivityRegistry.GetRecipe(target) is { } recipe)
             {
-                output = "每轮基础产出：" + string.Join("、", recipe.Outputs.Select(x => $"{UiText.BackpackItemName(x.ItemId)} ×{x.Count}")) + "（额外产量加成另计）。";
+                output = target == RecipeUnlockRules.Recycle ? "每轮固定1灵气碎片；不受双倍产量或灵膳增产影响，仅在线推进。" : "每轮基础产出：" + string.Join("、", recipe.Outputs.Select(x => $"{UiText.BackpackItemName(x.ItemId)} ×{x.Count}")) + "（额外产量加成另计）。";
             }
             view.Status.Text = (target == "" ? "" : plan.Summary + "\n") + ProductionBlockRules.Summary(view.Check) + "\n" + output
                 + (system == "formation" ? " 同名阵法重复持有不叠加效果。" : "");
@@ -162,6 +165,7 @@ public partial class BookTabsController
             ProductionBlockKind.Material => "找该材料",
             ProductionBlockKind.Lingqi => "切到修炼补充灵气",
             ProductionBlockKind.ActivityLocked => "查看开放条件",
+            ProductionBlockKind.RegionClear => "查看首通条件",
             ProductionBlockKind.Mastery => "查看研习",
             ProductionBlockKind.EnhanceCap => block.RequiredLevel > 0 ? "查看研习" : "比较其他装备",
             _ => "选择制作项目"
@@ -183,6 +187,7 @@ public partial class BookTabsController
         var block = RecoveryBlock(view.Check); if (block == null) return;
         if (block.Kind == ProductionBlockKind.Reserve) { OpenMaterialReserve(block.ItemId); return; }
         if (block.Kind == ProductionBlockKind.Material) { NavigateProductionMaterial(block.ItemId); return; }
+        if (block.Kind == ProductionBlockKind.RegionClear) { _playerActionState?.SetAction("dungeon"); SetActiveLeftTab("CultivationTab"); _cultivationStatusLabel.Text = "需首通第三地区；从底栏查看区域，不会自动切区或挑战。"; return; }
         if (block.Kind == ProductionBlockKind.Lingqi) { _playerActionState?.SetAction("cultivation"); return; }
         if (block.Kind is ProductionBlockKind.Mastery or ProductionBlockKind.ActivityLocked || block.Kind == ProductionBlockKind.EnhanceCap && block.RequiredLevel > 0)
         {
@@ -201,6 +206,8 @@ public partial class BookTabsController
     private (string System, string Target, string Hint) FindProductionMaterialSource(string itemId)
     {
         int realm = _playerProgressState?.RealmLevel ?? 1;
+        if (itemId == "lingqi_shard" && realm >= 3)
+            return ("mining", RecipeUnlockRules.Recycle, "稳定来源：回收寒铁，每轮寒铁矿×3、灵气20、100输入→灵气碎片×1；选择后手动开始。副本也可掉落碎片。");
         if (ProgressiveUnlockRules.IsActionModeUnlocked("garden", realm))
             foreach (var crop in GardenRules.GetCrops())
                 if (crop.OutputItemId == itemId && GardenRules.CanPlantCrop(crop.RecipeId, GetMasteryLevel("garden")))
@@ -226,7 +233,11 @@ public partial class BookTabsController
         var source = FindProductionMaterialSource(itemId); if (source.System == "") return;
         var services = ServiceLocator.Instance;
         if (source.System == "garden") services?.GardenState?.SelectCrop(source.Target);
-        else if (source.System == "mining" && services?.MiningState?.SelectedRecipeId != source.Target) services?.MiningState?.SelectNode(source.Target);
+        else if (source.System == "mining")
+        {
+            if (source.Target == RecipeUnlockRules.Recycle) services?.MiningState?.SetRecycling(true);
+            else services?.MiningState?.SelectNode(source.Target);
+        }
         else if (source.System == "fishing" && services?.FishingState?.SelectedRecipeId != source.Target) services?.FishingState?.SelectPond(source.Target);
         _playerActionState?.SetAction(source.System); SetActiveLeftTab("CultivationTab");
         _cultivationStatusLabel.Text = source.Hint;

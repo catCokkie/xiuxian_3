@@ -1,12 +1,14 @@
 using System.Collections.Generic;
+using System.Linq;
 
 namespace Xiuxian.Scripts.Services
 {
     public static class TalismanRules
     {
-        public readonly record struct BattleEffect(double DefenseReduction = 0, double RoundAcceleration = 0, bool ForceFirst = false, double FirstHitHpRate = 0);
+        public readonly record struct BattleEffect(double DefenseReduction = 0, double RoundAcceleration = 0, bool ForceFirst = false, double FirstHitHpRate = 0, int SuppressHealingRounds = 0);
         public static BattleEffect GetBattleEffect(string id, string strategyTag = "") => id switch
         {
+            RecipeUnlockRules.Zhenling => new(SuppressHealingRounds: 5),
             "talisman_fire_charm" => new(DefenseReduction: strategyTag == "armor" ? 0.60 : 0.30),
             "talisman_shield_charm" => new(RoundAcceleration: strategyTag == "fast" ? 0.50 : 0.25, ForceFirst: true),
             "talisman_burst_charm" => new(FirstHitHpRate: 0.15),
@@ -52,8 +54,10 @@ namespace Xiuxian.Scripts.Services
                 280,
                 4,
                 default),
+            new(RecipeUnlockRules.Zhenling, "镇灵符", new[] { new MaterialCost("broken_talisman", 3), new MaterialCost("spirit_ink", 2) }, 70, 280, 2, default),
         };
 
+        public static int GetSuppressionRounds(IEnumerable<string> used) => used.Select(id => GetBattleEffect(id).SuppressHealingRounds).DefaultIfEmpty(0).Max();
         public static IReadOnlyList<RecipeSpec> GetRecipes() => Recipes;
 
         public static bool TryGetRecipe(string recipeId, out RecipeSpec recipe)

@@ -24,7 +24,7 @@ namespace Xiuxian.Scripts.Services
             int net = damage - Math.Max(0, boss.HealPerRound);
             return net <= 0 ? null : Math.Max(1, (int)Math.Ceiling((boss.BaseStats.MaxHp - boss.HealPerRound) / (double)net));
         }
-        public static string ChooseTalisman(string strategyTag, int masteryLevel) => strategyTag switch
+        public static string ChooseTalisman(string strategyTag, int masteryLevel, int enemyHealPerRound = 0) => enemyHealPerRound > 0 && masteryLevel >= 2 ? RecipeUnlockRules.Zhenling : strategyTag switch
         {
             "armor" => "talisman_fire_charm",
             "fast" when masteryLevel >= 2 => "talisman_shield_charm",

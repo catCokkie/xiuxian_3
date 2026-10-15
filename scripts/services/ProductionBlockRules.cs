@@ -4,7 +4,7 @@ using System.Linq;
 
 namespace Xiuxian.Scripts.Services
 {
-    public enum ProductionBlockKind { NoTarget, TargetUnavailable, Finished, Paused, ActivityLocked, Mastery, EnhanceCap, Material, Reserve, Lingqi }
+    public enum ProductionBlockKind { NoTarget, TargetUnavailable, Finished, Paused, ActivityLocked, RegionClear, Mastery, EnhanceCap, Material, Reserve, Lingqi }
     public sealed record ProductionBlock(ProductionBlockKind Kind, string ItemId = "", int RequiredLevel = 0);
     public sealed record ProductionCheck(IReadOnlyList<ProductionBlock> Blocks, IReadOnlyList<PreparationMaterial> Materials,
         double LingqiRequired, double LingqiOwned, int MasteryLevel, int EnhanceLevel = 0, int EnhanceCap = 0)
@@ -18,7 +18,7 @@ namespace Xiuxian.Scripts.Services
     {
         public static ProductionCheck Check(IEnumerable<MaterialCost> inputs, double lingqiCost, double lingqi,
             IReadOnlyDictionary<string, int> inventory, IReadOnlyDictionary<string, int>? reserves, int mastery,
-            int requiredMastery = 1, CraftingProductionPlan? plan = null, int requiredRealm = 0)
+            int requiredMastery = 1, CraftingProductionPlan? plan = null, int requiredRealm = 0, string missingRegion = "")
         {
             if (plan?.Finished == true) return new(new[] { new ProductionBlock(ProductionBlockKind.Finished) }, Array.Empty<PreparationMaterial>(), 0, lingqi, mastery);
             var materials = inputs.Where(x => x.Count > 0).GroupBy(x => x.ItemId)
@@ -27,6 +27,7 @@ namespace Xiuxian.Scripts.Services
             var blocks = new List<ProductionBlock>();
             if (plan?.Paused == true) blocks.Add(new(ProductionBlockKind.Paused));
             if (requiredRealm > 0) blocks.Add(new(ProductionBlockKind.ActivityLocked, RequiredLevel: requiredRealm));
+            if (missingRegion != "") blocks.Add(new(ProductionBlockKind.RegionClear, missingRegion));
             if (mastery < requiredMastery) blocks.Add(new(ProductionBlockKind.Mastery, RequiredLevel: requiredMastery));
             foreach (var material in materials)
                 if (material.Missing > 0) blocks.Add(new(material.Owned >= material.Required ? ProductionBlockKind.Reserve : ProductionBlockKind.Material, material.ItemId));
@@ -63,6 +64,7 @@ namespace Xiuxian.Scripts.Services
             ProductionBlockKind.Finished => "指定轮数已完成；可修改设置开始新计划。",
             ProductionBlockKind.Paused => "计划已手动停止或切换项目暂停；点击继续后才会推进。",
             ProductionBlockKind.ActivityLocked => $"活动尚未开放，需{RealmBreakthroughRules.DisplayName(block.RequiredLevel)}。",
+            ProductionBlockKind.RegionClear => "配方尚未开放：需首通第三地区；可前往副本查看条件。",
             ProductionBlockKind.Mastery => $"精通不足：当前Lv{check.MasteryLevel}，需Lv{block.RequiredLevel}。",
             ProductionBlockKind.EnhanceCap => $"强化已达当前上限：+{check.EnhanceLevel} / +{check.EnhanceCap}。"
                 + (block.RequiredLevel > 0 ? $"精通Lv{block.RequiredLevel}可提高上限。" : "已达装备稀有度或最终强化上限，可比较其他装备。"),

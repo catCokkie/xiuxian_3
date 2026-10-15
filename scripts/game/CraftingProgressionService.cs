@@ -205,11 +205,11 @@ namespace Xiuxian.Scripts.Game
 
             foreach (MaterialOutput output in recipe.Outputs)
             {
-                backpackState.AddItem(output.ItemId, output.Count * System.Math.Max(1, outputMultiplier) + (ServiceLocator.Instance?.CookingState?.ActiveMeal.ExtraOutput ?? 0));
+                backpackState.AddItem(output.ItemId, recipeId == RecipeUnlockRules.Recycle ? output.Count : output.Count * System.Math.Max(1, outputMultiplier) + (ServiceLocator.Instance?.CookingState?.ActiveMeal.ExtraOutput ?? 0));
             }
 
             rewardText = recipe.Outputs.Count > 0
-                ? $"{recipe.DisplayName}完成，获得 {UiText.BackpackItemName(recipe.Outputs[0].ItemId)} x{recipe.Outputs[0].Count * System.Math.Max(1, outputMultiplier)}"
+                ? $"{recipe.DisplayName}完成，获得 {UiText.BackpackItemName(recipe.Outputs[0].ItemId)} x{(recipeId == RecipeUnlockRules.Recycle ? recipe.Outputs[0].Count : recipe.Outputs[0].Count * System.Math.Max(1, outputMultiplier) + (ServiceLocator.Instance?.CookingState?.ActiveMeal.ExtraOutput ?? 0))}"
                 : $"{recipe.DisplayName}完成";
             return true;
         }
@@ -228,11 +228,12 @@ namespace Xiuxian.Scripts.Game
         {
             var recipe = ActivityRegistry.GetRecipe(recipeId);
             if (recipe == null || backpack == null || wallet == null) return ProductionBlockRules.Unavailable(recipeId);
-            int requiredRealm = ProgressiveUnlockRules.IsActionModeUnlocked(recipe.SystemId, realmLevel) ? 0 : ProgressiveUnlockRules.GetRequiredRealmLevel(recipe.SystemId);
+            int requiredRealm = realmLevel >= RecipeUnlockRules.RequiredRealm(recipeId, recipe.SystemId) ? 0 : RecipeUnlockRules.RequiredRealm(recipeId, recipe.SystemId);
+            string missingRegion = RecipeUnlockRules.HasRegion(recipeId, ServiceLocator.Instance?.LevelConfigLoader?.GetBossDefeatedLevelIds()) ? "" : RecipeUnlockRules.RequiredRegion(recipeId);
             return recipe.SystemId == "alchemy"
                 ? ProductionBlockRules.Alchemy(recipeId, wallet.Lingqi, backpack.GetItemEntries(), backpack.GetReservedEntries(), mastery, plan, requiredRealm)
                 : ProductionBlockRules.Check(GetEffectiveInputs(recipe, mastery), recipe.LingqiCost, wallet.Lingqi,
-                    backpack.GetItemEntries(), backpack.GetReservedEntries(), mastery, recipe.RequiredMasteryLevel, plan, requiredRealm);
+                    backpack.GetItemEntries(), backpack.GetReservedEntries(), mastery, recipe.RequiredMasteryLevel, plan, requiredRealm, missingRegion);
         }
         public static ProductionCheck CheckSmithing(EquipmentStatProfile profile, BackpackState? backpack, ResourceWalletState? wallet,
             int mastery, CraftingProductionPlan? plan = null, int realmLevel = int.MaxValue)

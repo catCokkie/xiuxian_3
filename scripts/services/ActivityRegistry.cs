@@ -191,6 +191,11 @@ namespace Xiuxian.Scripts.Services
                 });
             }
 
+            mining.AddRecipe(new SimpleRecipeDefinition {
+                RecipeId = RecipeUnlockRules.Recycle, SystemId = PlayerActionState.ModeMining, DisplayName = "回收寒铁",
+                Inputs = new[] { new MaterialCost("cold_iron_ore", 3) }, LingqiCost = 20, RequiredInputEvents = 100,
+                Outputs = new[] { new MaterialOutput("lingqi_shard", 1) }, RequiredMasteryLevel = 1,
+            });
             Register(mining);
         }
 

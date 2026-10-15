@@ -80,6 +80,14 @@ This currently covers the refactor-stable core rules around:
 
 For a fuller coverage summary and current testing gaps, see `TESTING.md`.
 
+To quickly verify the ore → shards → enhancement and suppression-talisman routes in an isolated Godot session on Windows:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File tools/verify_supply.ps1 -GodotPath "path/to/Godot.NET_console.exe"
+```
+
+Add `-RenderArt` to render the 80px/24px character and inventory contact sheet to `docs/art/asset_contact_sheet.png`. The checks skip real player saves and global input hooks. Open `docs/art/asset_gallery.html` for a searchable offline asset preview; task status and validation records live only in `docs/design/10_todo.md`.
+
 ## Documentation
 
 - design hub & agent guide: `docs/design/AGENT_PROMPT.md`

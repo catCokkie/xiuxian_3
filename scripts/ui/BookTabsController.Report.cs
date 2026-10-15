@@ -48,6 +48,10 @@ public partial class BookTabsController
         bool relevant = IsBossReportRelevant(report);
         string advice = relevant ? string.Join("\n", BossChallengeReportRules.Advice(report).Select((text, i) => $"调整{i + 1}：{text}"))
             : "记录来自其他目标，仅供回看；不会用它判断当前目标的准备。";
+        if (relevant && report.Result != "victory" && report.StatisticsComplete && report.EnemyHealing > 0)
+            advice += "\n" + (IsPreparationUnlocked(ActivityRegistry.GetRecipe(RecipeUnlockRules.Zhenling)!)
+                ? "镇灵符配方已开放；是否制作由你选择，装备输出路线仍可继续。"
+                : "镇灵符" + RecipeUnlockRules.Requirements(ActivityRegistry.GetRecipe(RecipeUnlockRules.Zhenling)!));
         _bossReviewSummary!.Text = BossChallengeReportRules.Details(report) + (advice != "" ? "\n" + advice : "")
             + (relevant && report.Result != "victory" && _playerActionState?.ConsumablePolicy == "none" ? "\n自动消耗已关闭，可继续走装备路线。" : "");
         _bossReviewEquipment!.Visible = relevant && report.Result != "victory";

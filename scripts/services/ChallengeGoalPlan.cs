@@ -6,7 +6,7 @@ namespace Xiuxian.Scripts.Services
     /// <summary>A single explicit challenge purpose; inventory and production remain independent.</summary>
     public sealed class ChallengeGoalPlan
     {
-        public static readonly IReadOnlyList<string> Recipes = Array.AsReadOnly(new[] { "recipe_huiqi_dan", "talisman_fire_charm", "talisman_shield_charm" });
+        public static readonly IReadOnlyList<string> Recipes = Array.AsReadOnly(new[] { "recipe_huiqi_dan", "talisman_fire_charm", "talisman_shield_charm", RecipeUnlockRules.Zhenling });
         public string LevelId { get; private set; } = "";
         public string BossId { get; private set; } = "";
         public bool Completed { get; private set; }

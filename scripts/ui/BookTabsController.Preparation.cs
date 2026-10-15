@@ -64,7 +64,7 @@ public partial class BookTabsController
         bool hasBoss = TryGetPreparationContext(out string levelId, out _, out MonsterStatProfile boss);
         RefreshChallengeGoalUi(hasBoss, levelId, boss);
         var stats = _exploreProgressController?.GetPreparationStats() ?? default;
-        string threat = boss.HealPerRound > 0 ? $"每回合恢复{boss.HealPerRound}气血，需要足够持续伤害；当前尚无可制作的禁疗配方。"
+        string threat = boss.HealPerRound > 0 ? $"每回合恢复{boss.HealPerRound}气血，可提高持续伤害，或用镇灵符阻断前5回合回血，第6回合恢复。制作需炼气4层、符箓精通Lv2及首通第三地区。"
             : boss.StrategyTag == "armor" ? "护甲型，可用破甲符削减防御。"
             : boss.StrategyTag == "fast" ? "迅捷型，疾风符可提供先手和回合加速。" : "按当前装备与气血准备即可。";
         bool consumes = _playerActionState?.ConsumablePolicy != "none";
@@ -74,15 +74,15 @@ public partial class BookTabsController
             + (estimate > roundLimit ? " 输出偏紧，可优先比较武器、强化或战术符箓。" : "") : "基础输出难以压过回血，可优先比较装备攻击。";
         _preparationSummary.Text = hasBoss ? $"当前目标：{UiText.LocalizeGameNames(boss.DisplayName)} · 攻击{boss.BaseStats.Attack} / 防御{boss.BaseStats.Defense}\n{threat}\n当前攻击{stats.Attack} / 防御{stats.Defense}，Boss上限{roundLimit}回合。可按自己的路线选择准备。\n{outputHint}"
             + (consumes ? "\n回气丹仅在低血量时使用，单战最多一颗；目标库存可修改。" : "\n自动消耗已关闭，当前不推荐消耗品备货；可先比较装备与气血。") : "当前没有可用的Boss目标。";
-        string counter = ChallengePreparationRules.ChooseTalisman(boss.StrategyTag, _challengeGoalState?.Goal.HasGoal == true ? 4 : GetMasteryLevel("talisman"));
+        string counter = ChallengePreparationRules.ChooseTalisman(boss.StrategyTag, 4, boss.HealPerRound);
         foreach (var view in _preparationViews)
         {
             var recipe = ActivityRegistry.GetRecipe(view.Recipe)!;
-            bool unlocked = ProgressiveUnlockRules.IsActionModeUnlocked(recipe.SystemId, _playerProgressState?.RealmLevel ?? 1) && GetMasteryLevel(recipe.SystemId) >= recipe.RequiredMasteryLevel;
+            bool unlocked = IsPreparationUnlocked(recipe);
             view.Root.Visible = hasBoss && consumes && (view.Recipe == "recipe_huiqi_dan" || view.Recipe == counter)
-                && (unlocked || _challengeGoalState?.Goal.HasGoal == true);
+                && (unlocked || _challengeGoalState?.Goal.HasGoal == true || view.Recipe == RecipeUnlockRules.Zhenling);
             if (!view.Root.Visible) continue;
-            if (!unlocked) { view.Arrange.Disabled = true; view.Detail.Text = $"需开放{UiText.MasterySystemName(recipe.SystemId)}活动及精通Lv{recipe.RequiredMasteryLevel}；可将数量设为0跳过准备。"; continue; }
+            if (!unlocked) { view.Arrange.Disabled = true; view.Detail.Text = RecipeUnlockRules.Requirements(recipe) + "可将数量设为0跳过准备。"; continue; }
             var recommendation = BuildRecommendation(view)!;
             view.Arrange.Disabled = recommendation.Rounds == 0 || _challengeGoalState?.Goal.Completed == true;
             string unit = recipe.SystemId == "alchemy" ? "颗" : "张";
@@ -94,10 +94,13 @@ public partial class BookTabsController
         _preparationDetails.FindChild("PreparationGarden", true, false).Set("disabled", !ProgressiveUnlockRules.IsActionModeUnlocked("garden", _playerProgressState?.RealmLevel ?? 1));
         _preparationDetails.FindChild("PreparationEquipment", true, false).Set("disabled", !IsLeftTabUnlocked("EquipmentTab"));
     }
+    private bool IsPreparationUnlocked(IRecipeDefinition recipe) => RecipeUnlockRules.Available(recipe, _playerProgressState?.RealmLevel ?? 1,
+        GetMasteryLevel(recipe.SystemId), ServiceLocator.Instance?.LevelConfigLoader?.GetBossDefeatedLevelIds());
     private void ArrangePreparation(PreparationView view)
     {
         view.Target.Apply();
         if (_challengeGoalState?.Goal.Completed == true || !TryGetPreparationContext(out _, out _, out _) || _playerActionState?.ConsumablePolicy == "none") return;
+        if (!IsPreparationUnlocked(ActivityRegistry.GetRecipe(view.Recipe)!)) return;
         var recommendation = BuildRecommendation(view);
         if (recommendation == null || recommendation.Rounds == 0) return;
         string system = ActivityRegistry.GetRecipe(view.Recipe)!.SystemId;

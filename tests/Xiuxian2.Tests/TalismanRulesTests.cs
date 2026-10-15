@@ -25,11 +25,12 @@ public sealed class TalismanRulesTests
     }
 
     [Fact]
-    public void GetRecipes_ReturnsThreeRecipesWithMasteryThresholds()
+    public void GetRecipes_ReturnsFourRecipesWithMasteryThresholds()
     {
         IReadOnlyList<TalismanRules.RecipeSpec> recipes = TalismanRules.GetRecipes();
 
-        Assert.Equal(3, recipes.Count);
+        Assert.Equal(4, recipes.Count);
+        Assert.Equal(2, recipes[3].RequiredMasteryLevel);
         Assert.Equal(1, recipes[0].RequiredMasteryLevel);
         Assert.Equal(2, recipes[1].RequiredMasteryLevel);
         Assert.Equal(4, recipes[2].RequiredMasteryLevel);

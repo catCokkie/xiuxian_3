@@ -32,6 +32,13 @@ public static class GameArtCatalog
     public static Texture2D? LoadTexture(string path)
     {
         if (Textures.TryGetValue(path, out var texture)) return texture;
+        if (path.EndsWith(".svg", StringComparison.OrdinalIgnoreCase) && FileAccess.FileExists(path) && !FileAccess.FileExists(path + ".import"))
+        {
+            using var source = new Image();
+            if (source.LoadSvgFromString(FileAccess.GetFileAsString(path)) != Error.Ok) return null;
+            var vectorTexture = ImageTexture.CreateFromImage(source);
+            vectorTexture.TakeOverPath(path); Textures[path] = vectorTexture; return vectorTexture;
+        }
         if (!ResourceLoader.Exists(path)) return null;
         var loaded = GD.Load<Texture2D>(path);
         if (loaded != null) Textures[path] = loaded;

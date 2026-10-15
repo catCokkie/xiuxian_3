@@ -77,7 +77,7 @@ public sealed class PreparationAndProjectTests
     public void Preparation_MasteryLockedOrUnimplementedRecipesAreExcluded()
     {
         Assert.Null(ChallengePreparationRules.Build("talisman_shield_charm", 1, 0, 1, 1, 0, new Dictionary<string, int>()));
-        Assert.Null(ChallengePreparationRules.Build("talisman_zhenling", 1, 0, 4, 1, 0, new Dictionary<string, int>()));
+        Assert.NotNull(ChallengePreparationRules.Build("talisman_zhenling", 1, 0, 4, 1, 0, new Dictionary<string, int>()));
         Assert.Equal("talisman_fire_charm", ChallengePreparationRules.ChooseTalisman("armor", 1));
         Assert.Equal("", ChallengePreparationRules.ChooseTalisman("fast", 1));
         Assert.Equal("talisman_shield_charm", ChallengePreparationRules.ChooseTalisman("fast", 2));

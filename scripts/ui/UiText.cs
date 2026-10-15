@@ -427,6 +427,7 @@ public static class UiText
             "broken_talisman" => "碎符",
             "spirit_ink" => "灵墨",
             "beast_bone" => "兽骨",
+            "talisman_zhenling" => "镇灵符",
             "talisman_fire_charm" => "破甲符",
             "talisman_shield_charm" => "疾风符",
             "food_clear_fish_soup" => "清心鱼汤",

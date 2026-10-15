@@ -149,6 +149,12 @@ public partial class LayoutSmokeTest : Node
                 await Settle();
                 string scenario = dimensions.ToString();
                 Check(Inside(GetViewport().GetVisibleRect(), _book.GetGlobalRect()), scenario + ": book fits viewport");
+                s.PlayerActionState!.SetAction("mining"); s.MiningState!.SetRecycling(true); await Select("CultivationTab");
+                Check(productionPanel.IsVisibleInTree() && productionPanel.GetNode<Label>("ProductionStatus").Text.Contains("每轮固定1"), scenario + ": recycling shows fixed yield and shared production controls");
+                foreach (Control control in ((Control)_tabs.FindChild("HomeAction_mining", true, false)).GetChildren())
+                    if (control.Visible) Check(Inside(_book.GetGlobalRect(), control.GetGlobalRect()), scenario + ": mining operation picker fits book");
+                if (dimensions.X == 800) await Capture("small_recycling");
+                s.MiningState.SetRecycling(false);
                 s.PlayerActionState!.SetAction("alchemy"); await Select("CultivationTab");
                 foreach (Control control in productionPanel.GetNode<Control>("ProductionActions").GetChildren())
                     if (control.Visible) Check(Inside(productionPanel.GetGlobalRect(), control.GetGlobalRect()), scenario + ": production action fits its wrapping row");
@@ -279,7 +285,7 @@ public partial class LayoutSmokeTest : Node
                 reviewToggle.ButtonPressed = true; await Settle();
                 var reviewDetails = (Control)_tabs.FindChild("BossReviewDetails", true, false);
                 var reviewSummary = (Label)_tabs.FindChild("BossReviewSummary", true, false);
-                Check(reviewSummary.Text.Contains("敌方实际回血45") && reviewSummary.Text.Contains("调整2") && reviewSummary.Text.Contains("尚无可制作的禁疗配方"),
+                Check(reviewSummary.Text.Contains("敌方实际回血45") && reviewSummary.Text.Contains("调整2") && reviewSummary.Text.Contains("镇灵符阻断前5回合"),
                     scenario + ": Boss review shows actual recovery and at most two honest adjustment directions");
                 Check(reviewSummary.Size.X <= reviewDetails.Size.X && reviewSummary.IsVisibleInTree(), scenario + ": long Boss review wraps inside the scrollable home");
                 foreach (Control control in reviewDetails.GetNode<Control>("BossReviewActions").GetChildren())
@@ -357,7 +363,7 @@ public partial class LayoutSmokeTest : Node
             _book.SetVisibleImmediate(false); await Settle();
             Check(_bar.Size.Y > 96 && _root.GetNode<Control>("MainBarWindow/Chrome/BattleTrack/EnemySlotTexture").Visible, "battle: stage expands and shows target");
             var stage = _root.GetNode<Control>("MainBarWindow/Chrome/BattleTrack");
-            Check(stage.GetNode<TextureRect>("PlayerSlotTexture").Texture?.ResourcePath.EndsWith("cultivator_idle_v1.png") == true, "battle: new cultivator portrait");
+            Check(stage.GetNode<TextureRect>("PlayerSlotTexture").Texture?.ResourcePath.EndsWith("cultivator_idle_plain_v2.svg") == true, "battle: plain cultivator portrait");
             Check(stage.GetNode<TextureRect>("EnemySlotTexture").Texture?.ResourcePath.StartsWith("res://assets/characters/monsters/") == true, "battle: target uses species portrait");
             Check(Enumerable.Range(1, 5).All(i => stage.GetNode<TextureRect>($"MonsterSlot{i:00}").Texture?.ResourcePath.StartsWith("res://assets/characters/monsters/") == true), "battle: entire queue uses species portraits");
             Check(stage.GetNode<TextureRect>("PlayerSlotTexture").Size == new Vector2(80, 80), "battle: source image cannot enlarge sprite bounds");
@@ -378,12 +384,12 @@ public partial class LayoutSmokeTest : Node
                 Check(controller.StartBossChallengeFromUi(), levelId + ": boss challenge starts");
                 await Settle();
                 string bossId = s.LevelConfigLoader.GetBossMonsterId(levelId);
-                Check(stage.GetNode<TextureRect>("EnemySlotTexture").Texture?.ResourcePath.EndsWith(bossId + "_idle_v1.png") == true, levelId + ": correct boss artwork");
+                Check(stage.GetNode<TextureRect>("EnemySlotTexture").Texture?.ResourcePath.EndsWith(bossId + "_plain_v2.svg") == true, levelId + ": correct boss artwork");
                 var markers = (Godot.Collections.Array<Variant>)controller.ToRuntimeDictionary()["monster_marker_states"];
                 Check(Enumerable.Range(1, 5).All(i =>
                 {
                     string id = ((Godot.Collections.Dictionary<string, Variant>)markers[i - 1])["monster_id"].AsString();
-                    return stage.GetNode<TextureRect>($"MonsterSlot{i:00}").Texture?.ResourcePath.EndsWith(id + "_idle_v1.png") == true;
+                    return stage.GetNode<TextureRect>($"MonsterSlot{i:00}").Texture?.ResourcePath.EndsWith(id + "_plain_v2.svg") == true;
                 }), levelId + ": queue images match actual regional monster IDs");
                 await Capture("battle_" + levelId);
             }
@@ -407,8 +413,17 @@ public partial class LayoutSmokeTest : Node
             await Capture("preparation_armor");
             s.LevelConfigLoader.TrySetActiveLevel("lv_qi_004"); _tabs.RestoreActiveTabs("CultivationTab", "BugTab"); await Settle();
             ((ScrollContainer)PageRoot("CultivationScroll")).ScrollVertical = 500; await Settle();
-            Check(((Label)preparation.FindChild("PreparationSummary", true, false)).Text.Contains("尚无可制作的禁疗"), "preparation: healing threat does not advertise an unimplemented recipe");
+            Check(((Label)preparation.FindChild("PreparationSummary", true, false)).Text.Contains("第6回合恢复"), "preparation: healing threat explains the exact suppression window and recipe requirements");
+            var suppression = (Control)preparation.FindChild("Preparation_" + RecipeUnlockRules.Zhenling, true, false);
+            ((SpinBox)suppression.FindChild("StockTarget", true, false)).Value = 1;
+            Check(suppression.Visible && ((Button)suppression.FindChild("ArrangeProduction", true, false)).Disabled
+                && ((Label)suppression.FindChild("PreparationDetail", true, false)).Text.Contains("首通第三地区"), "preparation: locked suppression explains the regional gate instead of inviting invalid production");
             await Capture("preparation_healing");
+            var suppressionRegions = s.LevelConfigLoader.ToRuntimeDictionary();
+            suppressionRegions["boss_cleared_level_ids"] = new Godot.Collections.Array<Variant> { "lv_qi_001", "lv_qi_002", "lv_qi_003" }; s.LevelConfigLoader.FromRuntimeDictionary(suppressionRegions);
+            _tabs.RestoreActiveTabs("CultivationTab", "BugTab"); await Settle();
+            Check(!((Button)suppression.FindChild("ArrangeProduction", true, false)).Disabled, "preparation: regional clear enables the optional suppression route");
+            await Capture("preparation_healing_unlocked");
             GetWindow().Size = new Vector2I(800, 600); await Settle();
             ((ScrollContainer)PageRoot("CultivationScroll")).ScrollVertical = 500; await Settle();
             foreach (var flow in preparation.FindChildren("*", "HFlowContainer", true, false).OfType<HFlowContainer>().Where(x => x.IsVisibleInTree()))

@@ -71,7 +71,8 @@ public partial class ArtSmokeTest : Node
                     Vector2 pos = new(28 + index % columns * width, top + index / columns * height);
                     var rect = new TextureRect { Texture = texture, Position = pos, ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize, StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered, TextureFilter = CanvasItem.TextureFilterEnum.Nearest };
                     _canvas.AddChild(rect);
-                    rect.Size = new Vector2(width - 10, category == "characters" ? 104 : 48);
+                    rect.Size = category == "characters" ? new Vector2(80, 80) : new Vector2(width - 10, 48);
+                    if (category == "characters") rect.Position += new Vector2(12, 12);
                     if (category == "characters")
                     {
                         var small = new TextureRect { Texture = texture, Position = pos + new Vector2(40, 112), ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize, StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered, TextureFilter = CanvasItem.TextureFilterEnum.Nearest };

@@ -979,7 +979,7 @@ public partial class BookTabsController : Control
             PlayerActionState.ActionAlchemy => BuildAlchemyFocusSummary(),
             PlayerActionState.ActionSmithing => BuildSmithingFocusSummary(),
             PlayerActionState.ActionGarden => _gardenState?.BuildSelectedPlotSummary() ?? "灵田待命（请选择田位与作物）",
-            PlayerActionState.ActionMining => _miningState != null && MiningRules.TryGetNode(_miningState.SelectedRecipeId, out var node) ? node.DisplayName : "请选择矿脉，积累炼器材料",
+            PlayerActionState.ActionMining => _miningState?.Recycling == true ? "回收寒铁 · 稳定强化供给" : _miningState != null && MiningRules.TryGetNode(_miningState.SelectedRecipeId, out var node) ? node.DisplayName : "请选择矿脉，积累炼器材料",
             PlayerActionState.ActionFishing => _fishingState != null && FishingRules.TryGetPond(_fishingState.SelectedRecipeId, out var pond) ? $"{pond.DisplayName}垂钓，鱼群容量 {_fishingState.RemainingCapacity}" : "请选择鱼塘，收集灵鱼与稀有水产",
             PlayerActionState.ActionTalisman => "制作战斗符箓，按消耗策略自动使用",
             PlayerActionState.ActionCooking => "制作灵膳，选择用餐后按活跃时间生效",
@@ -1929,6 +1929,9 @@ public partial class BookTabsController : Control
             }
         }
 
+        RefreshMiningOperationPicker();
+        bool gathering = !_miningState.Recycling;
+        _cultivationMiningOption.Visible = gathering; _cultivationMiningStartButton.Visible = gathering; _cultivationMiningRefreshButton.Visible = gathering;
         SelectCurrentOption(_cultivationMiningOption, _miningState.SelectedRecipeId);
         if (!_miningState.HasSelectedNode) { _cultivationMiningOption.Select(-1); _cultivationMiningOption.Text = "选择矿脉"; }
         bool canStart = _miningState.HasSelectedNode;
@@ -2049,11 +2052,20 @@ public partial class BookTabsController : Control
         }
 
         List<IRecipeDefinition> availableRecipes = GetAvailableRecipes(systemId);
+        // Keep a valid locked selection visible so loading or refreshing cannot silently change projects.
+        var selectedDefinition = ActivityRegistry.GetRecipe(state!.SelectedRecipeId);
+        if (selectedDefinition?.SystemId == systemId && !availableRecipes.Exists(x => x.RecipeId == selectedDefinition.RecipeId))
+            availableRecipes.Add(selectedDefinition);
         option.Clear();
         for (int i = 0; i < availableRecipes.Count; i++)
         {
             option.AddItem(availableRecipes[i].DisplayName, i);
             option.SetItemMetadata(i, availableRecipes[i].RecipeId);
+            if (!IsPreparationUnlocked(availableRecipes[i]))
+            {
+                option.SetItemText(i, availableRecipes[i].DisplayName + "（未开放）");
+                option.SetItemDisabled(i, true);
+            }
         }
 
         string selectedRecipeId = state!.SelectedRecipeId;
@@ -2123,7 +2135,7 @@ public partial class BookTabsController : Control
         IReadOnlyList<IRecipeDefinition> recipes = activity.GetRecipes();
         for (int i = 0; i < recipes.Count; i++)
         {
-            if (recipes[i].RequiredMasteryLevel <= masteryLevel)
+            if (RecipeUnlockRules.Available(recipes[i], _playerProgressState?.RealmLevel ?? 1, masteryLevel, ServiceLocator.Instance?.LevelConfigLoader?.GetBossDefeatedLevelIds()))
             {
                 result.Add(recipes[i]);
             }

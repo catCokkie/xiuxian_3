@@ -45,7 +45,7 @@ public partial class BookTabsController
     private IEnumerable<string> RelevantPreparationRecipes(MonsterStatProfile boss)
     {
         yield return "recipe_huiqi_dan";
-        string counter = ChallengePreparationRules.ChooseTalisman(boss.StrategyTag, 4);
+        string counter = ChallengePreparationRules.ChooseTalisman(boss.StrategyTag, 4, boss.HealPerRound);
         if (counter != "") yield return counter;
     }
     private void RefreshChallengeGoalUi(bool hasBoss, string levelId, MonsterStatProfile boss)
@@ -97,7 +97,7 @@ public partial class BookTabsController
             lines.Add($"{recipe.DisplayName}可用{owned}/{target}");
             if (owned >= target || suggested) continue;
             suggested = true;
-            if (!ProgressiveUnlockRules.IsActionModeUnlocked(recipe.SystemId, _playerProgressState?.RealmLevel ?? 1) || GetMasteryLevel(recipe.SystemId) < recipe.RequiredMasteryLevel)
+            if (!IsPreparationUnlocked(recipe))
                 next = $"{recipe.DisplayName}尚未解锁，可查看真实门槛或跳过本项。";
             else
             {

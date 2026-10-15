@@ -1,31 +1,31 @@
 # 素材提示词模板库
 
-美术规则见 `20_asset_direction.md`；实际角色生成提示词见 `../art/generation_prompts.json`。任务状态只记录在 `10_todo.md`。以下模板用于内容扩展，不代表相应功能或动画已经开放。
+美术规则见`20_asset_direction.md`；`../art/generation_prompts.json`保留历史v1图片生成提示词。现行角色使用`tools/art/build_actor_assets.py`的简朴SVG构形，以下角色模板作为设计简报，优先修改源形状。任务状态只记录在`10_todo.md`，模板不代表功能或动画已经开放。
 
 ## 使用方法
 
 1. 先明确稳定内容 ID、类别、家族、展示尺寸、状态和使用页面。
-2. 新角色/怪物引用 `assets/characters/player/cultivator_idle_v1.png`，同物种的变体还应引用该物种原图。
+2. 新角色/怪物参考`assets/characters/player/cultivator_idle_plain_v2.svg`，同物种变体沿用该物种的SVG源形状。
 3. 将下面的基础模板与一个具体主体描述组合，保留负面约束。一个主体/状态对应一条提示词，不用一张“全套素材拼图”代替各自文件。
-4. 生成透明 PNG 后检查 alpha 与四周留白，再放到纸面、深色背景和实际 24/80px 大小上比较。
+4. 检查透明度与四周留白，再放到纸面、深色背景和实际24/80px大小上比较；SVG同样需要原生渲染验收。
 5. 审核通过后加入索引与内容配置；品质框、数字、文案由引擎显示，不交给图片模型绘制。
 
 ## A：角色 / 怪物基础模板
 
 ```text
-Use case: stylized-concept.
-Asset type: one production character sprite for an original Chinese xianxia desktop idle game.
-Input image 1: STYLE reference only. Match the reference's warm dark brown outlines,
-stepped pixel edges, readable large color clusters and cozy compact proportions.
+Asset type: one simple flat SVG character for an original Chinese xianxia desktop idle game.
+Reference: the existing plain_v2 SVG family. Use a 32-unit grid, 96px canvas,
+warm brown 1.2-unit rounded outlines, readable polygons and compact proportions.
 Subject: {one exact species or character}; {silhouette}; {two identifying features};
-{idle / specific action pose}; facing {right for player / left for enemy}.
+{idle / specific action pose}; {side-facing right for player / front or side for enemy}.
 Palette: parchment ivory, muted jade, copper gold, warm dark brown;
-regional accent {accent}, used sparingly. Soft upper-left light, restrained shading.
+regional accent {accent}, used sparingly. At most seven flat colors per subject, no shading.
 Composition: exactly ONE subject, full body and appendages, centered square canvas,
 approximately 80 percent height, generous transparent padding, readable at 80px and 24px.
 Constraints: genuinely transparent alpha; no frame, no ground, no cast shadow,
 no background, no checkerboard, no lettering, no watermark, no extra subjects,
-no photorealism, no glossy 3D, no noisy tiny ornaments.
+no gradients, no glow, no surface texture, no photorealism, no glossy 3D,
+no noisy tiny ornaments; distinguish a Boss by silhouette before adding decoration.
 ```
 
 | 家族 / 主体 | 形态参数 | 普通怪与 Boss 区分 |

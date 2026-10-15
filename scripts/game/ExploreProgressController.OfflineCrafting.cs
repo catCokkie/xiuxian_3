@@ -8,6 +8,7 @@ namespace Xiuxian.Scripts.Game
         private readonly Dictionary<string, int> _offlineCraftMessages = new();
         public string AdvanceOfflineCrafting(int inputs)
         {
+            if (_actionState?.ActionId == "mining" && _miningState?.Recycling == true) return "回收寒铁仅在线推进；离线只结算基础修炼，回收进度与轮数保持。";
             _offlineCraftMessages.Clear();
             _settlingOfflineCrafts = true;
             try

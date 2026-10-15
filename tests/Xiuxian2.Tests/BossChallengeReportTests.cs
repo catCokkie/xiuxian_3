@@ -83,7 +83,7 @@ public sealed class BossChallengeReportTests
         var attempt = new BossChallengeAttempt(); attempt.Begin("zone", "boss"); attempt.Observe(new(100, 30, 0));
         var report = attempt.Finish(outcome, 10, 30, 100, 1);
         var advice = BossChallengeReportRules.Advice(report);
-        Assert.Equal(2, advice.Count); Assert.Contains(direction, advice[0]); Assert.Contains("尚无可制作的禁疗配方", advice[1]);
+        Assert.Equal(2, advice.Count); Assert.Contains(direction, advice[0]); Assert.Contains("镇灵符阻断前5回合", advice[1]);
     }
     [Fact]
     public void VictoryHasNoFailureAdviceAndCorruptReportsAreConservative()

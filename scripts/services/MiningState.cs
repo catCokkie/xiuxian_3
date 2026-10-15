@@ -11,10 +11,34 @@ namespace Xiuxian.Scripts.Services
         public float CurrentProgress { get; private set; }
         public float RequiredProgress { get; private set; } = 180.0f;
         public int CurrentDurability { get; private set; } = MiningRules.DefaultNodeDurability;
+        public bool Recycling { get; private set; }
+        public float RecycleProgress { get; private set; }
+        public const float RecycleRequired = 100;
+        public CraftingProductionPlan RecyclingProduction { get; } = CreateRecyclePlan();
+        private static CraftingProductionPlan CreateRecyclePlan() { var plan = new CraftingProductionPlan(); plan.Stop(); return plan; }
+        public void SetRecycling(bool recycling)
+        {
+            if (Recycling == recycling) return;
+            RecyclingProduction.Stop(); Recycling = recycling; NotifyProductionChanged();
+        }
+        public void NotifyProductionChanged() => EmitSignal(SignalName.MiningChanged, SelectedRecipeId, CurrentProgress, RequiredProgress, CurrentDurability);
+        public void AdvanceRecycling(int inputs)
+        {
+            if (!Recycling || !RecyclingProduction.CanProduce) return;
+            RecycleProgress = RecyclingProduction.BoundProgress(BatchProgressRules.Advance(RecycleProgress, inputs, RecycleRequired), RecycleRequired);
+            NotifyProductionChanged();
+        }
+        public void CompleteRecycling()
+        {
+            if (!Recycling || !RecyclingProduction.CanProduce || RecycleProgress < RecycleRequired) return;
+            RecycleProgress = BatchProgressRules.Consume(RecycleProgress, RecycleRequired); RecyclingProduction.CommitBatch(); NotifyProductionChanged();
+        }
         public bool HasSelectedNode => !string.IsNullOrEmpty(SelectedRecipeId);
 
         public void SelectNode(string recipeId)
         {
+            SetRecycling(false);
+            if (SelectedRecipeId == recipeId && HasSelectedNode) return;
             if (!MiningRules.TryGetNode(recipeId, out MiningRules.NodeSpec node))
             {
                 SelectedRecipeId = string.Empty;
@@ -64,12 +88,22 @@ namespace Xiuxian.Scripts.Services
 
         public Godot.Collections.Dictionary<string, Variant> ToDictionary()
         {
-            return MiningPersistenceRules.ToDictionary(new MiningPersistenceRules.MiningSnapshot(SelectedRecipeId, CurrentProgress, RequiredProgress, CurrentDurability));
+            var data = MiningPersistenceRules.ToDictionary(new MiningPersistenceRules.MiningSnapshot(SelectedRecipeId, CurrentProgress, RequiredProgress, CurrentDurability));
+            data["recycling"] = Recycling; data["recycle_progress"] = RecycleProgress;
+            data["recycle_production"] = SaveValueConversionRules.ToVariantDictionary(RecyclingProduction.ToPlainDictionary());
+            return data;
         }
 
         public void FromDictionary(Godot.Collections.Dictionary<string, Variant> data)
         {
             MiningPersistenceRules.MiningSnapshot snapshot = MiningPersistenceRules.FromDictionary(data);
+            Recycling = data.TryGetValue("recycling", out var operation) && operation.AsBool();
+            RecycleProgress = data.TryGetValue("recycle_progress", out var progress) ? System.Math.Max(0, progress.AsSingle()) : 0;
+            if (!float.IsFinite(RecycleProgress)) RecycleProgress = 0;
+            if (data.TryGetValue("recycle_production", out var plan) && plan.VariantType == Variant.Type.Dictionary)
+                RecyclingProduction.Restore(SaveValueConversionRules.ToPlainDictionary((Godot.Collections.Dictionary<string, Variant>)plan));
+            else { RecyclingProduction.Configure(false, 1); RecyclingProduction.Stop(); }
+            RecycleProgress = RecyclingProduction.BoundProgress(RecycleProgress, RecycleRequired);
             SelectedRecipeId = snapshot.SelectedRecipeId;
             CurrentProgress = snapshot.Progress;
             RequiredProgress = snapshot.RequiredProgress;

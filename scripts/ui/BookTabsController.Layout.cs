@@ -189,6 +189,7 @@ public partial class BookTabsController
         Move("talisman", _cultivationTalismanOption, _cultivationTalismanStartButton);
         Move("garden", _cultivationGardenOption, _cultivationGardenPlotOption, _cultivationGardenStartButton, _cultivationGardenBoostButton);
         foreach (var breeding in oldGatheringRow.GetChildren().OfType<Button>().Where(b => b.Text == "育种研究").ToArray()) Move("garden", breeding);
+        BuildMiningOperationPicker(_homeActions["mining"]);
         Move("mining", _cultivationMiningOption, _cultivationMiningStartButton, _cultivationMiningRefreshButton);
         Move("fishing", _cultivationFishingOption, _cultivationFishingStartButton);
         Move("formation", _cultivationFormationOption, _cultivationFormationActivateButton, _cultivationFormationSecondaryOption, _cultivationFormationSecondaryActivateButton);
@@ -269,7 +270,7 @@ public partial class BookTabsController
         return action switch
         {
             "garden" => "选择地块与灵植，再点击“播种”；成熟后收益会记入动态。",
-            "mining" => "选择矿脉后开始开采；矿脉耗尽时可以刷新。",
+            "mining" => _miningState?.Recycling == true ? "回收寒铁：每轮3寒铁矿与20灵气，100输入产出1碎片；可指定轮数或一直生产，仅在线推进。" : "选择矿脉后开始开采；炼气3层可切换回收寒铁，稳定供应强化碎片。",
             "fishing" => "选择鱼塘后开始垂钓；渔获可用于灵膳或兑换。",
             "alchemy" => "选择丹方后开始炼制；材料不足时可前往背包查看库存。",
             "talisman" => "选择符箓后开始制作；产物用于战斗辅助。",
