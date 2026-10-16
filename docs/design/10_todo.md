@@ -74,6 +74,7 @@
 - **数据**：`docs/balance/first_boss_input_matrix.json`（90）、`first_boss_small_budget_funded.json`（18）、`first_boss_small_budget_after_failure.json`（18）、`first_boss_small_budget_rounds.json`（18）、`first_boss_candidate_funded.json`（9）。分组表含成功数/中位与范围、境界、准备时间、余额与败退；逐例含Boss回合/起始属性/实际阈值、墙钟/在线战斗时长、输入总数和关键轨迹，完整原生JSON与日志留在`.godot/input_matrix`。
 - **复验**：`powershell -NoProfile -ExecutionPolicy Bypass -File tools/compare_first_boss_inputs.ps1`重建90例主矩阵；需时传`-GodotPath`。在PowerShell中可用数组参数，如`& tools/compare_first_boss_inputs.ps1 -SkipBaseline -ExploreBudgets @(500) -RoundInputs @(2) -Preparation funded-early -Report docs/balance/first_boss_candidate_funded.json`重建9例候选。补测相应用`@(500,750)/@(4)`两种准备策略，及`@(500)/@(2,8)`配`after-failure`；默认各3次、3日、最多3进程，窗口隐藏，仅内存参数覆盖。
 - **验证/承接**：153例原生均完成，输入数量与在线分配时间/速率相符，钱包/库存非负，实际Boss阈值逐例匹配配置，里程碑顺序与51组样本数通过；554单元（新增14项覆盖参数边界、仅首区修改与原基线保留）及426原生玩法通过。布局/素材沿用既有记录；全局Hook和玩家存档不启用。NEXT-02增加首区参数/失败准备对照证据；仍需延迟突破、少管理与整章验证，NEXT-03/04不标整体完成。
+- **Git**：测试工具及153例数据提交`14f5ce9`（11文件）已推送至用户已确认的`catCokkie/xiuxian_3`仓库`main`；本条补记交付结果，原有3份无关文件未纳入。
 
 #### 2026-10-16：SIM-01 首Boss原生加速模拟
 
