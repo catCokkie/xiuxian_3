@@ -11,7 +11,7 @@ namespace Xiuxian.Scripts.Services
     /// </summary>
     public static class SaveMigrationRules
     {
-        public const int LatestVersion = 23;
+        public const int LatestVersion = 24;
 
         private const string DefaultLeftTab = "CultivationTab";
         private const string DefaultRightTab = "BugTab";
@@ -213,6 +213,10 @@ namespace Xiuxian.Scripts.Services
                         case 22:
                             MigrateV22ToV23(cfg);
                             version = 23;
+                            break;
+                        case 23:
+                            MigrateV23ToV24(cfg);
+                            version = 24;
                             break;
                         default:
                             version = LatestVersion;
@@ -793,6 +797,13 @@ namespace Xiuxian.Scripts.Services
             var usage = new MealUsagePlan(); usage.Restore(null, active);
             cooking.TryAdd("meal_usage", usage.ToPlainDictionary());
             cfg.SetValue("cooking", "state", cooking);
+        }
+
+        private static void MigrateV23ToV24(IMigrationStore cfg)
+        {
+            var equipped = EnsureDictionaryValue(cfg, "equipment", "equipped");
+            equipped.TryAdd("__instances", new List<object>());
+            cfg.SetValue("equipment", "equipped", equipped);
         }
 
         private static void MigrateV22ToV23(IMigrationStore cfg)

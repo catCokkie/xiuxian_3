@@ -34,7 +34,11 @@ namespace Xiuxian.Scripts.Services
             }
 
             sb.AppendLine();
-            sb.AppendLine($"背包装备 {backpackInstances.Count + legacyBackpackProfiles.Count} 件");
+            var instanceIds = new HashSet<string>();
+            foreach (var instance in backpackInstances) instanceIds.Add(instance.EquipmentId);
+            int legacyCount = 0;
+            foreach (var profile in legacyBackpackProfiles) if (!instanceIds.Contains(profile.EquipmentId)) legacyCount++;
+            sb.AppendLine($"背包装备 {backpackInstances.Count + legacyCount} 件");
 
             for (int i = 0; i < backpackInstances.Count; i++)
             {
@@ -48,6 +52,7 @@ namespace Xiuxian.Scripts.Services
             for (int i = 0; i < legacyBackpackProfiles.Count; i++)
             {
                 EquipmentStatProfile profile = legacyBackpackProfiles[i];
+                if (instanceIds.Contains(profile.EquipmentId)) continue;
                 sb.AppendLine($"- [{BuildSlotLabel(profile.Slot)}] {profile.DisplayName} | 旧版装备");
                 sb.AppendLine($"  属性：{BuildModifierSummary(profile.Modifier)}");
             }

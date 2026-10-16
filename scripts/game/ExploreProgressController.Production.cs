@@ -6,13 +6,15 @@ namespace Xiuxian.Scripts.Game
 {
     public partial class ExploreProgressController
     {
-        public CharacterStatBlock GetPreparationStats()
+        public bool IsInBattle => _inBattle;
+        public CharacterStatBlock GetPreparationStats() => GetPreparationStats(_equippedItemsState?.GetEquippedProfiles() ?? Array.Empty<EquipmentStatProfile>());
+        public CharacterStatBlock GetPreparationStats(IReadOnlyList<EquipmentStatProfile> equipment)
         {
             var modifiers = new List<CharacterStatModifier>(BuildNonEquipmentModifiers(false));
             modifiers.Add(new CharacterStatModifier(DefenseRate: ServiceLocator.Instance?.CookingState?.ActiveMeal.DefenseRate ?? 0));
             return CharacterStatRules.BuildFinalStats(
                 PlayerBaseStatRules.BuildBaseStats(_playerProgressState?.RealmLevel ?? 1, _levelConfigLoader?.PlayerBaseHp ?? 36, _levelConfigLoader?.PlayerAttackPerRound ?? 4),
-                _equippedItemsState?.GetEquippedProfiles() ?? Array.Empty<EquipmentStatProfile>(), modifiers);
+                equipment, modifiers);
         }
         private CraftingProductionPlan? GetCurrentProductionPlan() => (_actionState?.ActionId ?? "") switch
         {

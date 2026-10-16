@@ -205,6 +205,31 @@ public partial class LayoutSmokeTest : Node
                 Check(forge.GetNode<Label>("ProductionDetails").Size.X <= forge.Size.X, scenario + ": detailed smithing shortages wrap inside scroll content");
                 if (dimensions.X == 800) { equipmentScroll.EnsureControlVisible(forge); await Settle(); await Capture("small_production_smithing"); }
                 forgeToggle.ButtonPressed = false; equipmentScroll.ScrollVertical = 0;
+                s.EquippedItemsState.Equip(weapon with { EnhanceLevel = 6, Rarity = 3 });
+                var inheritTarget = weapon with { EquipmentId = "layout_inherit", DisplayName = "用于检查窄窗口长装备名显示的寒铁长枪", EnhanceLevel = 1, Rarity = 1, IsEquipped = false };
+                s.BackpackState.AddEquipment(inheritTarget); await Select("EquipmentTab");
+                var inheritToggle = (Button)_tabs.FindChild("InheritanceToggle", true, false);
+                var inheritPanel = (Control)_tabs.FindChild("InheritancePanel", true, false);
+                Check(!inheritPanel.Visible && !inheritToggle.ButtonPressed, scenario + ": inheritance stays collapsed until requested");
+                inheritToggle.ButtonPressed = true;
+                foreach (var pair in new[] { ("InheritanceSource", weapon.EquipmentId), ("InheritanceTarget", inheritTarget.EquipmentId) })
+                {
+                    var picker = (OptionButton)_tabs.FindChild(pair.Item1, true, false);
+                    for (int i = 0; i < picker.ItemCount; i++)
+                        if (picker.GetItemMetadata(i).AsString() == pair.Item2) { picker.Select(i); picker.EmitSignal(OptionButton.SignalName.ItemSelected, (long)i); break; }
+                }
+                await Settle();
+                var inheritPreview = (Label)_tabs.FindChild("InheritancePreview", true, false);
+                Check(inheritPreview.Text.Contains("83 灵气") && inheritPreview.Text.Contains("将损失") && inheritPreview.Text.Contains("气血"), scenario + ": inheritance preview includes exact capped result cost and total attributes");
+                foreach (Control control in inheritPanel.GetChildren())
+                    if (control.Visible) Check(control.Size.X <= inheritPanel.Size.X + 1, scenario + ": long inheritance controls wrap within page width");
+                Check(equipmentScroll.GetHScrollBar().MaxValue <= equipmentScroll.Size.X + 1, scenario + ": expanded inheritance needs no horizontal scrolling");
+                if (dimensions.X == 800)
+                {
+                    equipmentScroll.EnsureControlVisible(inheritPreview); await Settle(); await Capture("small_inheritance_preview");
+                    equipmentScroll.EnsureControlVisible((Control)_tabs.FindChild("InheritanceConfirm", true, false)); await Settle(); await Capture("small_inheritance_confirm");
+                }
+                inheritToggle.ButtonPressed = false; equipmentScroll.ScrollVertical = 0;
                 s.EquippedItemsState.FromDictionary(equipmentBefore); s.SmithingState.FromDictionary(smithingBefore);
                 s.BackpackState.FromDictionary(inventoryBefore); s.ResourceWalletState.FromDictionary(walletBefore);
                 s.PlayerActionState!.SetAction("cooking"); await Select("CultivationTab");

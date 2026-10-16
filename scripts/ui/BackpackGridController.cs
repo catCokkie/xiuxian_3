@@ -172,9 +172,11 @@ public partial class BackpackGridController : VBoxContainer
             _equipmentGrid = CreateGridContainer();
             _innerContainer.AddChild(_equipmentGrid);
 
+            var instanceIds = new HashSet<string>();
             for (int i = 0; i < equipInstances.Length; i++)
             {
                 EquipmentInstanceData inst = equipInstances[i];
+                instanceIds.Add(inst.EquipmentId);
                 Color bg = GetRarityColor(inst.RarityTier);
                 Control cell = CreateEquipmentCell(GameArtCatalog.Equipment(inst.EquipmentTemplateId, inst.Slot), inst.DisplayName, bg, BuildInstanceTooltip(inst));
                 string capturedId = inst.EquipmentId;
@@ -186,6 +188,7 @@ public partial class BackpackGridController : VBoxContainer
             for (int i = 0; i < equipProfiles.Length; i++)
             {
                 EquipmentStatProfile profile = equipProfiles[i];
+                if (instanceIds.Contains(profile.EquipmentId)) continue;
                 Control cell = CreateEquipmentCell(GameArtCatalog.Equipment(string.Empty, profile.Slot), profile.DisplayName, EquipCommonColor, BuildProfileTooltip(profile));
                 string capturedId = profile.EquipmentId;
                 ((Button)cell.GetChild(0)).Pressed += () => EmitSignal(SignalName.EquipmentCellClicked, capturedId);

@@ -5,6 +5,19 @@ namespace Xiuxian.Tests;
 public sealed class EquipmentPresentationRulesTests
 {
     [Fact]
+    public void BuildEquipmentPageText_DoesNotCountInstanceProfileAsAnotherLegacyItem()
+    {
+        var instance = new EquipmentInstanceData("known", "template", "寒铁枪", EquipmentSlotType.Weapon, "series",
+            EquipmentRarityTier.Artifact, EquipmentSourceStage.Normal, "lv_qi_001", "attack_flat", 5,
+            Array.Empty<EquipmentSubStatData>(), 0, 12, 123, false);
+        var text = EquipmentPresentationRules.BuildEquipmentPageText(CharacterStatBlock.Empty, CharacterStatBlock.Empty,
+            Array.Empty<EquipmentStatProfile>(), new[] { instance }, new[] { EquipmentInstanceRules.ToStatProfile(instance) });
+        Assert.Contains("背包装备 1 件", text);
+        Assert.DoesNotContain("旧版装备", text);
+        Assert.Equal(1, text.Split("寒铁枪").Length - 1);
+    }
+
+    [Fact]
     public void BuildEquipmentPageText_ShowsInstanceRaritySourceAndSubStats()
     {
         string text = EquipmentPresentationRules.BuildEquipmentPageText(

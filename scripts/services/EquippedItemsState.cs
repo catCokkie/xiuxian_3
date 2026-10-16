@@ -14,22 +14,23 @@ namespace Xiuxian.Scripts.Services
 
         public void Equip(EquipmentStatProfile profile)
         {
-            _equippedBySlot[profile.Slot] = profile with { IsEquipped = true };
+            CommitEquipmentSwap(profile, null);
             EmitSignal(SignalName.EquippedItemsChanged);
         }
 
         public bool TryEquipReplacing(EquipmentStatProfile profile, out EquipmentStatProfile replacedProfile)
         {
             bool hadExisting = _equippedBySlot.TryGetValue(profile.Slot, out replacedProfile);
-            _equippedBySlot[profile.Slot] = profile with { IsEquipped = true };
+            CommitEquipmentSwap(profile, null);
             EmitSignal(SignalName.EquippedItemsChanged);
             return hadExisting;
         }
 
         public void Unequip(EquipmentSlotType slot)
         {
-            if (_equippedBySlot.Remove(slot))
+            if (_equippedBySlot.Remove(slot, out var old))
             {
+                _instances.Remove(old.EquipmentId);
                 EmitSignal(SignalName.EquippedItemsChanged);
             }
         }
@@ -98,8 +99,9 @@ namespace Xiuxian.Scripts.Services
 
         public Godot.Collections.Dictionary<string, Variant> ToDictionary()
         {
-            return SaveValueConversionRules.ToVariantDictionary(
-                EquippedItemsPersistenceRules.ToPlainDictionary(_equippedBySlot));
+            var data = EquippedItemsPersistenceRules.ToPlainDictionary(_equippedBySlot);
+            data["__instances"] = SerializeInstances();
+            return SaveValueConversionRules.ToVariantDictionary(data);
         }
 
         public void FromDictionary(Godot.Collections.Dictionary<string, Variant> data)
@@ -112,6 +114,7 @@ namespace Xiuxian.Scripts.Services
                 _equippedBySlot[slot] = profile;
             }
 
+            RestoreInstances(SaveValueConversionRules.ToPlainDictionary(data));
             EmitSignal(SignalName.EquippedItemsChanged);
         }
     }

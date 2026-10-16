@@ -770,6 +770,7 @@ public partial class BookTabsController : Control
         EquipmentInstanceData[] backpackInstances = _backpackState.GetEquipmentInstances();
         EquipmentStatProfile[] backpackProfiles = _backpackState.GetEquipmentProfiles();
         RefreshSmithingControls(equippedProfiles);
+        RefreshInheritanceControls();
         string text = EquipmentPresentationRules.BuildEquipmentPageText(baseStats, finalStats, equippedProfiles, backpackInstances, backpackProfiles);
         if (_smithingState != null && _smithingState.HasTarget && _equippedItemsState.TryGetEquippedProfileById(_smithingState.TargetEquipmentId, out EquipmentStatProfile target))
         {
@@ -804,15 +805,11 @@ public partial class BookTabsController : Control
             return;
         }
 
-        if (!_backpackState.TryTakeEquipmentBySlot(slot, out EquipmentStatProfile nextProfile))
-        {
-            return;
-        }
-
-        if (_equippedItemsState.TryEquipReplacing(nextProfile, out EquipmentStatProfile replacedProfile))
-        {
-            _backpackState.AddEquipment(replacedProfile with { IsEquipped = false });
-        }
+        if (ServiceLocator.Instance == null) return;
+        foreach (var instance in _backpackState.GetEquipmentInstances())
+            if (instance.Slot == slot) { EquipmentExchangeService.TryEquipById(ServiceLocator.Instance, instance.EquipmentId); return; }
+        foreach (var profile in _backpackState.GetEquipmentProfiles())
+            if (profile.Slot == slot) { EquipmentExchangeService.TryEquipById(ServiceLocator.Instance, profile.EquipmentId); return; }
     }
 
     private void RefreshBackpackGrid()
@@ -835,7 +832,7 @@ public partial class BookTabsController : Control
             return;
         }
 
-        // Clicking an equipment cell — for now just refresh (future: show detail panel)
+        if (ServiceLocator.Instance != null) EquipmentExchangeService.TryEquipById(ServiceLocator.Instance, equipmentId);
         RefreshBackpackGrid();
     }
 
@@ -2913,6 +2910,7 @@ public partial class BookTabsController : Control
         actionRow.AddChild(_equipmentSmithingStartButton);
         _equipmentSmithingStartButton.Hide();
         BuildProductionControls(content, "smithing");
+        BuildInheritanceControls(content);
 
         Label hint = new();
         hint.AutowrapMode = TextServer.AutowrapMode.WordSmart;

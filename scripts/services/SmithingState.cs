@@ -72,6 +72,22 @@ namespace Xiuxian.Scripts.Services
 
         public void NotifyProductionChanged() => EmitSignal(SignalName.SmithingChanged, TargetEquipmentId, CurrentProgress, RequiredProgress);
 
+        public void ResetAfterInheritance(string sourceId, string targetId, int resultLevel)
+        {
+            _projects.Capture(TargetEquipmentId, CurrentProgress, RequiredProgress, Production, _targetEnhanceLevel);
+            foreach (var entry in new[] { (sourceId, 0), (targetId, resultLevel) })
+            {
+                var plan = new CraftingProductionPlan();
+                if (_projects.TryRestore(entry.Item1, plan, out _, out _, out _))
+                    _projects.Capture(entry.Item1, 0, SmithingRules.GetCost(entry.Item2).RequiredInputs, plan, entry.Item2);
+            }
+            if (TargetEquipmentId != sourceId && TargetEquipmentId != targetId) return;
+            Production.Stop(); CurrentProgress = 0;
+            RefreshRequiredProgress(TargetEquipmentId == sourceId ? 0 : resultLevel);
+            SelectTarget(targetId, resultLevel);
+            NotifyProductionChanged();
+        }
+
         public Godot.Collections.Dictionary<string, Variant> ToDictionary()
         {
             var data = new Godot.Collections.Dictionary<string, Variant>
