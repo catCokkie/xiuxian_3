@@ -23,6 +23,14 @@ public partial class FirstBossRouteSimulation : Node
     private double _seconds, _onlineSeconds, _credit;
     private double? _readyAt, _attemptAt, _clearAt, _swapAt, _postClearSwapAt;
     private int _decisions, _lastBossRealm, _lastBossEnhance = -1;
+    private int _managementChecks, _exploreInputs, _roundInputs;
+    private double _bossStartedAt;
+    private double _bossStartedOnlineAt;
+    private int _bossStartRealm, _bossStartHp;
+    private int _bossRoundThreshold;
+    private CharacterStatBlock _bossStartStats;
+    private string _preparation = "funded-early";
+    private readonly List<object> _bosses = new();
     private CharacterStatBlock _lastBossStats;
     private bool _lastBossHadHeal;
     private readonly List<object> _trace = new();
@@ -50,6 +58,22 @@ public partial class FirstBossRouteSimulation : Node
             double rate = double.Parse(Arg("--route-rate", "30"), System.Globalization.CultureInfo.InvariantCulture);
             int days = Math.Clamp(int.Parse(Arg("--route-days", "3")), 1, 7);
             bool mixed = Arg("--route-schedule", "mixed") == "mixed";
+            _exploreInputs = int.Parse(Arg("--route-explore-inputs", "5000"));
+            _roundInputs = int.Parse(Arg("--route-round-inputs", "0"));
+            _preparation = Arg("--route-preparation", "funded-early");
+            if (_preparation != "funded-early" && _preparation != "after-failure") throw new ArgumentException("Unknown preparation policy.");
+            string content = File.ReadAllText(ProjectSettings.GlobalizePath("res://docs/design/09_level_monster_drop_sample.json"));
+            string equipment = File.ReadAllText(ProjectSettings.GlobalizePath("res://docs/design/12_equipment_sample_qi_refining.json"));
+            if (!_s.LevelConfigLoader!.LoadConfigFromText(EquipmentConfigMergeRules.Merge(FirstBossScenarioRules.Apply(content, _exploreInputs, _roundInputs), equipment)))
+                throw new InvalidOperationException("Experimental configuration failed to load.");
+            if (Math.Abs(_controller.ProgressPerInput - 100.0 / _exploreInputs) > .000001)
+                throw new InvalidOperationException("Experimental exploration rate was not applied.");
+            if (_roundInputs > 0 && (!_s.LevelConfigLoader.TryGetMonsterStatProfile(_s.LevelConfigLoader.GetBossMonsterId(), out var bossProfile) || bossProfile.InputsPerRound != _roundInputs))
+                throw new InvalidOperationException("Experimental round threshold was not applied.");
+            // Keep the existing settings page selected: gameplay signals remain
+            // connected, while expensive hidden home text is not rebuilt per input.
+            var tabs = Descendants(_root).OfType<BookTabsController>().Single();
+            tabs.GetNode<Button>("TopStrip/RightTabs/SettingsTab").EmitSignal(Button.SignalName.Pressed);
             if (!double.IsFinite(rate) || rate < 0 || rate > 90) throw new ArgumentException("Rate must be0..90/min.");
             // Only the simulator drives time after initialization. Signals still run the
             // real gameplay settlement, battle, inventory and root persistence wiring.
@@ -80,6 +104,10 @@ public partial class FirstBossRouteSimulation : Node
                     if (previousBosses != _s.PlayerStatsState.TotalBossBattles)
                     {
                         var report = _s.ChallengeGoalState!.LastBossReport;
+                        if (report != null) _bosses.Add(new { StartHours = Hours(_bossStartedAt), EndHours = Hours(_seconds), DurationMinutes = (_seconds - _bossStartedAt) / 60,
+                            OnlineMinutes = (_onlineSeconds - _bossStartedOnlineAt) / 60, RoundThreshold = _bossRoundThreshold,
+                            StartRealm = _bossStartRealm, StartHp = _bossStartHp, StartStats = _bossStartStats,
+                            report.Result, report.Rounds, report.EnemyHp, Realm = _s.PlayerProgressState!.RealmLevel });
                         Record("boss_result", report == null ? "missing report" : $"{report.Result}; rounds={report.Rounds}; enemyHP={report.EnemyHp}");
                     }
                     previousKills = _s.PlayerStatsState.TotalMonsterKills; previousBosses = _s.PlayerStatsState.TotalBossBattles;
@@ -94,17 +122,19 @@ public partial class FirstBossRouteSimulation : Node
             Record("end", Cleared ? "first-clear sample completed" : "observation limit reached; no success inferred");
             var reportData = new
             {
-                Model = "native_first_boss_route_sample", RatePerMinute = rate, Schedule = mixed ? "8h online /16h offline" : "continuous online", LimitDays = days,
+                Model = "native_first_boss_route_sample", ExploreInputs = _exploreInputs, RoundInputOverride = _roundInputs,
+                PreparationPolicy = _preparation,
+                RatePerMinute = rate, Schedule = mixed ? "8h online /16h offline" : "continuous online", LimitDays = days,
                 Cleared, BossReadyHours = Hours(_readyAt), FirstBossAttemptHours = Hours(_attemptAt), FirstClearHours = Hours(_clearAt),
                 FirstEquipmentSwapHours = Hours(_swapAt), FirstPostClearSwapHours = Hours(_postClearSwapAt), ElapsedHours = Math.Round(_seconds / 3600, 4),
-                OnlineHours = Math.Round(_onlineSeconds / 3600, 4), ManagementActions = _decisions,
+                OnlineHours = Math.Round(_onlineSeconds / 3600, 4), ManagementActions = _decisions, ManagementChecks = _managementChecks, BossAttempts = _bosses,
                 Realm = _s.PlayerProgressState.RealmLevel, Experience = _s.PlayerProgressState.RealmExp,
                 ExploreProgress = _controller.ExploreProgressValue, Stats = _controller.GetPreparationStats(),
                 Wallet = SaveValueConversionRules.ToPlainDictionary(_s.ResourceWalletState!.ToDictionary()),
                 BattleStats = SaveValueConversionRules.ToPlainDictionary(_s.PlayerStatsState!.ToDictionary()),
                 Inventory = _s.BackpackState!.GetItemEntries(), Potions = _s.PotionInventoryState!.GetPotionEntries(), OnlineSecondsByAction = _onlineByAction,
                 InputLedger = SaveValueConversionRules.ToPlainDictionary(_s.InputActivityState!.ToDictionary()),
-                Equipped = _s.EquippedItemsState!.GetEquippedProfiles(), Trace = _trace,
+                Equipped = _s.EquippedItemsState!.GetEquippedProfiles(), EquipmentInBag = _s.BackpackState.GetEquipmentInstances(), Trace = _trace,
                 Assumptions = new[] { "native controller and real input aggregation, settlement, growth, battle, drops, crafting and swaps", "one-second online ticks; keyboard AP1; basic growth every10sec; no free resources",
                     "manage every60 online seconds and after combat; manual breakthrough whenever affordable; use UI stronger-item hint",
                     "spend earned stones on a five-heal bundle before Boss if affordable; enhance weapon up to+3 only from existing earned materials; no mining detour or mastery purchase",
@@ -113,6 +143,9 @@ public partial class FirstBossRouteSimulation : Node
                     "no automatic Boss or offline real input; current HP carries across battles and recovery uses runtime rules",
                     "random encounters, criticals and rewards use current unseeded runtime generators; this is a sample, not a win-rate estimate or exact replay",
                     "management actions are policy operations, not measured UI clicks or human attention; no conclusion about fun or comprehension",
+                    "scenario overrides first-region exploration and first-region monsters' input thresholds only, in process memory; round override0 retains each monster's shipped value",
+                    "funded-early enhances whenever materials are affordable; after-failure defers enhancement until the first failed Boss attempt; both may equip drops and buy earned healing before the first challenge",
+                    "settings page stays selected to avoid rebuilding hidden home text; this sample does not validate presentation",
                     "no player save or global hook; native return occurs at a real process timestamp then the shared watermark is translated back to virtual time" }
             };
             string output = ProjectSettings.GlobalizePath(Arg("--route-output", "res://.godot/first_boss_route.json"));
@@ -127,6 +160,7 @@ public partial class FirstBossRouteSimulation : Node
 
     private void Manage()
     {
+        _managementChecks++;
         while (_s.PlayerProgressState!.TryBreakthrough()) { _decisions++; Record("breakthrough", "confirmed manual breakthrough"); }
         if (_controller.IsInBattle) return;
         foreach (var instance in _s.BackpackState!.GetEquipmentInstances())
@@ -146,7 +180,8 @@ public partial class FirstBossRouteSimulation : Node
             { _s.SmithingState.Production.Stop(); _s.PlayerActionState.SetAction("dungeon"); _decisions++; Record("stop_smithing", "one batch completed or blocked; return to dungeon"); }
             else return;
         }
-        if (_s.PlayerProgressState.RealmLevel >= 3 && weapon.EnhanceLevel < 3 && SmithingRules.CanEnhance(weapon, _s.BackpackState, _s.ResourceWalletState!, _s.SubsystemMasteryState!.GetLevel("smithing")))
+        if ((_preparation == "funded-early" || _s.PlayerStatsState!.TotalBossBattles > 0)
+            && _s.PlayerProgressState.RealmLevel >= 3 && weapon.EnhanceLevel < 3 && SmithingRules.CanEnhance(weapon, _s.BackpackState, _s.ResourceWalletState!, _s.SubsystemMasteryState!.GetLevel("smithing")))
         {
             _s.SmithingState!.SelectTarget(weapon.EquipmentId, weapon.EnhanceLevel); _s.SmithingState.Production.Start(false, 1);
             _s.PlayerActionState.SetAction("smithing"); _decisions++; Record("start_smithing", weapon.DisplayName + $" +{weapon.EnhanceLevel} → +{weapon.EnhanceLevel + 1}"); return;
@@ -159,6 +194,13 @@ public partial class FirstBossRouteSimulation : Node
         if (!improved) return;
         if (_controller.StartBossChallengeFromUi())
         {
+            _bossStartedAt = _seconds;
+            _bossStartedOnlineAt = _onlineSeconds;
+            _bossRoundThreshold = _controller.ToRuntimeDictionary()["inputs_per_battle_round_runtime"].AsInt32();
+            _bossStartRealm = _s.PlayerProgressState.RealmLevel; _bossStartStats = stats;
+            _bossStartHp = _controller.ToRuntimeDictionary()["player_hp"].AsInt32();
+            if (_roundInputs > 0 && _controller.ToRuntimeDictionary()["inputs_per_battle_round_runtime"].AsInt32() != _roundInputs)
+                throw new InvalidOperationException("Started battle did not use the experimental threshold.");
             _lastBossRealm = _s.PlayerProgressState.RealmLevel; _lastBossStats = stats; _lastBossEnhance = weapon.EnhanceLevel; _lastBossHadHeal = heal;
             _attemptAt ??= _seconds; _decisions++; Record("boss_start", $"real challenge; hp={_controller.ToRuntimeDictionary()["player_hp"].AsInt32()}; heal={heal}");
         }
@@ -166,6 +208,7 @@ public partial class FirstBossRouteSimulation : Node
 
     private void ApplyNight(int duration)
     {
+        Record("leave", $"action={_s.PlayerActionState!.ActionId}; explore={_controller.ExploreProgressValue:0.0}%; inBattle={_controller.IsInBattle}");
         // Test-only time translation: preserve the accrued phase, and make the
         // production root see exactly this unclaimed real-time interval once.
         _s.ActivityConversionService!.ApplyOnlineBasicGrowth(Epoch + _seconds);
