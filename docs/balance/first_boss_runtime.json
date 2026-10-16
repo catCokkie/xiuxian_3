@@ -1,0 +1,1070 @@
+{
+    "Model":  "native_first_boss_route_samples",
+    "Scope":  "Current implemented gameplay only; stochastic policy samples, not human playtesting or a win-rate estimate",
+    "Cases":  [
+                  {
+                      "Model":  "native_first_boss_route_sample",
+                      "RatePerMinute":  2,
+                      "Schedule":  "8h online /16h offline",
+                      "LimitDays":  3,
+                      "Cleared":  true,
+                      "BossReadyHours":  48,
+                      "FirstBossAttemptHours":  48,
+                      "FirstClearHours":  49.8333,
+                      "FirstEquipmentSwapHours":  49.8333,
+                      "FirstPostClearSwapHours":  49.8333,
+                      "ElapsedHours":  49.8333,
+                      "OnlineHours":  17.8333,
+                      "ManagementActions":  14,
+                      "Realm":  6,
+                      "Experience":  857.3395477875317,
+                      "ExploreProgress":  0,
+                      "Stats":  {
+                                    "MaxHp":  82,
+                                    "Attack":  14,
+                                    "Defense":  9,
+                                    "Speed":  110,
+                                    "CritChance":  0.08019424,
+                                    "CritDamage":  1.5
+                                },
+                      "Wallet":  {
+                                     "lingqi":  18669.41700000156,
+                                     "insight":  1375.2000000000492,
+                                     "spirit_stones":  112,
+                                     "total_earned_lingqi":  18759.41700000156,
+                                     "total_earned_insight":  1375.2000000000492,
+                                     "total_earned_spirit_stones":  142
+                                 },
+                      "BattleStats":  {
+                                          "total_battle_losses":  0,
+                                          "total_boss_battles":  1,
+                                          "total_elite_battles":  0,
+                                          "total_monster_kills":  8,
+                                          "highest_win_streak":  8,
+                                          "current_win_streak":  8,
+                                          "total_alchemy_crafts":  0,
+                                          "total_smithing_crafts":  3,
+                                          "total_talisman_crafts":  0,
+                                          "total_cooking_crafts":  0,
+                                          "total_formation_crafts":  0,
+                                          "total_mining_completions":  0,
+                                          "total_fishing_completions":  0,
+                                          "total_potions_consumed_in_battle":  0,
+                                          "total_talismans_consumed_in_battle":  0,
+                                          "total_garden_plants":  0,
+                                          "total_garden_harvests":  0,
+                                          "total_garden_auto_harvests":  0,
+                                          "total_spent_lingqi":  90,
+                                          "total_spent_spirit_stones":  30,
+                                          "spent_spirit_stones_on_shop":  30,
+                                          "spent_spirit_stones_on_seeds":  0,
+                                          "spent_spirit_stones_on_other":  0,
+                                          "total_spent_insight":  0
+                                      },
+                      "Inventory":  {
+                                        "spirit_herb":  11,
+                                        "lingqi_core_fragment":  2,
+                                        "lingqi_shard":  1,
+                                        "broken_talisman":  5
+                                    },
+                      "Potions":  {
+                                      "potion_huiqi_dan":  5
+                                  },
+                      "OnlineSecondsByAction":  {
+                                                    "dungeon":  50670,
+                                                    "smithing":  13530
+                                                },
+                      "InputLedger":  {
+                                          "total_key_down":  2140,
+                                          "total_mouse_click":  0,
+                                          "total_scroll_steps":  0,
+                                          "total_move_distance":  0,
+                                          "total_joypad_button":  0,
+                                          "total_joypad_axis":  0,
+                                          "total_active_seconds":  12825,
+                                          "ap_accumulator":  0.4
+                                      },
+                      "Equipped":  [
+                                       {
+                                           "EquipmentId":  "starter_sword",
+                                           "DisplayName":  "练气短剑",
+                                           "Slot":  0,
+                                           "Modifier":  {
+                                                            "MaxHpFlat":  0,
+                                                            "AttackFlat":  3,
+                                                            "DefenseFlat":  0,
+                                                            "SpeedFlat":  0,
+                                                            "MaxHpRate":  0,
+                                                            "AttackRate":  0,
+                                                            "DefenseRate":  0,
+                                                            "SpeedRate":  0,
+                                                            "CritChanceDelta":  0.02,
+                                                            "CritDamageDelta":  0
+                                                        },
+                                           "SetTag":  "starter",
+                                           "Rarity":  1,
+                                           "EnhanceLevel":  3,
+                                           "IsEquipped":  true
+                                       },
+                                       {
+                                           "EquipmentId":  "eq_armor_qi_outer_moss_robe__first_clear_1",
+                                           "DisplayName":  "苔纹护袍",
+                                           "Slot":  1,
+                                           "Modifier":  {
+                                                            "MaxHpFlat":  0,
+                                                            "AttackFlat":  0,
+                                                            "DefenseFlat":  4,
+                                                            "SpeedFlat":  0,
+                                                            "MaxHpRate":  0,
+                                                            "AttackRate":  0,
+                                                            "DefenseRate":  0,
+                                                            "SpeedRate":  0,
+                                                            "CritChanceDelta":  0,
+                                                            "CritDamageDelta":  0
+                                                        },
+                                           "SetTag":  "series_qi_outer_cave",
+                                           "Rarity":  2,
+                                           "EnhanceLevel":  0,
+                                           "IsEquipped":  true
+                                       }
+                                   ],
+                      "Trace":  [
+                                    {
+                                        "Hours":  0,
+                                        "OnlineHours":  0,
+                                        "Kind":  "start",
+                                        "Detail":  "new game; starter gear; zero wallet and inventory; boss-only consumables",
+                                        "Realm":  1,
+                                        "Qi":  0,
+                                        "Insight":  0,
+                                        "Stones":  0
+                                    },
+                                    {
+                                        "Hours":  1.6,
+                                        "OnlineHours":  1.6,
+                                        "Kind":  "breakthrough",
+                                        "Detail":  "confirmed manual breakthrough",
+                                        "Realm":  2,
+                                        "Qi":  1067.58,
+                                        "Insight":  86.4,
+                                        "Stones":  0
+                                    },
+                                    {
+                                        "Hours":  4.5667,
+                                        "OnlineHours":  4.5667,
+                                        "Kind":  "breakthrough",
+                                        "Detail":  "confirmed manual breakthrough",
+                                        "Realm":  3,
+                                        "Qi":  2999.25,
+                                        "Insight":  238.36,
+                                        "Stones":  10
+                                    },
+                                    {
+                                        "Hours":  24,
+                                        "OnlineHours":  8,
+                                        "Kind":  "return",
+                                        "Detail":  "native root settled16 offline hours; explore=69.3%",
+                                        "Realm":  3,
+                                        "Qi":  7928.88,
+                                        "Insight":  623.2,
+                                        "Stones":  22
+                                    },
+                                    {
+                                        "Hours":  24,
+                                        "OnlineHours":  8,
+                                        "Kind":  "breakthrough",
+                                        "Detail":  "confirmed manual breakthrough",
+                                        "Realm":  4,
+                                        "Qi":  7928.88,
+                                        "Insight":  623.2,
+                                        "Stones":  22
+                                    },
+                                    {
+                                        "Hours":  24,
+                                        "OnlineHours":  8,
+                                        "Kind":  "start_smithing",
+                                        "Detail":  "练气短剑 +0 → +1",
+                                        "Realm":  4,
+                                        "Qi":  7928.88,
+                                        "Insight":  623.2,
+                                        "Stones":  22
+                                    },
+                                    {
+                                        "Hours":  24.8333,
+                                        "OnlineHours":  8.8333,
+                                        "Kind":  "stop_smithing",
+                                        "Detail":  "one batch completed or blocked; return to dungeon",
+                                        "Realm":  4,
+                                        "Qi":  8728.07,
+                                        "Insight":  674.8,
+                                        "Stones":  37
+                                    },
+                                    {
+                                        "Hours":  25.8833,
+                                        "OnlineHours":  9.8833,
+                                        "Kind":  "breakthrough",
+                                        "Detail":  "confirmed manual breakthrough",
+                                        "Realm":  5,
+                                        "Qi":  9460.13,
+                                        "Insight":  725.2,
+                                        "Stones":  37
+                                    },
+                                    {
+                                        "Hours":  26.2417,
+                                        "OnlineHours":  10.2417,
+                                        "Kind":  "start_smithing",
+                                        "Detail":  "练气短剑 +1 → +2",
+                                        "Realm":  5,
+                                        "Qi":  9739.57,
+                                        "Insight":  744.4,
+                                        "Stones":  42
+                                    },
+                                    {
+                                        "Hours":  27.5,
+                                        "OnlineHours":  11.5,
+                                        "Kind":  "stop_smithing",
+                                        "Detail":  "one batch completed or blocked; return to dungeon",
+                                        "Realm":  5,
+                                        "Qi":  10661.36,
+                                        "Insight":  809.8,
+                                        "Stones":  42
+                                    },
+                                    {
+                                        "Hours":  30.2333,
+                                        "OnlineHours":  14.2333,
+                                        "Kind":  "start_smithing",
+                                        "Detail":  "练气短剑 +2 → +3",
+                                        "Realm":  5,
+                                        "Qi":  12442.22,
+                                        "Insight":  926.56,
+                                        "Stones":  52
+                                    },
+                                    {
+                                        "Hours":  31.9,
+                                        "OnlineHours":  15.9,
+                                        "Kind":  "stop_smithing",
+                                        "Detail":  "one batch completed or blocked; return to dungeon",
+                                        "Realm":  5,
+                                        "Qi":  13438.73,
+                                        "Insight":  994.56,
+                                        "Stones":  52
+                                    },
+                                    {
+                                        "Hours":  48,
+                                        "OnlineHours":  16,
+                                        "Kind":  "return",
+                                        "Detail":  "native root settled16 offline hours; explore=100.0%",
+                                        "Realm":  5,
+                                        "Qi":  16741.23,
+                                        "Insight":  1232.6,
+                                        "Stones":  52
+                                    },
+                                    {
+                                        "Hours":  48,
+                                        "OnlineHours":  16,
+                                        "Kind":  "breakthrough",
+                                        "Detail":  "confirmed manual breakthrough",
+                                        "Realm":  6,
+                                        "Qi":  16741.23,
+                                        "Insight":  1232.6,
+                                        "Stones":  52
+                                    },
+                                    {
+                                        "Hours":  48,
+                                        "OnlineHours":  16,
+                                        "Kind":  "buy_heal",
+                                        "Detail":  "bought five huiqi pills with earned stones",
+                                        "Realm":  6,
+                                        "Qi":  16741.23,
+                                        "Insight":  1232.6,
+                                        "Stones":  22
+                                    },
+                                    {
+                                        "Hours":  48,
+                                        "OnlineHours":  16,
+                                        "Kind":  "boss_start",
+                                        "Detail":  "real challenge; hp=80; heal=True",
+                                        "Realm":  6,
+                                        "Qi":  16741.23,
+                                        "Insight":  1232.6,
+                                        "Stones":  22
+                                    },
+                                    {
+                                        "Hours":  49.8333,
+                                        "OnlineHours":  17.8333,
+                                        "Kind":  "boss_result",
+                                        "Detail":  "victory; rounds=11; enemyHP=0",
+                                        "Realm":  6,
+                                        "Qi":  18669.42,
+                                        "Insight":  1375.2,
+                                        "Stones":  112
+                                    },
+                                    {
+                                        "Hours":  49.8333,
+                                        "OnlineHours":  17.8333,
+                                        "Kind":  "first_clear",
+                                        "Detail":  "first region cleared and real rewards granted",
+                                        "Realm":  6,
+                                        "Qi":  18669.42,
+                                        "Insight":  1375.2,
+                                        "Stones":  112
+                                    },
+                                    {
+                                        "Hours":  49.8333,
+                                        "OnlineHours":  17.8333,
+                                        "Kind":  "equip",
+                                        "Detail":  "苔纹护袍: 更强，+0.54（防御+2 / HP-12）",
+                                        "Realm":  6,
+                                        "Qi":  18669.42,
+                                        "Insight":  1375.2,
+                                        "Stones":  112
+                                    },
+                                    {
+                                        "Hours":  49.8333,
+                                        "OnlineHours":  17.8333,
+                                        "Kind":  "end",
+                                        "Detail":  "first-clear sample completed",
+                                        "Realm":  6,
+                                        "Qi":  18669.42,
+                                        "Insight":  1375.2,
+                                        "Stones":  112
+                                    }
+                                ],
+                      "Assumptions":  [
+                                          "native controller and real input aggregation, settlement, growth, battle, drops, crafting and swaps",
+                                          "one-second online ticks; keyboard AP1; basic growth every10sec; no free resources",
+                                          "manage every60 online seconds and after combat; manual breakthrough whenever affordable; use UI stronger-item hint",
+                                          "spend earned stones on a five-heal bundle before Boss if affordable; enhance weapon up to+3 only from existing earned materials; no mining detour or mastery purchase",
+                                          "retry Boss only after realm, stats, enhancement or healing preparation improves; no future recipe is used",
+                                          "offline calls the actual root settlement with a shifted test clock and unchanged growth phase; hourly/day quota rollover is advanced in test memory",
+                                          "no automatic Boss or offline real input; current HP carries across battles and recovery uses runtime rules",
+                                          "random encounters, criticals and rewards use current unseeded runtime generators; this is a sample, not a win-rate estimate or exact replay",
+                                          "management actions are policy operations, not measured UI clicks or human attention; no conclusion about fun or comprehension",
+                                          "no player save or global hook; native return occurs at a real process timestamp then the shared watermark is translated back to virtual time"
+                                      ]
+                  },
+                  {
+                      "Model":  "native_first_boss_route_sample",
+                      "RatePerMinute":  30,
+                      "Schedule":  "8h online /16h offline",
+                      "LimitDays":  3,
+                      "Cleared":  true,
+                      "BossReadyHours":  4.7411,
+                      "FirstBossAttemptHours":  4.75,
+                      "FirstClearHours":  4.8833,
+                      "FirstEquipmentSwapHours":  3.7794,
+                      "FirstPostClearSwapHours":  null,
+                      "ElapsedHours":  4.8833,
+                      "OnlineHours":  4.8833,
+                      "ManagementActions":  13,
+                      "Realm":  5,
+                      "Experience":  722.1828652625237,
+                      "ExploreProgress":  0,
+                      "Stats":  {
+                                    "MaxHp":  86,
+                                    "Attack":  13,
+                                    "Defense":  6,
+                                    "Speed":  108,
+                                    "CritChance":  0.10204448030506612,
+                                    "CritDamage":  1.6156657189130783
+                                },
+                      "Wallet":  {
+                                     "lingqi":  14764.441666668308,
+                                     "insight":  1164.8400000000881,
+                                     "spirit_stones":  290,
+                                     "total_earned_lingqi":  14854.441666668374,
+                                     "total_earned_insight":  1164.8400000000881,
+                                     "total_earned_spirit_stones":  320
+                                 },
+                      "BattleStats":  {
+                                          "total_battle_losses":  0,
+                                          "total_boss_battles":  1,
+                                          "total_elite_battles":  0,
+                                          "total_monster_kills":  43,
+                                          "highest_win_streak":  43,
+                                          "current_win_streak":  43,
+                                          "total_alchemy_crafts":  0,
+                                          "total_smithing_crafts":  3,
+                                          "total_talisman_crafts":  0,
+                                          "total_cooking_crafts":  0,
+                                          "total_formation_crafts":  0,
+                                          "total_mining_completions":  0,
+                                          "total_fishing_completions":  0,
+                                          "total_potions_consumed_in_battle":  0,
+                                          "total_talismans_consumed_in_battle":  0,
+                                          "total_garden_plants":  0,
+                                          "total_garden_harvests":  0,
+                                          "total_garden_auto_harvests":  0,
+                                          "total_spent_lingqi":  90,
+                                          "total_spent_spirit_stones":  30,
+                                          "spent_spirit_stones_on_shop":  30,
+                                          "spent_spirit_stones_on_seeds":  0,
+                                          "spent_spirit_stones_on_other":  0,
+                                          "total_spent_insight":  0
+                                      },
+                      "Inventory":  {
+                                        "broken_talisman":  13,
+                                        "lingqi_shard":  56,
+                                        "spirit_herb":  39,
+                                        "lingqi_core_fragment":  14
+                                    },
+                      "Potions":  {
+                                      "potion_huiqi_dan":  5
+                                  },
+                      "OnlineSecondsByAction":  {
+                                                    "dungeon":  16620,
+                                                    "smithing":  960
+                                                },
+                      "InputLedger":  {
+                                          "total_key_down":  8790,
+                                          "total_mouse_click":  0,
+                                          "total_scroll_steps":  0,
+                                          "total_move_distance":  0,
+                                          "total_joypad_button":  0,
+                                          "total_joypad_axis":  0,
+                                          "total_active_seconds":  17579,
+                                          "ap_accumulator":  0.4
+                                      },
+                      "Equipped":  [
+                                       {
+                                           "EquipmentId":  "starter_sword",
+                                           "DisplayName":  "练气短剑",
+                                           "Slot":  0,
+                                           "Modifier":  {
+                                                            "MaxHpFlat":  0,
+                                                            "AttackFlat":  3,
+                                                            "DefenseFlat":  0,
+                                                            "SpeedFlat":  0,
+                                                            "MaxHpRate":  0,
+                                                            "AttackRate":  0,
+                                                            "DefenseRate":  0,
+                                                            "SpeedRate":  0,
+                                                            "CritChanceDelta":  0.02,
+                                                            "CritDamageDelta":  0
+                                                        },
+                                           "SetTag":  "starter",
+                                           "Rarity":  1,
+                                           "EnhanceLevel":  3,
+                                           "IsEquipped":  true
+                                       },
+                                       {
+                                           "EquipmentId":  "starter_robe",
+                                           "DisplayName":  "练气布袍",
+                                           "Slot":  1,
+                                           "Modifier":  {
+                                                            "MaxHpFlat":  12,
+                                                            "AttackFlat":  0,
+                                                            "DefenseFlat":  2,
+                                                            "SpeedFlat":  0,
+                                                            "MaxHpRate":  0,
+                                                            "AttackRate":  0,
+                                                            "DefenseRate":  0,
+                                                            "SpeedRate":  0,
+                                                            "CritChanceDelta":  0,
+                                                            "CritDamageDelta":  0
+                                                        },
+                                           "SetTag":  "starter",
+                                           "Rarity":  1,
+                                           "EnhanceLevel":  0,
+                                           "IsEquipped":  true
+                                       },
+                                       {
+                                           "EquipmentId":  "eq_accessory_qi_shadow_ring__drop_7253efc74ca74bfdbe79461e5cb586df_1",
+                                           "DisplayName":  "影息指环",
+                                           "Slot":  2,
+                                           "Modifier":  {
+                                                            "MaxHpFlat":  0,
+                                                            "AttackFlat":  0,
+                                                            "DefenseFlat":  0,
+                                                            "SpeedFlat":  0,
+                                                            "MaxHpRate":  0,
+                                                            "AttackRate":  0,
+                                                            "DefenseRate":  0,
+                                                            "SpeedRate":  0,
+                                                            "CritChanceDelta":  0.02685024030506611,
+                                                            "CritDamageDelta":  0.11566571891307831
+                                                        },
+                                           "SetTag":  "series_qi_shadow_swift",
+                                           "Rarity":  3,
+                                           "EnhanceLevel":  0,
+                                           "IsEquipped":  true
+                                       }
+                                   ],
+                      "Trace":  [
+                                    {
+                                        "Hours":  0,
+                                        "OnlineHours":  0,
+                                        "Kind":  "start",
+                                        "Detail":  "new game; starter gear; zero wallet and inventory; boss-only consumables",
+                                        "Realm":  1,
+                                        "Qi":  0,
+                                        "Insight":  0,
+                                        "Stones":  0
+                                    },
+                                    {
+                                        "Hours":  0.4333,
+                                        "OnlineHours":  0.4333,
+                                        "Kind":  "breakthrough",
+                                        "Detail":  "confirmed manual breakthrough",
+                                        "Realm":  2,
+                                        "Qi":  1187.18,
+                                        "Insight":  98.36,
+                                        "Stones":  15
+                                    },
+                                    {
+                                        "Hours":  1.1833,
+                                        "OnlineHours":  1.1833,
+                                        "Kind":  "breakthrough",
+                                        "Detail":  "confirmed manual breakthrough",
+                                        "Realm":  3,
+                                        "Qi":  3297.24,
+                                        "Insight":  266.44,
+                                        "Stones":  49
+                                    },
+                                    {
+                                        "Hours":  1.1833,
+                                        "OnlineHours":  1.1833,
+                                        "Kind":  "start_smithing",
+                                        "Detail":  "练气短剑 +0 → +1",
+                                        "Realm":  3,
+                                        "Qi":  3297.24,
+                                        "Insight":  266.44,
+                                        "Stones":  49
+                                    },
+                                    {
+                                        "Hours":  1.25,
+                                        "OnlineHours":  1.25,
+                                        "Kind":  "stop_smithing",
+                                        "Detail":  "one batch completed or blocked; return to dungeon",
+                                        "Realm":  3,
+                                        "Qi":  3440.45,
+                                        "Insight":  278.6,
+                                        "Stones":  49
+                                    },
+                                    {
+                                        "Hours":  1.25,
+                                        "OnlineHours":  1.25,
+                                        "Kind":  "start_smithing",
+                                        "Detail":  "练气短剑 +1 → +2",
+                                        "Realm":  3,
+                                        "Qi":  3440.45,
+                                        "Insight":  278.6,
+                                        "Stones":  49
+                                    },
+                                    {
+                                        "Hours":  1.3333,
+                                        "OnlineHours":  1.3333,
+                                        "Kind":  "stop_smithing",
+                                        "Detail":  "one batch completed or blocked; return to dungeon",
+                                        "Realm":  3,
+                                        "Qi":  3639.43,
+                                        "Insight":  298.8,
+                                        "Stones":  49
+                                    },
+                                    {
+                                        "Hours":  1.3333,
+                                        "OnlineHours":  1.3333,
+                                        "Kind":  "start_smithing",
+                                        "Detail":  "练气短剑 +2 → +3",
+                                        "Realm":  3,
+                                        "Qi":  3639.43,
+                                        "Insight":  298.8,
+                                        "Stones":  49
+                                    },
+                                    {
+                                        "Hours":  1.45,
+                                        "OnlineHours":  1.45,
+                                        "Kind":  "stop_smithing",
+                                        "Detail":  "one batch completed or blocked; return to dungeon",
+                                        "Realm":  3,
+                                        "Qi":  3912.56,
+                                        "Insight":  320.08,
+                                        "Stones":  49
+                                    },
+                                    {
+                                        "Hours":  2.2667,
+                                        "OnlineHours":  2.2667,
+                                        "Kind":  "breakthrough",
+                                        "Detail":  "confirmed manual breakthrough",
+                                        "Realm":  4,
+                                        "Qi":  6378.41,
+                                        "Insight":  515.04,
+                                        "Stones":  101
+                                    },
+                                    {
+                                        "Hours":  3.7167,
+                                        "OnlineHours":  3.7167,
+                                        "Kind":  "breakthrough",
+                                        "Detail":  "confirmed manual breakthrough",
+                                        "Realm":  5,
+                                        "Qi":  10887.76,
+                                        "Insight":  857.52,
+                                        "Stones":  184
+                                    },
+                                    {
+                                        "Hours":  3.7794,
+                                        "OnlineHours":  3.7794,
+                                        "Kind":  "equip",
+                                        "Detail":  "影息指环: 可直接穿戴",
+                                        "Realm":  5,
+                                        "Qi":  11137.85,
+                                        "Insight":  881.91,
+                                        "Stones":  191
+                                    },
+                                    {
+                                        "Hours":  4.7411,
+                                        "OnlineHours":  4.7411,
+                                        "Kind":  "boss_ready",
+                                        "Detail":  "exploration reached100%",
+                                        "Realm":  5,
+                                        "Qi":  14109.05,
+                                        "Insight":  1104.2,
+                                        "Stones":  245
+                                    },
+                                    {
+                                        "Hours":  4.75,
+                                        "OnlineHours":  4.75,
+                                        "Kind":  "buy_heal",
+                                        "Detail":  "bought five huiqi pills with earned stones",
+                                        "Realm":  5,
+                                        "Qi":  14134.03,
+                                        "Insight":  1105.8,
+                                        "Stones":  215
+                                    },
+                                    {
+                                        "Hours":  4.75,
+                                        "OnlineHours":  4.75,
+                                        "Kind":  "boss_start",
+                                        "Detail":  "real challenge; hp=80; heal=True",
+                                        "Realm":  5,
+                                        "Qi":  14134.03,
+                                        "Insight":  1105.8,
+                                        "Stones":  215
+                                    },
+                                    {
+                                        "Hours":  4.8833,
+                                        "OnlineHours":  4.8833,
+                                        "Kind":  "boss_result",
+                                        "Detail":  "victory; rounds=12; enemyHP=0",
+                                        "Realm":  5,
+                                        "Qi":  14764.44,
+                                        "Insight":  1164.84,
+                                        "Stones":  290
+                                    },
+                                    {
+                                        "Hours":  4.8833,
+                                        "OnlineHours":  4.8833,
+                                        "Kind":  "first_clear",
+                                        "Detail":  "first region cleared and real rewards granted",
+                                        "Realm":  5,
+                                        "Qi":  14764.44,
+                                        "Insight":  1164.84,
+                                        "Stones":  290
+                                    },
+                                    {
+                                        "Hours":  4.8833,
+                                        "OnlineHours":  4.8833,
+                                        "Kind":  "end",
+                                        "Detail":  "first-clear sample completed",
+                                        "Realm":  5,
+                                        "Qi":  14764.44,
+                                        "Insight":  1164.84,
+                                        "Stones":  290
+                                    }
+                                ],
+                      "Assumptions":  [
+                                          "native controller and real input aggregation, settlement, growth, battle, drops, crafting and swaps",
+                                          "one-second online ticks; keyboard AP1; basic growth every10sec; no free resources",
+                                          "manage every60 online seconds and after combat; manual breakthrough whenever affordable; use UI stronger-item hint",
+                                          "spend earned stones on a five-heal bundle before Boss if affordable; enhance weapon up to+3 only from existing earned materials; no mining detour or mastery purchase",
+                                          "retry Boss only after realm, stats, enhancement or healing preparation improves; no future recipe is used",
+                                          "offline calls the actual root settlement with a shifted test clock and unchanged growth phase; hourly/day quota rollover is advanced in test memory",
+                                          "no automatic Boss or offline real input; current HP carries across battles and recovery uses runtime rules",
+                                          "random encounters, criticals and rewards use current unseeded runtime generators; this is a sample, not a win-rate estimate or exact replay",
+                                          "management actions are policy operations, not measured UI clicks or human attention; no conclusion about fun or comprehension",
+                                          "no player save or global hook; native return occurs at a real process timestamp then the shared watermark is translated back to virtual time"
+                                      ]
+                  },
+                  {
+                      "Model":  "native_first_boss_route_sample",
+                      "RatePerMinute":  90,
+                      "Schedule":  "8h online /16h offline",
+                      "LimitDays":  3,
+                      "Cleared":  true,
+                      "BossReadyHours":  1.6739,
+                      "FirstBossAttemptHours":  1.6833,
+                      "FirstClearHours":  1.7167,
+                      "FirstEquipmentSwapHours":  0.9128,
+                      "FirstPostClearSwapHours":  null,
+                      "ElapsedHours":  1.7167,
+                      "OnlineHours":  1.7167,
+                      "ManagementActions":  19,
+                      "Realm":  5,
+                      "Experience":  460.66286526259114,
+                      "ExploreProgress":  0,
+                      "Stats":  {
+                                    "MaxHp":  86,
+                                    "Attack":  17,
+                                    "Defense":  6,
+                                    "Speed":  108,
+                                    "CritChance":  0.06367382004129887,
+                                    "CritDamage":  1.5
+                                },
+                      "Wallet":  {
+                                     "lingqi":  12507.047000000708,
+                                     "insight":  1052.1200000000301,
+                                     "spirit_stones":  290,
+                                     "total_earned_lingqi":  12687.04700000076,
+                                     "total_earned_insight":  1052.1200000000301,
+                                     "total_earned_spirit_stones":  320
+                                 },
+                      "BattleStats":  {
+                                          "total_battle_losses":  0,
+                                          "total_boss_battles":  1,
+                                          "total_elite_battles":  0,
+                                          "total_monster_kills":  43,
+                                          "highest_win_streak":  43,
+                                          "current_win_streak":  43,
+                                          "total_alchemy_crafts":  0,
+                                          "total_smithing_crafts":  6,
+                                          "total_talisman_crafts":  0,
+                                          "total_cooking_crafts":  0,
+                                          "total_formation_crafts":  0,
+                                          "total_mining_completions":  0,
+                                          "total_fishing_completions":  0,
+                                          "total_potions_consumed_in_battle":  0,
+                                          "total_talismans_consumed_in_battle":  0,
+                                          "total_garden_plants":  0,
+                                          "total_garden_harvests":  0,
+                                          "total_garden_auto_harvests":  0,
+                                          "total_spent_lingqi":  180,
+                                          "total_spent_spirit_stones":  30,
+                                          "spent_spirit_stones_on_shop":  30,
+                                          "spent_spirit_stones_on_seeds":  0,
+                                          "spent_spirit_stones_on_other":  0,
+                                          "total_spent_insight":  0
+                                      },
+                      "Inventory":  {
+                                        "broken_talisman":  5,
+                                        "lingqi_shard":  35,
+                                        "lingqi_core_fragment":  7,
+                                        "spirit_herb":  43
+                                    },
+                      "Potions":  {
+                                      "potion_huiqi_dan":  5
+                                  },
+                      "OnlineSecondsByAction":  {
+                                                    "dungeon":  5391,
+                                                    "smithing":  789
+                                                },
+                      "InputLedger":  {
+                                          "total_key_down":  9270,
+                                          "total_mouse_click":  0,
+                                          "total_scroll_steps":  0,
+                                          "total_move_distance":  0,
+                                          "total_joypad_button":  0,
+                                          "total_joypad_axis":  0,
+                                          "total_active_seconds":  6180,
+                                          "ap_accumulator":  5561.9999999997
+                                      },
+                      "Equipped":  [
+                                       {
+                                           "EquipmentId":  "eq_weapon_qi_outer_moss_blade__drop_81b45519553c40a7b93e1839d55432e1_1",
+                                           "DisplayName":  "苔锋短刃",
+                                           "Slot":  0,
+                                           "Modifier":  {
+                                                            "MaxHpFlat":  0,
+                                                            "AttackFlat":  6,
+                                                            "DefenseFlat":  0,
+                                                            "SpeedFlat":  0,
+                                                            "MaxHpRate":  0,
+                                                            "AttackRate":  0,
+                                                            "DefenseRate":  0,
+                                                            "SpeedRate":  0,
+                                                            "CritChanceDelta":  0.010854719206690788,
+                                                            "CritDamageDelta":  0
+                                                        },
+                                           "SetTag":  "series_qi_outer_cave",
+                                           "Rarity":  2,
+                                           "EnhanceLevel":  3,
+                                           "IsEquipped":  true
+                                       },
+                                       {
+                                           "EquipmentId":  "starter_robe",
+                                           "DisplayName":  "练气布袍",
+                                           "Slot":  1,
+                                           "Modifier":  {
+                                                            "MaxHpFlat":  12,
+                                                            "AttackFlat":  0,
+                                                            "DefenseFlat":  2,
+                                                            "SpeedFlat":  0,
+                                                            "MaxHpRate":  0,
+                                                            "AttackRate":  0,
+                                                            "DefenseRate":  0,
+                                                            "SpeedRate":  0,
+                                                            "CritChanceDelta":  0,
+                                                            "CritDamageDelta":  0
+                                                        },
+                                           "SetTag":  "starter",
+                                           "Rarity":  1,
+                                           "EnhanceLevel":  0,
+                                           "IsEquipped":  true
+                                       }
+                                   ],
+                      "Trace":  [
+                                    {
+                                        "Hours":  0,
+                                        "OnlineHours":  0,
+                                        "Kind":  "start",
+                                        "Detail":  "new game; starter gear; zero wallet and inventory; boss-only consumables",
+                                        "Realm":  1,
+                                        "Qi":  0,
+                                        "Insight":  0,
+                                        "Stones":  0
+                                    },
+                                    {
+                                        "Hours":  0.1833,
+                                        "OnlineHours":  0.1833,
+                                        "Kind":  "breakthrough",
+                                        "Detail":  "confirmed manual breakthrough",
+                                        "Realm":  2,
+                                        "Qi":  1146.8,
+                                        "Insight":  99.76,
+                                        "Stones":  15
+                                    },
+                                    {
+                                        "Hours":  0.4667,
+                                        "OnlineHours":  0.4667,
+                                        "Kind":  "breakthrough",
+                                        "Detail":  "confirmed manual breakthrough",
+                                        "Realm":  3,
+                                        "Qi":  3156.54,
+                                        "Insight":  271.48,
+                                        "Stones":  54
+                                    },
+                                    {
+                                        "Hours":  0.4681,
+                                        "OnlineHours":  0.4681,
+                                        "Kind":  "start_smithing",
+                                        "Detail":  "练气短剑 +0 → +1",
+                                        "Realm":  3,
+                                        "Qi":  3185.22,
+                                        "Insight":  275.04,
+                                        "Stones":  59
+                                    },
+                                    {
+                                        "Hours":  0.5,
+                                        "OnlineHours":  0.5,
+                                        "Kind":  "stop_smithing",
+                                        "Detail":  "one batch completed or blocked; return to dungeon",
+                                        "Realm":  3,
+                                        "Qi":  3368.13,
+                                        "Insight":  290.8,
+                                        "Stones":  59
+                                    },
+                                    {
+                                        "Hours":  0.5,
+                                        "OnlineHours":  0.5,
+                                        "Kind":  "start_smithing",
+                                        "Detail":  "练气短剑 +1 → +2",
+                                        "Realm":  3,
+                                        "Qi":  3368.13,
+                                        "Insight":  290.8,
+                                        "Stones":  59
+                                    },
+                                    {
+                                        "Hours":  0.5333,
+                                        "OnlineHours":  0.5333,
+                                        "Kind":  "stop_smithing",
+                                        "Detail":  "one batch completed or blocked; return to dungeon",
+                                        "Realm":  3,
+                                        "Qi":  3545.69,
+                                        "Insight":  306.48,
+                                        "Stones":  59
+                                    },
+                                    {
+                                        "Hours":  0.5333,
+                                        "OnlineHours":  0.5333,
+                                        "Kind":  "start_smithing",
+                                        "Detail":  "练气短剑 +2 → +3",
+                                        "Realm":  3,
+                                        "Qi":  3545.69,
+                                        "Insight":  306.48,
+                                        "Stones":  59
+                                    },
+                                    {
+                                        "Hours":  0.5833,
+                                        "OnlineHours":  0.5833,
+                                        "Kind":  "stop_smithing",
+                                        "Detail":  "one batch completed or blocked; return to dungeon",
+                                        "Realm":  3,
+                                        "Qi":  3827.05,
+                                        "Insight":  330,
+                                        "Stones":  59
+                                    },
+                                    {
+                                        "Hours":  0.8833,
+                                        "OnlineHours":  0.8833,
+                                        "Kind":  "breakthrough",
+                                        "Detail":  "confirmed manual breakthrough",
+                                        "Realm":  4,
+                                        "Qi":  5965.66,
+                                        "Insight":  512.12,
+                                        "Stones":  103
+                                    },
+                                    {
+                                        "Hours":  0.9128,
+                                        "OnlineHours":  0.9128,
+                                        "Kind":  "equip",
+                                        "Detail":  "苔锋短刃: 更强，+0.28（攻击+2 / 暴击-1%）",
+                                        "Realm":  4,
+                                        "Qi":  6230.93,
+                                        "Insight":  533.91,
+                                        "Stones":  110
+                                    },
+                                    {
+                                        "Hours":  0.9128,
+                                        "OnlineHours":  0.9128,
+                                        "Kind":  "start_smithing",
+                                        "Detail":  "苔锋短刃 +0 → +1",
+                                        "Realm":  4,
+                                        "Qi":  6230.93,
+                                        "Insight":  533.91,
+                                        "Stones":  110
+                                    },
+                                    {
+                                        "Hours":  0.9333,
+                                        "OnlineHours":  0.9333,
+                                        "Kind":  "stop_smithing",
+                                        "Detail":  "one batch completed or blocked; return to dungeon",
+                                        "Realm":  4,
+                                        "Qi":  6336.84,
+                                        "Insight":  543.64,
+                                        "Stones":  110
+                                    },
+                                    {
+                                        "Hours":  0.9333,
+                                        "OnlineHours":  0.9333,
+                                        "Kind":  "start_smithing",
+                                        "Detail":  "苔锋短刃 +1 → +2",
+                                        "Realm":  4,
+                                        "Qi":  6336.84,
+                                        "Insight":  543.64,
+                                        "Stones":  110
+                                    },
+                                    {
+                                        "Hours":  0.9667,
+                                        "OnlineHours":  0.9667,
+                                        "Kind":  "stop_smithing",
+                                        "Detail":  "one batch completed or blocked; return to dungeon",
+                                        "Realm":  4,
+                                        "Qi":  6525,
+                                        "Insight":  559.32,
+                                        "Stones":  110
+                                    },
+                                    {
+                                        "Hours":  0.9667,
+                                        "OnlineHours":  0.9667,
+                                        "Kind":  "start_smithing",
+                                        "Detail":  "苔锋短刃 +2 → +3",
+                                        "Realm":  4,
+                                        "Qi":  6525,
+                                        "Insight":  559.32,
+                                        "Stones":  110
+                                    },
+                                    {
+                                        "Hours":  1.0167,
+                                        "OnlineHours":  1.0167,
+                                        "Kind":  "stop_smithing",
+                                        "Detail":  "one batch completed or blocked; return to dungeon",
+                                        "Realm":  4,
+                                        "Qi":  6822.22,
+                                        "Insight":  582.84,
+                                        "Stones":  110
+                                    },
+                                    {
+                                        "Hours":  1.45,
+                                        "OnlineHours":  1.45,
+                                        "Kind":  "breakthrough",
+                                        "Detail":  "confirmed manual breakthrough",
+                                        "Realm":  5,
+                                        "Qi":  10136.66,
+                                        "Insight":  849.68,
+                                        "Stones":  186
+                                    },
+                                    {
+                                        "Hours":  1.6739,
+                                        "OnlineHours":  1.6739,
+                                        "Kind":  "boss_ready",
+                                        "Detail":  "exploration reached100%",
+                                        "Realm":  5,
+                                        "Qi":  11939.19,
+                                        "Insight":  990.93,
+                                        "Stones":  245
+                                    },
+                                    {
+                                        "Hours":  1.6833,
+                                        "OnlineHours":  1.6833,
+                                        "Kind":  "buy_heal",
+                                        "Detail":  "bought five huiqi pills with earned stones",
+                                        "Realm":  5,
+                                        "Qi":  12006.31,
+                                        "Insight":  995.44,
+                                        "Stones":  215
+                                    },
+                                    {
+                                        "Hours":  1.6833,
+                                        "OnlineHours":  1.6833,
+                                        "Kind":  "boss_start",
+                                        "Detail":  "real challenge; hp=80; heal=True",
+                                        "Realm":  5,
+                                        "Qi":  12006.31,
+                                        "Insight":  995.44,
+                                        "Stones":  215
+                                    },
+                                    {
+                                        "Hours":  1.7167,
+                                        "OnlineHours":  1.7167,
+                                        "Kind":  "boss_result",
+                                        "Detail":  "victory; rounds=9; enemyHP=0",
+                                        "Realm":  5,
+                                        "Qi":  12507.05,
+                                        "Insight":  1052.12,
+                                        "Stones":  290
+                                    },
+                                    {
+                                        "Hours":  1.7167,
+                                        "OnlineHours":  1.7167,
+                                        "Kind":  "first_clear",
+                                        "Detail":  "first region cleared and real rewards granted",
+                                        "Realm":  5,
+                                        "Qi":  12507.05,
+                                        "Insight":  1052.12,
+                                        "Stones":  290
+                                    },
+                                    {
+                                        "Hours":  1.7167,
+                                        "OnlineHours":  1.7167,
+                                        "Kind":  "end",
+                                        "Detail":  "first-clear sample completed",
+                                        "Realm":  5,
+                                        "Qi":  12507.05,
+                                        "Insight":  1052.12,
+                                        "Stones":  290
+                                    }
+                                ],
+                      "Assumptions":  [
+                                          "native controller and real input aggregation, settlement, growth, battle, drops, crafting and swaps",
+                                          "one-second online ticks; keyboard AP1; basic growth every10sec; no free resources",
+                                          "manage every60 online seconds and after combat; manual breakthrough whenever affordable; use UI stronger-item hint",
+                                          "spend earned stones on a five-heal bundle before Boss if affordable; enhance weapon up to+3 only from existing earned materials; no mining detour or mastery purchase",
+                                          "retry Boss only after realm, stats, enhancement or healing preparation improves; no future recipe is used",
+                                          "offline calls the actual root settlement with a shifted test clock and unchanged growth phase; hourly/day quota rollover is advanced in test memory",
+                                          "no automatic Boss or offline real input; current HP carries across battles and recovery uses runtime rules",
+                                          "random encounters, criticals and rewards use current unseeded runtime generators; this is a sample, not a win-rate estimate or exact replay",
+                                          "management actions are policy operations, not measured UI clicks or human attention; no conclusion about fun or comprehension",
+                                          "no player save or global hook; native return occurs at a real process timestamp then the shared watermark is translated back to virtual time"
+                                      ]
+                  }
+              ]
+}
