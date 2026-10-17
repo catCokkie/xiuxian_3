@@ -456,7 +456,7 @@ Top: "系统" | "画面" | "进度" | "隐私" (active) navigation
 
 Setting rows:
 1. "输入采集" — Toggle switch (开/关), default ON
-   Hint text below: "关闭后游戏将暂停所有键鼠统计，修炼进度停止。"
+   Hint text below: "关闭后暂停键鼠采集与输入推进，静修基础成长继续。"
 2. "采集状态" — Read-only label, dynamic:
    ON → "采集中 · 本次会话已记录 {N} 次操作"
    OFF → "已暂停"

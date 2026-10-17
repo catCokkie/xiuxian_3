@@ -807,9 +807,9 @@ public partial class BookTabsController : Control
 
         if (ServiceLocator.Instance == null) return;
         foreach (var instance in _backpackState.GetEquipmentInstances())
-            if (instance.Slot == slot) { EquipmentExchangeService.TryEquipById(ServiceLocator.Instance, instance.EquipmentId); return; }
+            if (instance.Slot == slot) { EquipWithStatistics(instance.EquipmentId); return; }
         foreach (var profile in _backpackState.GetEquipmentProfiles())
-            if (profile.Slot == slot) { EquipmentExchangeService.TryEquipById(ServiceLocator.Instance, profile.EquipmentId); return; }
+            if (profile.Slot == slot) { EquipWithStatistics(profile.EquipmentId); return; }
     }
 
     private void RefreshBackpackGrid()
@@ -832,8 +832,15 @@ public partial class BookTabsController : Control
             return;
         }
 
-        if (ServiceLocator.Instance != null) EquipmentExchangeService.TryEquipById(ServiceLocator.Instance, equipmentId);
+        EquipWithStatistics(equipmentId);
         RefreshBackpackGrid();
+    }
+
+    private void EquipWithStatistics(string equipmentId)
+    {
+        if (ServiceLocator.Instance == null) return;
+        bool equipped = EquipmentExchangeService.TryEquipById(ServiceLocator.Instance, equipmentId);
+        _operationStatistics?.RecordEvent(equipped ? "equip_success" : "equip_rejected");
     }
 
     private string BuildBattleLogText()
@@ -3695,6 +3702,8 @@ public partial class BookTabsController : Control
         _privacyStatementLabel.Text = UiText.PrivacyStatementBody;
         root.AddChild(_privacyStatementLabel);
 
+        BuildOperationStatisticsUi(root);
+
         UpdatePrivacySectionState();
     }
 
@@ -4048,6 +4057,7 @@ public partial class BookTabsController : Control
 
     private void UpdatePrivacySectionState()
     {
+        RefreshOperationStatistics();
         if (_privacyCollectionStatusLabel == null)
         {
             return;
@@ -4066,11 +4076,7 @@ public partial class BookTabsController : Control
             return 0L;
         }
 
-        return _activityState.TotalKeyDownCount
-            + _activityState.TotalMouseClickCount
-            + _activityState.TotalMouseScrollSteps
-            + _activityState.TotalJoypadButtonCount
-            + _activityState.TotalJoypadAxisInputCount;
+        return _activityState.SessionRawInputCount;
     }
 
     private void OpenLogFolder()

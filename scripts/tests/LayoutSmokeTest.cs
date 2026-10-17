@@ -353,6 +353,19 @@ public partial class LayoutSmokeTest : Node
                             var roots = settings.FindChildren("Settings*Root", "VBoxContainer", true, false).Cast<Control>().Where(x => x.Name != "SettingsActionRoot");
                             Check(roots.Count(x => x.IsVisibleInTree()) == 1, scenario + " settings " + section.Text + ": exactly one section");
                             Check(nav.GetGlobalRect().End.Y <= scroll.GetGlobalRect().Position.Y && scroll.GetGlobalRect().End.Y <= actions.GetGlobalRect().Position.Y, scenario + " settings " + section.Text + ": scroll avoids fixed actions");
+                            var operationRoot = settings.FindChild("OperationStatistics", true, false) as Control;
+                            if (operationRoot?.IsVisibleInTree() == true)
+                            {
+                                var statisticsButtons = operationRoot.FindChildren("Operation*", "Button", true, false).Cast<Control>().ToArray();
+                                Check(statisticsButtons.All(x => x.Size.X <= scroll.Size.X), scenario + ": statistics actions wrap within settings scroll width");
+                                Check(statisticsButtons.All(x => x.GlobalPosition.X >= scroll.GlobalPosition.X - 1 && x.GetGlobalRect().End.X <= scroll.GetGlobalRect().End.X + 1), scenario + ": statistics actions do not overflow paper horizontally");
+                                if (dimensions.X == 800)
+                                {
+                                    ((ScrollContainer)scroll).ScrollVertical = 10000; await Settle();
+                                    await Capture("small_operation_statistics");
+                                    ((ScrollContainer)scroll).ScrollVertical = 0;
+                                }
+                            }
                             if (dimensions.X == 800) await Capture("small_settings_" + section.Text);
                         }
                     }

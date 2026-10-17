@@ -89,12 +89,14 @@ public partial class BookTabsController
             plan.Start(mode.Selected == 1, (int)rounds.Value);
             NotifyProductionChanged(system);
             _playerActionState?.SetAction(system);
+            _operationStatistics?.RecordEvent("production_start_" + system);
             RefreshDynamicTabContent(); RefreshProductionControls();
         };
         stop.Pressed += () =>
         {
             string system = fixedSystem == "" ? _playerActionState?.ActionId ?? "" : fixedSystem;
             GetProductionPlan(system)?.Stop(); NotifyProductionChanged(system);
+            _operationStatistics?.RecordEvent("production_stop_" + system);
             RefreshProductionControls();
         };
     }

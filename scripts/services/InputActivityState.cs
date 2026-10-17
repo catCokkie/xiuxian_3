@@ -10,6 +10,9 @@ namespace Xiuxian.Scripts.Services
     /// </summary>
     public partial class InputActivityState : Node, IDictionaryPersistable
     {
+        public event System.Action<OperationInputObservation>? StatisticsObserved;
+        // Process-lifetime raw input count, deliberately excluded from save loading.
+        public long SessionRawInputCount { get; private set; }
         [Signal]
         public delegate void ActivityTickEventHandler(double apThisBatch, double apFinal, double activeSecondsThisBatch);
 
@@ -129,6 +132,13 @@ namespace Xiuxian.Scripts.Services
             ApFinal = acceptedAp;
             ApAccumulator = InputActivityRules.CalculateAccumulator(ApAccumulator, ApFinal, AccumulatorDrainPerSecond, delta);
 
+            if (StatisticsObserved != null)
+            {
+                double rawAp = InputActivityRules.CalculateRawAp(rawDiscreteBatch, moveBatch, KeyDownWeight,
+                    MouseClickWeight, ScrollStepWeight, MovePxDivider, JoypadButtonWeight, JoypadAxisWeight);
+                StatisticsObserved.Invoke(new(delta, rawDiscreteBatch, acceptedDiscreteBatch, moveBatch, rawAp, acceptedAp, activeSeconds));
+            }
+
             if (activeSeconds > 0.0) EmitSignal(SignalName.ActivityTick, ApThisSecond, ApFinal, activeSeconds);
             if (acceptedInputCount > 0 || acceptedAp > 0) ServiceLocator.Instance?.GuideState?.Complete("first_input");
             if (acceptedInputCount > 0)
@@ -144,6 +154,7 @@ namespace Xiuxian.Scripts.Services
                 MarkInputActivity();
                 _pendingKeyDown++;
                 TotalKeyDownCount++;
+                SessionRawInputCount++;
             }
         }
 
@@ -154,6 +165,7 @@ namespace Xiuxian.Scripts.Services
                 MarkInputActivity();
                 _pendingMouseClick++;
                 TotalMouseClickCount++;
+                SessionRawInputCount++;
             }
         }
 
@@ -169,6 +181,7 @@ namespace Xiuxian.Scripts.Services
                 MarkInputActivity();
                 _pendingMouseScroll += steps;
                 TotalMouseScrollSteps += steps;
+                SessionRawInputCount += steps;
             }
         }
 
@@ -194,6 +207,7 @@ namespace Xiuxian.Scripts.Services
                 MarkInputActivity();
                 _pendingJoypadButton++;
                 TotalJoypadButtonCount++;
+                SessionRawInputCount++;
             }
         }
 
@@ -204,6 +218,7 @@ namespace Xiuxian.Scripts.Services
                 MarkInputActivity();
                 _pendingJoypadAxis++;
                 TotalJoypadAxisInputCount++;
+                SessionRawInputCount++;
             }
         }
 

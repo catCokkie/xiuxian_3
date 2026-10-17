@@ -5,6 +5,7 @@ namespace Xiuxian.Scripts.Services
 {
     public partial class EventLogState : Node, IDictionaryPersistable
     {
+        public event Action<EventLogEntryData>? EventAdded;
         public const string CategoryBattle = "battle";
         public const string CategoryCraft = "craft";
         public const string CategoryBreakthrough = "breakthrough";
@@ -132,6 +133,7 @@ namespace Xiuxian.Scripts.Services
 
             TotalLoggedCount++;
             UnreadCount = Math.Clamp(UnreadCount + 1, 0, TotalLoggedCount);
+            EventAdded?.Invoke(_entries[0]);
             EmitSignal(SignalName.EntriesChanged);
         }
 

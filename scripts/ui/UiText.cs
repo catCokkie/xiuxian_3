@@ -75,7 +75,7 @@ public static class UiText
     public const string MilestoneTips = "里程碑提示";
     public const string GlobalDebugOverlay = "全局调试信息";
     public const string PrivacyInputCollection = "输入采集";
-    public const string PrivacyInputCollectionHint = "关闭后游戏将暂停所有键鼠统计，修炼进度停止。";
+    public const string PrivacyInputCollectionHint = "关闭后暂停键鼠采集与输入推进，静修基础成长继续。";
     public const string PrivacyCollectionStatus = "采集状态";
     public const string PrivacyCollectionPaused = "已暂停";
     public const string PrivacyStatement = "隐私声明";

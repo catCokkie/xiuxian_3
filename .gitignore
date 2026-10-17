@@ -9,6 +9,13 @@ obj/
 TestResults/
 __pycache__/
 
+# Opt-in local playtest input statistics (not game assets)
+operation_statistics/
+operations_*.jsonl
+operations_*.csv
+operation_statistics_summary.json
+operation_statistics_summary.csv
+
 # IDEs and editors
 .vs/
 .vscode/

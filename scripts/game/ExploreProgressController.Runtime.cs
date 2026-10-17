@@ -212,7 +212,7 @@ namespace Xiuxian.Scripts.Game
             _bossChallengeButton.SetAnchorsPreset(Control.LayoutPreset.BottomRight);
             _bossChallengeButton.OffsetLeft = -244; _bossChallengeButton.OffsetRight = -134;
             _bossChallengeButton.OffsetTop = -36; _bossChallengeButton.OffsetBottom = -8;
-            _bossChallengeButton.Pressed += () => { TryStartBossChallenge(); RefreshBossChallengeButton(); };
+            _bossChallengeButton.Pressed += () => StartBossChallengeFromUi();
             _validationPanel = GetNodeOrNull<Panel>(ValidationPanelPath);
             _validationTitleLabel = GetNodeOrNull<Label>(ValidationTitleLabelPath);
             _validationBodyLabel = GetNodeOrNull<Label>(ValidationBodyLabelPath);
@@ -1276,6 +1276,7 @@ namespace Xiuxian.Scripts.Game
         }
 
         public bool IsBossChallengeReady => HasDungeonCapability() && !_inBattle && _exploreProgress >= MaxProgress;
+        public bool IsInBossBattle => _inBattle && IsBossChallengeBattle();
         public bool IsRecoveringForBattle => !_inBattle && !BattleRecoveryRules.CanFight(_playerHp, _playerMaxHp);
         public string HealthRecoverySummary => $"自动休整 · 气血 {_playerHp}/{_playerMaxHp}，约 {Math.Ceiling(BattleRecoveryRules.SecondsUntilReady(_playerHp, _playerMaxHp))} 秒后可出战";
         public bool CanStartBossChallenge => IsBossChallengeReady && !IsRecoveringForBattle;
@@ -1302,6 +1303,7 @@ namespace Xiuxian.Scripts.Game
         {
             if (!CanStartBossChallenge) return false;
             bool started = TryStartBossChallenge();
+            GetParentOrNull<PrototypeRootController>()?.OperationStatistics?.RecordEvent(started ? "boss_challenge_started" : "boss_challenge_rejected");
             RefreshBossChallengeButton();
             return started;
         }

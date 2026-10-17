@@ -43,7 +43,8 @@ public partial class BookTabsController
         _inheritConfirm.Pressed += () =>
         {
             if (_inheritReviewed is not EquipmentInheritanceCheck reviewed || _exploreProgressController == null || ServiceLocator.Instance == null) return;
-            EquipmentExchangeService.TryInherit(ServiceLocator.Instance, _exploreProgressController, reviewed, out string result);
+            bool inherited = EquipmentExchangeService.TryInherit(ServiceLocator.Instance, _exploreProgressController, reviewed, out string result);
+            _operationStatistics?.RecordEvent(inherited ? "inherit_success" : "inherit_rejected");
             _inheritResult.Text = result; RefreshDynamicTabContent();
         };
         RefreshInheritanceControls();

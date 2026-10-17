@@ -268,11 +268,13 @@ namespace Xiuxian.Scripts.Game
                 GD.PushWarning("PrototypeRootController: ExploreProgressController not found under PrototypeRoot");
             }
 
+            SetupOperationStatistics();
             CallDeferred(nameof(LoadAllState));
         }
 
         public override void _ExitTree()
         {
+            CloseOperationStatistics();
             _mainBar.BookButtonPressed -= _submenu.ToggleVisible;
             _mainBar.LayoutChanged -= OnMainBarLayoutChanged;
             _submenu.VisibilityChanged -= OnSubmenuVisibilityChanged;
@@ -393,6 +395,8 @@ namespace Xiuxian.Scripts.Game
 
         private void OnSubmenuVisibilityChanged(bool isVisible)
         {
+            if (OperationStatistics?.Session?.Context.BookOpen != isVisible)
+                OperationStatistics?.RecordEvent(isVisible ? "book_open" : "book_close");
             if (isVisible)
             {
                 ServiceLocator.Instance?.GuideState?.Complete("first_book");
@@ -405,6 +409,9 @@ namespace Xiuxian.Scripts.Game
 
         private void OnBookTabsActiveTabsChanged(string leftTab, string rightTab)
         {
+            if (OperationStatistics?.Session?.Context.Page != (_submenu.Visible ? _bookTabs.ActivePageName : "closed"))
+                OperationStatistics?.RecordEvent("page_selected");
+            else OperationStatistics?.ContextChanged();
             RefreshRuntimeSettingsFromBookTabs();
             MarkDirty();
         }
