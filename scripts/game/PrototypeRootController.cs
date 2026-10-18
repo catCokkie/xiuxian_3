@@ -399,6 +399,7 @@ namespace Xiuxian.Scripts.Game
                 OperationStatistics?.RecordEvent(isVisible ? "book_open" : "book_close");
             if (isVisible)
             {
+                _bookTabs.RefreshVisibleContent();
                 ServiceLocator.Instance?.GuideState?.Complete("first_book");
                 _eventLogState?.MarkAllRead();
             }

@@ -38,18 +38,20 @@ namespace Xiuxian.Scripts.Services
         private double _retryCooldown;
 
         private WindowsInputHookPump? _hookPump;
-        private readonly object _captureLock = new();
-        private readonly ScrollInputAccumulator _globalScroll = new();
+        private readonly GlobalInputCaptureBuffer _captureBuffer = new();
         private readonly ScrollInputAccumulator _fallbackScroll = new();
 
-        // 鼠标位置追踪（用于计算移动距离）
-        private Vector2I _lastMousePosition;
-        private bool _hasLastMousePosition = false;
         private bool _warnedUnsupportedPlatform = false;
         private readonly System.Collections.Generic.Dictionary<string, float> _joyAxisSample = new();
 
         public override void _Ready()
         {
+            _activityState = GetNode<InputActivityState>(ActivityStatePath);
+            if (_activityState == null)
+            {
+                EmitSignal(SignalName.InputError, "InputActivityState not found"); return;
+            }
+            _activityState.CaptureDrainRequested += FlushCapturedInput;
             if (Array.IndexOf(OS.GetCmdlineUserArgs(), "--smoke-test") >= 0)
             {
                 SetPaused(true);
@@ -58,14 +60,6 @@ namespace Xiuxian.Scripts.Services
                 SetProcessInput(false);
                 return;
             }
-            _activityState = GetNode<InputActivityState>(ActivityStatePath);
-            if (_activityState == null)
-            {
-                GD.PushError("InputHookService: InputActivityState not found!");
-                EmitSignal(SignalName.InputError, "InputActivityState not found");
-                return;
-            }
-
             ProcessMode = ProcessModeEnum.Always;
             SetProcessInput(true);
 
@@ -100,7 +94,10 @@ namespace Xiuxian.Scripts.Services
         public override void _ExitTree()
         {
             StopHook();
+            if (_activityState != null) _activityState.CaptureDrainRequested -= FlushCapturedInput;
         }
+
+        public void FlushCapturedInput() => _activityState?.RegisterCapturedBatch(_captureBuffer.Drain());
 
         public override void _Input(InputEvent @event)
         {
@@ -201,7 +198,7 @@ namespace Xiuxian.Scripts.Services
                 return;
             }
             _hookPump?.Dispose();
-            lock (_captureLock) { _globalScroll.Reset(); _hasLastMousePosition = false; }
+            _captureBuffer.SetPaused(IsPaused);
             _fallbackScroll.Reset();
             _hookPump = new(KeyboardHookCallback, MouseHookCallback);
             if (!_hookPump.Start())
@@ -218,6 +215,7 @@ namespace Xiuxian.Scripts.Services
         public void StopHook()
         {
             _hookPump?.Dispose(); _hookPump = null;
+            FlushCapturedInput();
             bool wasActive = _isHookActive; _isHookActive = false;
             _retryCooldown = Math.Max(0.2, GlobalHookRetryIntervalSeconds);
             if (wasActive) EmitSignal(SignalName.HookStateChanged, false);
@@ -228,11 +226,8 @@ namespace Xiuxian.Scripts.Services
         /// </summary>
         public void SetPaused(bool paused)
         {
-            lock (_captureLock)
-            {
-                IsPaused = paused;
-                _globalScroll.Reset(); _hasLastMousePosition = false;
-            }
+            IsPaused = paused;
+            _captureBuffer.SetPaused(paused);
             _fallbackScroll.Reset();
             _joyAxisSample.Clear();
             // Already captured inputs settle normally; never discard their statistics on pause.
@@ -252,14 +247,13 @@ namespace Xiuxian.Scripts.Services
         /// </summary>
         private IntPtr KeyboardHookCallback(int nCode, IntPtr wParam, IntPtr lParam)
         {
-            lock (_captureLock)
-            if (nCode >= 0 && !IsPaused && _activityState != null)
+            if (nCode >= 0)
             {
                 // wParam: WM_KEYDOWN = 256, WM_KEYUP = 257, WM_SYSKEYDOWN = 260, WM_SYSKEYUP = 261
                 if (wParam == (IntPtr)WM_KEYDOWN || wParam == (IntPtr)WM_SYSKEYDOWN)
                 {
                     // 不记录具体键值 (lParam 包含虚拟键码，但我们不存储它)
-                    _activityState.RegisterKeyDown();
+                    _captureBuffer.ObserveKeyDown();
                 }
             }
 
@@ -271,37 +265,25 @@ namespace Xiuxian.Scripts.Services
         /// </summary>
         private IntPtr MouseHookCallback(int nCode, IntPtr wParam, IntPtr lParam)
         {
-            lock (_captureLock)
-            if (nCode >= 0 && !IsPaused && _activityState != null)
+            if (nCode >= 0)
             {
-                // 解析鼠标结构
-                var mouseInfo = Marshal.PtrToStructure<MSLLHOOKSTRUCT>(lParam);
-                var currentPos = new Vector2I(mouseInfo.pt.x, mouseInfo.pt.y);
-
                 switch ((int)wParam)
                 {
                     case WM_LBUTTONDOWN:
                     case WM_RBUTTONDOWN:
                     case WM_MBUTTONDOWN:
                     case WM_XBUTTONDOWN:
-                        _activityState.RegisterMouseClick();
+                        _captureBuffer.ObserveClick();
                         break;
 
                     case WM_MOUSEWHEEL:
                     case WM_MOUSEHWHEEL:
-                        int delta = (short)((mouseInfo.mouseData >> 16) & 0xFFFF);
-                        int steps = _globalScroll.AddWindowsDelta(delta, (int)wParam == WM_MOUSEHWHEEL);
-                        _activityState.RegisterMouseScroll(steps);
+                        int delta = (short)((uint)Marshal.ReadInt32(lParam, 8) >> 16);
+                        _captureBuffer.ObserveScroll(delta, (int)wParam == WM_MOUSEHWHEEL);
                         break;
 
                     case WM_MOUSEMOVE:
-                        if (_hasLastMousePosition)
-                        {
-                            double distance = _lastMousePosition.DistanceTo(currentPos);
-                            _activityState.RegisterMouseMove(distance);
-                        }
-                        _lastMousePosition = currentPos;
-                        _hasLastMousePosition = true;
+                        _captureBuffer.ObserveMouseMove(Marshal.ReadInt32(lParam), Marshal.ReadInt32(lParam, 4));
                         break;
                 }
             }
@@ -331,23 +313,6 @@ namespace Xiuxian.Scripts.Services
         private const int WM_MBUTTONDOWN = 0x0207;
         private const int WM_MBUTTONUP = 0x0208;
         private const int WM_XBUTTONDOWN = 0x020B;
-
-        [StructLayout(LayoutKind.Sequential)]
-        private struct POINT
-        {
-            public int x;
-            public int y;
-        }
-
-        [StructLayout(LayoutKind.Sequential)]
-        private struct MSLLHOOKSTRUCT
-        {
-            public POINT pt;
-            public uint mouseData;
-            public uint flags;
-            public uint time;
-            public IntPtr dwExtraInfo;
-        }
 
         [DllImport("user32.dll", SetLastError = true)]
         private static extern IntPtr CallNextHookEx(IntPtr hhk, int nCode, IntPtr wParam, IntPtr lParam);

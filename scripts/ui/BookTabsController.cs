@@ -179,6 +179,9 @@ public partial class BookTabsController : Control
     private string _lastSimulationSummary = "";
     private string _activeShopCategory = ShopRules.CategoryConsumables;
     private double _livePanelRefreshAccumulator;
+    private double _dynamicRefreshAge;
+    private bool _dynamicRefreshPending;
+    private const double DynamicRefreshIntervalSeconds = 0.25;
     private int _pendingDeleteSlotId;
     private readonly Dictionary<int, Label> _saveSlotSummaryLabels = new();
     private readonly Dictionary<int, Button> _saveSlotLoadButtons = new();
@@ -344,30 +347,21 @@ public partial class BookTabsController : Control
 
     public override void _Process(double delta)
     {
-        if (!IsVisibleInTree())
-        {
-            return;
-        }
-
+        if (!IsVisibleInTree()) return;
+        _dynamicRefreshAge += delta;
         _livePanelRefreshAccumulator += delta;
-        if (_livePanelRefreshAccumulator < 1.0)
+        if (_livePanelRefreshAccumulator >= 1.0)
         {
-            return;
+            _livePanelRefreshAccumulator = 0;
+            RefreshProductionControls();
+            if (ActivePageName == "SettingsTab" && _activeSettingsSection == "privacy") UpdatePrivacySectionState();
+            if (!_isShowingRightTab && (ActiveLeftTabName == "CultivationTab" || ActiveLeftTabName == "ShopTab"))
+                _dynamicRefreshPending = true;
         }
-
-        _livePanelRefreshAccumulator = 0.0;
-        RefreshProductionControls();
-        if (ActivePageName == "SettingsTab" && _activeSettingsSection == "privacy")
+        if (_dynamicRefreshPending && _dynamicRefreshAge >= DynamicRefreshIntervalSeconds)
         {
-            UpdatePrivacySectionState();
-            return;
-        }
-
-        if (_isShowingRightTab) return;
-
-        if (ActiveLeftTabName == "CultivationTab" || ActiveLeftTabName == "ShopTab")
-        {
-            RefreshDynamicTabContent();
+            RefreshCoinLabel(); RefreshDynamicTabContent();
+            if (ActivePageName == "SettingsTab" && _activeSettingsSection == "privacy") UpdatePrivacySectionState();
         }
     }
 
@@ -574,8 +568,7 @@ public partial class BookTabsController : Control
 
     private void OnActivityTick(double apThisSecond, double apFinal, double activeSecondsThisBatch)
     {
-        RefreshDynamicTabContent();
-        UpdatePrivacySectionState();
+        RequestDynamicRefresh();
     }
 
     private void OnInventoryChanged(string itemId, int amount, int newTotal)
@@ -590,8 +583,7 @@ public partial class BookTabsController : Control
 
     private void OnWalletChanged(double lingqi, double insight, int spiritStones)
     {
-        RefreshCoinLabel();
-        RefreshDynamicTabContent();
+        RequestDynamicRefresh();
     }
 
     private void OnPlayerStatsChanged()
@@ -601,7 +593,7 @@ public partial class BookTabsController : Control
 
     private void OnAlchemyChanged(string selectedRecipeId, float currentProgress, float requiredProgress)
     {
-        RefreshDynamicTabContent();
+        RequestDynamicRefresh();
     }
 
     private void OnPotionInventoryChanged(string potionId, int amount, int newTotal)
@@ -611,37 +603,37 @@ public partial class BookTabsController : Control
 
     private void OnSmithingChanged(string targetEquipmentId, float currentProgress, float requiredProgress)
     {
-        RefreshDynamicTabContent();
+        RequestDynamicRefresh();
     }
 
     private void OnGardenChanged(string selectedRecipeId, float currentProgress, float requiredProgress)
     {
-        RefreshDynamicTabContent();
+        RequestDynamicRefresh();
     }
 
     private void OnMiningChanged(string selectedRecipeId, float currentProgress, float requiredProgress, int currentDurability)
     {
-        RefreshDynamicTabContent();
+        RequestDynamicRefresh();
     }
 
     private void OnFishingChanged(string selectedRecipeId, float currentProgress, float requiredProgress)
     {
-        RefreshDynamicTabContent();
+        RequestDynamicRefresh();
     }
 
     private void OnFormationChanged(string selectedRecipeId, float currentProgress, float requiredProgress)
     {
-        RefreshDynamicTabContent();
+        RequestDynamicRefresh();
     }
 
     private void OnGenericRecipeChanged(string selectedRecipeId, float currentProgress, float requiredProgress)
     {
-        RefreshDynamicTabContent();
+        RequestDynamicRefresh();
     }
 
     private void OnRealmProgressChanged(int realmLevel, double realmExp, double realmExpRequired)
     {
-        RefreshDynamicTabContent();
+        RequestDynamicRefresh();
     }
 
     private void OnShopChanged()
@@ -651,7 +643,7 @@ public partial class BookTabsController : Control
 
     private void OnEventLogChanged()
     {
-        if (!_isShowingRightTab && ActiveLeftTabName == "BattleLogTab")
+        if (IsVisibleInTree() && !_isShowingRightTab && ActiveLeftTabName == "BattleLogTab")
         {
             _eventLogState?.MarkAllRead();
         }
@@ -669,8 +661,23 @@ public partial class BookTabsController : Control
         RefreshDynamicTabContent();
     }
 
+    private void RequestDynamicRefresh() => _dynamicRefreshPending = true;
+
+    public void RefreshVisibleContent()
+    {
+        if (!IsVisibleInTree()) return;
+        RefreshCoinLabel(); RefreshDynamicTabContent(); UpdatePrivacySectionState();
+    }
+
     private void RefreshDynamicTabContent()
     {
+        if (!IsVisibleInTree())
+        {
+            // Sticky unlock history is gameplay state; retain it even while skipping page construction.
+            RefreshStickyTabUnlocks(); _dynamicRefreshPending = true; return;
+        }
+        _dynamicRefreshPending = false; _dynamicRefreshAge = 0;
+        DynamicContentRefreshCount++;
         RefreshUnlockedTabs();
         RefreshProductionControls();
 
@@ -709,6 +716,8 @@ public partial class BookTabsController : Control
             }
         }
     }
+
+    public long DynamicContentRefreshCount { get; private set; }
 
     private string GetLeftTabContent(string tabName)
     {

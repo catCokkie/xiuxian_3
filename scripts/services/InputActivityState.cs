@@ -11,6 +11,8 @@ namespace Xiuxian.Scripts.Services
     public partial class InputActivityState : Node, IDictionaryPersistable
     {
         public event System.Action<OperationInputObservation>? StatisticsObserved;
+        // Invoked only on the game thread, including explicit statistics/session boundaries.
+        public event System.Action? CaptureDrainRequested;
         // Process-lifetime raw input count, deliberately excluded from save loading.
         public long SessionRawInputCount { get; private set; }
         [Signal]
@@ -75,6 +77,7 @@ namespace Xiuxian.Scripts.Services
         // Calling this only when pending data exists keeps logging controls from emitting idle ticks.
         public void FlushPendingInput()
         {
+            CaptureDrainRequested?.Invoke();
             lock (_pendingLock)
             {
                 if (_pendingKeyDown == 0 && _pendingMouseClick == 0 && _pendingMouseScroll == 0
@@ -85,6 +88,7 @@ namespace Xiuxian.Scripts.Services
 
         public override void _Process(double delta)
         {
+            CaptureDrainRequested?.Invoke();
             _runtimeSeconds += delta;
             SecondsSinceLastInput += delta;
             PruneAcceptedInputWindow();
@@ -156,6 +160,22 @@ namespace Xiuxian.Scripts.Services
             if (acceptedInputCount > 0)
             {
                 EmitSignal(SignalName.InputBatchTick, InputEventsThisSecond, ApFinal);
+            }
+        }
+
+        public void RegisterCapturedBatch(CapturedInputBatch batch)
+        {
+            int keys = System.Math.Max(0, batch.Keys), clicks = System.Math.Max(0, batch.Clicks), scroll = System.Math.Max(0, batch.Scroll);
+            double move = double.IsFinite(batch.MouseDistance) ? System.Math.Max(0, batch.MouseDistance) : 0;
+            if (keys == 0 && clicks == 0 && scroll == 0 && move == 0) return;
+            lock (_pendingLock)
+            {
+                MarkInputActivity();
+                _pendingKeyDown += keys; TotalKeyDownCount += keys;
+                _pendingMouseClick += clicks; TotalMouseClickCount += clicks;
+                _pendingMouseScroll += scroll; TotalMouseScrollSteps += scroll;
+                _pendingMouseMove += move; TotalMouseMoveDistancePx += move;
+                SessionRawInputCount += (long)keys + clicks + scroll;
             }
         }
 

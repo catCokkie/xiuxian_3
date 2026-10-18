@@ -10,6 +10,35 @@ namespace Xiuxian.Scripts.Tests;
 
 public partial class GameplaySmokeTest
 {
+    private void RunMousePerformanceChecks(PrototypeRootController root, ServiceLocator s)
+    {
+        var tabs = Descendants(root).OfType<BookTabsController>().Single();
+        var book = Descendants(root).OfType<SubmenuWindowController>().Single();
+        tabs.RestoreActivePage("CultivationTab");
+        foreach (bool visible in new[] { false, true })
+        {
+            book.Visible = visible;
+            long beforeRefreshes = tabs.DynamicContentRefreshCount;
+            double beforeDistance = s.InputActivityState!.TotalMouseMoveDistancePx;
+            long beforeBytes = GC.GetAllocatedBytesForCurrentThread();
+            var clock = System.Diagnostics.Stopwatch.StartNew();
+            for (int i = 0; i < 120; i++)
+            {
+                s.InputActivityState!.RegisterMouseMove(10); s.InputActivityState._Process(1.0 / 60);
+                tabs._Process(1.0 / 60);
+            }
+            GD.Print($"MOUSE PERF: visible={visible} frames=120 refreshes={tabs.DynamicContentRefreshCount - beforeRefreshes} allocated_bytes={GC.GetAllocatedBytesForCurrentThread() - beforeBytes} elapsed_ms={clock.Elapsed.TotalMilliseconds:0.###}");
+            long refreshes = tabs.DynamicContentRefreshCount - beforeRefreshes;
+            Check(visible ? refreshes is > 0 and <= 8 : refreshes == 0,
+                "mouse performance: " + (visible ? "visible status updates are coalesced to at most four per second" : "hidden book performs no dynamic page rebuilds"));
+            Check(Math.Abs(s.InputActivityState.TotalMouseMoveDistancePx - beforeDistance - 1200) < .001,
+                "mouse performance: UI throttling preserves all sampled movement distance");
+        }
+        book.Visible = false; s.ResourceWalletState!.AddLingqi(1);
+        long beforeOpen = tabs.DynamicContentRefreshCount; book.SetVisibleImmediate(true);
+        Check(tabs.DynamicContentRefreshCount > beforeOpen, "mouse performance: opening the book immediately refreshes current state");
+    }
+
     private void RunOperationStatisticsChecks(PrototypeRootController root, ExploreProgressController controller, ServiceLocator s)
     {
         var recorder = root.OperationStatistics!; var input = s.InputActivityState!;
@@ -114,6 +143,21 @@ public partial class GameplaySmokeTest
                 && rows.Where(x => x.Kind == "sample").Sum(x => x.Counts.RawTotal) == 19, "capture: stopping before next frame preserves exact disk and session totals");
             input._Process(1);
             Check(recorder.Session.Totals.RawTotal == 19, "capture: stopped recording never duplicates a flushed tail");
+            var buffer = (GlobalInputCaptureBuffer)typeof(InputHookService).GetField("_captureBuffer", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!.GetValue(hook)!;
+            recorder.Start(BookTabsController.OperationStatisticsDirectory());
+            long beforeBuffered = input.SessionRawInputCount;
+            buffer.ObserveKeyDown(); buffer.ObserveKeyDown(); buffer.ObserveClick();
+            for (int i = 0; i < 4; i++) buffer.ObserveScroll(30, true);
+            buffer.ObserveMouseMove(0, 0); buffer.ObserveMouseMove(3, 4);
+            Check(input.SessionRawInputCount == beforeBuffered, "capture: hook-side accumulation never directly mutates game state");
+            recorder.Export();
+            Check(recorder.Session!.Totals.RawTotal == 4 && recorder.Session.Totals.MouseDistance == 5
+                && input.SessionRawInputCount == beforeBuffered + 4, "capture: export drains asynchronous counts and exact screen distance before settlement");
+            input._Process(1);
+            Check(recorder.Session.Totals.RawTotal == 4, "capture: drained hook batch is not duplicated by the next game frame");
+            buffer.ObserveKeyDown(); buffer.ObserveKeyDown(); hook.SetPaused(true); buffer.ObserveKeyDown(); recorder.Stop();
+            Check(recorder.Session.Totals.RawTotal == 6, "capture: pause and stop preserve buffered tail while rejecting new hook input");
+            hook.SetPaused(false);
             input.ResetCurrentTick(); input.MaxInputPerMinute = 3;
             for (int i = 0; i < 3; i++) input.RegisterKeyDown(); input._Process(1);
             hook.SetPaused(true); hook.SetPaused(false); input.RegisterKeyDown(); input._Process(1);
