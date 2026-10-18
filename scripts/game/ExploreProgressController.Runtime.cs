@@ -1355,6 +1355,7 @@ namespace Xiuxian.Scripts.Game
 
             double required = Mathf.Max(1.0f, (float)_playerProgressState.RealmExpRequired);
             double percent = _playerProgressState.RealmExp / required * 100.0;
+            _realmStageLabel.TooltipText = $"经验 {_playerProgressState.RealmExp:0.##} / {_playerProgressState.RealmExpRequired:0.##}；百分比保留一位小数，突破扣除本层需求后保留余量。";
             _realmStageLabel.Text = _playerProgressState.IsAtContentLimit
                 ? (_playerProgressState.RealmLevel == 10 ? "筑基初成" : RealmBreakthroughRules.DisplayName(_playerProgressState.RealmLevel))
                 : UiText.RealmStage(_playerProgressState.RealmLevel, percent);

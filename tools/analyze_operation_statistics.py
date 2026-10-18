@@ -3,13 +3,42 @@ import argparse
 import collections
 import csv
 import json
+import math
 from pathlib import Path
+
+
+def reconcile_experience(rows):
+    start = rows[0].get("Metadata") or {}
+    fields = ("process_input_experience", "process_effective_inputs", "process_online_basic_experience")
+    if not all(name in start for name in (*fields, "base_input_experience_rate", "cultivation_input_experience_rate")):
+        return None  # Legacy logs cannot prove actual experience settlement.
+    snapshots = [(index, r) for index, r in enumerate(rows) if r["Kind"] in ("checkpoint", "session_end")
+                 and all(name in (r.get("Metadata") or {}) for name in fields)]
+    if not snapshots:
+        return None
+    index, snapshot = snapshots[-1]
+    samples = [r for r in rows[:index] if r["Kind"] == "sample"]
+    expected = 0
+    for sample in samples:
+        cultivation = sample["Context"]["Action"] == "cultivation" and start.get("cultivation_input_bonus_enabled", "").lower() == "true"
+        rate = float(start["cultivation_input_experience_rate" if cultivation else "base_input_experience_rate"])
+        expected += sample["Counts"]["AcceptedTotal"] * rate
+    end = snapshot["Metadata"]
+    actual = float(end["process_input_experience"]) - float(start["process_input_experience"])
+    effective = sum(r["Counts"]["AcceptedTotal"] for r in samples)
+    actual_effective = int(end["process_effective_inputs"]) - int(start["process_effective_inputs"])
+    return {"Session": rows[0]["Session"], "SnapshotKind": snapshot["Kind"], "ThroughSeconds": snapshot["EndSeconds"],
+            "EffectiveInputs": effective, "ActualEffectiveInputs": actual_effective,
+            "ExpectedInputExperience": expected, "ActualInputExperience": actual, "Difference": actual - expected,
+            "OnlineBasicExperience": float(end["process_online_basic_experience"]) - float(start["process_online_basic_experience"]),
+            "Balanced": effective == actual_effective and math.isclose(expected, actual, rel_tol=0, abs_tol=1e-7)}
 
 
 def analyze(paths):
     groups = {}
     sessions = set()
     warnings = []
+    experience = []
     numeric = ("Keys", "Clicks", "Scroll", "JoyButtons", "JoyAxes", "AcceptedKeys", "AcceptedClicks",
                "AcceptedScroll", "AcceptedJoyButtons", "AcceptedJoyAxes", "MouseDistance", "RawAp", "AcceptedAp", "ActiveSeconds")
     for path in sorted({Path(p).resolve() for p in paths}):
@@ -32,6 +61,11 @@ def analyze(paths):
         if any(r["Session"] != session_id for r in rows):
             raise ValueError(f"{path}: multiple session IDs in one file")
         sessions.add(session_id)
+        reconciliation = reconcile_experience(rows)
+        if reconciliation is not None:
+            experience.append(reconciliation)
+            if not reconciliation["Balanced"]:
+                warnings.append(f"{path.name}: input experience or effective count differs from the saved settlement snapshot")
         ends = [r for r in rows if r["Kind"] == "session_end"]
         samples = [r for r in rows if r["Kind"] == "sample"]
         if not ends:
@@ -66,11 +100,13 @@ def analyze(paths):
         group["LimitedFraction"] = round(group["LimitedTotal"] / group["RawTotal"], 6) if group["RawTotal"] else 0
         group["Events"] = dict(sorted(group["Events"].items()))
         result.append(group)
-    return {"Sessions": len(sessions), "Groups": result, "Warnings": warnings,
+    return {"Sessions": len(sessions), "Groups": result, "ExperienceComparisons": experience, "Warnings": warnings,
             "Notes": "Scenario is self-reported. Counts are input events, not characters or productivity. "
                      "Mouse distance is separate. Events are selected game transitions/outcomes, not total UI clicks. "
                      "Seconds are monotonic recording time, including idle/suspend gaps while process remains alive; not measured work time. "
-                     "Unfinished sessions may lose the last unsaved partial bucket."}
+                     "Unfinished sessions may lose the last unsaved partial bucket. "
+                     "Experience comparisons require a start and export/end counter snapshot, cover only through that snapshot, "
+                     "and separate online time growth from input experience. Legacy logs cannot prove actual experience gains."}
 
 
 def main():
@@ -94,6 +130,9 @@ def main():
           f"Raw={sum(g['RawTotal'] for g in report['Groups'])} Effective={sum(g['AcceptedTotal'] for g in report['Groups'])}")
     for warning in report["Warnings"]:
         print("WARNING: " + warning)
+    for comparison in report["ExperienceComparisons"]:
+        print(f"Experience[{comparison['Session']}] expected={comparison['ExpectedInputExperience']:.6f} "
+              f"actual={comparison['ActualInputExperience']:.6f} balanced={comparison['Balanced']}")
     print(args.output)
 
 

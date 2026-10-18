@@ -9,6 +9,19 @@ public class OperationStatisticsTests
     private static OperationInputObservation Input(double seconds = 1) => new(seconds, new(10, 2, 3, 4, 1), new(5, 1, 1, 2, 1), 600, 21.4, 11.6, Math.Min(seconds, 1));
 
     [Fact]
+    public void ExperienceCheckpointsAreNonAdditiveAndEndMetadataKeepsFinalSnapshot()
+    {
+        var rows = new List<OperationStatisticsRow>(); var session = new OperationStatisticsSession(rows.Add, Context(), new());
+        session.Observe(Input()); session.Flush();
+        session.RecordCheckpoint(new() { ["process_input_experience"] = "2.8" });
+        session.Stop(new() { ["process_input_experience"] = "2.8" });
+        Assert.Equal(20, rows.Where(r => r.Kind == "sample").Sum(r => r.Counts.RawTotal));
+        var snapshot = Assert.Single(rows.Where(r => r.Kind == "checkpoint"));
+        Assert.Equal(0, snapshot.Counts.RawTotal); Assert.Equal("2.8", snapshot.Metadata!["process_input_experience"]);
+        Assert.Equal("2.8", rows.Last().Metadata!["process_input_experience"]);
+    }
+
+    [Fact]
     public void SeparatesOriginalEffectiveLimitedAndMovement()
     {
         var rows = new List<OperationStatisticsRow>(); var session = new OperationStatisticsSession(rows.Add, Context(), new());

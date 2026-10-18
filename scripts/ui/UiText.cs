@@ -136,7 +136,7 @@ public static class UiText
     public const string NextLevelQuickButton = "下一副本";
 
     public static string SpiritStone(int amount) => $"{SpiritStoneLabelPrefix} {amount}";
-    public static string RealmStage(int realmLevel, double percent) => $"{RealmBreakthroughRules.DisplayName(realmLevel)} {percent:0}%";
+    public static string RealmStage(int realmLevel, double percent) => $"{RealmBreakthroughRules.DisplayName(realmLevel)} {percent:0.0}%";
     public static string BatchInputAndAp(int inputEvents, double apFinal) => $"本批输入 {inputEvents} | 本批AP(资源) {apFinal:0.0}";
     public static string MasterySystemName(string systemId) => systemId switch
     {

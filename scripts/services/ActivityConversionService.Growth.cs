@@ -18,6 +18,7 @@ namespace Xiuxian.Scripts.Services
         {
             var result = ClaimBasicGrowth(nowUnix);
             _walletState.AddLingqi(result.LingqiGain); _walletState.AddInsight(result.InsightGain); _progressState.AddRealmExp(result.RealmExpGain);
+            SessionOnlineBasicGrowthExperience += result.RealmExpGain;
             // No input events, active-time cycles, meals, production, battles or notifications are synthesized.
             return result;
         }

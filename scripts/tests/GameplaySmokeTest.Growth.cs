@@ -70,7 +70,9 @@ namespace Xiuxian.Scripts.Tests
             Check(!(bool)applyOffline.Invoke(root, null)! && player.RealmExp == exp, "shared growth: root repeat-offline guard prevents a second settlement");
             tabs.RestoreActiveTabs("CultivationTab", "BugTab");
             var label = (Label)tabs.FindChild("HomeBasicGrowth", true, false);
-            Check(label.Text.Contains("线上线下共用") && label.Text.Contains("2.24"), "shared growth UI: simple home line reflects the persisted current rate");
+            Check(label.TooltipText.Contains("线上线下") && label.Text.Contains("2.24")
+                && label.Text.Contains(s.ActivityConversionService!.CurrentInputExperienceRate.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)),
+                "shared growth UI: home distinguishes shared time growth from the current input experience rate: " + label.Text);
             Reset(); Seed(now - 3600, 28800); s.PlayerActionState.SetAction("talisman");
             s.TalismanState.FromDictionary(new()); s.TalismanState.SelectRecipe("talisman_fire_charm"); s.TalismanState.Production.Start(true, 1);
             s.FormationState!.FromDictionary(new()); s.CookingState.FromDictionary(new());

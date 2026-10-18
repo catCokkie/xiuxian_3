@@ -15,6 +15,7 @@ namespace Xiuxian.Scripts.Services
         public event System.Action? CaptureDrainRequested;
         // Process-lifetime raw input count, deliberately excluded from save loading.
         public long SessionRawInputCount { get; private set; }
+        public long SessionAcceptedInputCount { get; private set; }
         [Signal]
         public delegate void ActivityTickEventHandler(double apThisBatch, double apFinal, double activeSecondsThisBatch);
 
@@ -115,6 +116,7 @@ namespace Xiuxian.Scripts.Services
                 rawDiscreteBatch,
                 remainingAllowance);
             int acceptedInputCount = acceptedDiscreteBatch.TotalCount;
+            SessionAcceptedInputCount += acceptedInputCount;
             double acceptedAp = InputActivityRules.CalculateRawAp(
                 acceptedDiscreteBatch,
                 moveBatch,
@@ -155,7 +157,8 @@ namespace Xiuxian.Scripts.Services
                 StatisticsObserved.Invoke(new(delta, rawDiscreteBatch, acceptedDiscreteBatch, moveBatch, rawAp, acceptedAp, activeSeconds));
             }
 
-            if (activeSeconds > 0.0) EmitSignal(SignalName.ActivityTick, ApThisSecond, ApFinal, activeSeconds);
+            if (activeSeconds > 0.0 || acceptedInputCount > 0 || acceptedAp > 0)
+                EmitSignal(SignalName.ActivityTick, ApThisSecond, ApFinal, activeSeconds);
             if (acceptedInputCount > 0 || acceptedAp > 0) ServiceLocator.Instance?.GuideState?.Complete("first_input");
             if (acceptedInputCount > 0)
             {

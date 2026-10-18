@@ -233,10 +233,13 @@ public partial class BookTabsController
         _homeRealmProgress!.Visible = !capped;
         _cultivationBreakthroughButton.Visible = !capped;
         _homeRealmProgress!.Value = Math.Clamp(percent, 0, 100);
+        _homeRealm.TooltipText = _homeRealmProgress.TooltipText = $"当前经验 {_playerProgressState.RealmExp:0.##} / 本层需求 {_playerProgressState.RealmExpRequired:0.##}。百分比保留一位小数；突破会扣除本层需求，溢出经验保留。";
         _homeResources!.Text = $"灵气 {_resourceWalletState?.Lingqi ?? 0:N0}    悟性 {_resourceWalletState?.Insight ?? 0:N0}    灵石 {_resourceWalletState?.SpiritStones ?? 0:N0}";
         double basicRate = (ServiceLocator.Instance?.ActivityConversionService?.GrowthClock.InputsPerMinute ?? 12) * GameBalanceConstants.ResourceConversion.BaseExpPerInput;
         bool clockPending = (ServiceLocator.Instance?.ActivityConversionService?.GrowthClock.LastSettledUnix ?? 0) > Time.GetUnixTimeFromSystem() + 1;
-        _homeBasicGrowth!.Text = clockPending ? "静修等待时间恢复 · 输入收益照常" : $"静修持续 · 基础经验约 {basicRate:0.##}/分钟 · 线上线下共用";
+        double inputExp = ServiceLocator.Instance?.ActivityConversionService?.CurrentInputExperienceRate ?? 0;
+        _homeBasicGrowth!.Text = (clockPending ? "静修等待时间恢复" : $"静修经验约 {basicRate:0.##}/分钟 · 线上线下共用")
+            + $" · 当前有效输入 +{inputExp:0.##}经验/次";
         _cultivationStatusLabel.AddThemeColorOverride("font_color", new Color("705334"));
         if (capped) _cultivationStatusLabel.Text = "本篇境界已达上限，继续修行的经验会保留；可查看篇章回顾与收藏。";
         else if (!_playerProgressState.HasRequiredBossClear) _cultivationStatusLabel.Text = "突破筑基前，需要击败当前阶段的最终 Boss。";

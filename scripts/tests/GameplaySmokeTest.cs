@@ -30,6 +30,10 @@ namespace Xiuxian.Scripts.Tests
                 var s = ServiceLocator.Instance!;
                 var root = GetNode<PrototypeRootController>("PrototypeRoot");
                 var controller = root.GetNode<ExploreProgressController>("ExploreProgressController");
+                if (Array.IndexOf(OS.GetCmdlineUserArgs(), "--experience-smoke") >= 0)
+                {
+                    RunInputExperienceChecks(root, s); GD.Print($"EXPERIENCE SUCCESS: {_checks} checks"); GetTree().Quit(0); return;
+                }
                 if (Array.IndexOf(OS.GetCmdlineUserArgs(), "--mouse-performance-smoke") >= 0)
                 {
                     RunMousePerformanceChecks(root, s); GD.Print($"MOUSE PERFORMANCE SUCCESS: {_checks} checks"); GetTree().Quit(0); return;
@@ -194,6 +198,7 @@ namespace Xiuxian.Scripts.Tests
                 RunInheritanceChecks(root, controller, s);
                 RunOperationStatisticsChecks(root, controller, s);
                 RunMousePerformanceChecks(root, s);
+                RunInputExperienceChecks(root, s);
                 GD.Print($"SMOKE SUCCESS: {_checks} checks");
                 if (Array.IndexOf(OS.GetCmdlineUserArgs(), "--render-smoke") >= 0) CaptureUi(root);
                 else GetTree().Quit(0);

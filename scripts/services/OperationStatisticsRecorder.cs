@@ -73,7 +73,7 @@ public sealed class OperationStatisticsRecorder : IDisposable
             _input.FlushPendingInput();
             if (!IsRecording) return; // A write failure during the boundary flush already closed the file.
             Session!.Observe(new(Math.Max(0, _clock.Elapsed.TotalSeconds - _lastObservedSeconds), default, default, 0, 0, 0, 0));
-            Session.Stop(); Status = "统计已停止，日志已保留。";
+            Session.Stop(_metadata()); Status = "统计已停止，日志已保留。";
         }
         catch (Exception ex) when (IsFileError(ex)) { Status = "统计保存失败：" + ex.Message; }
         finally { Close(); }
@@ -82,7 +82,11 @@ public sealed class OperationStatisticsRecorder : IDisposable
     {
         try
         {
-            if (IsRecording) { _input.FlushPendingInput(); if (IsRecording) Session!.Flush(); }
+            if (IsRecording)
+            {
+                _input.FlushPendingInput();
+                if (IsRecording) { Session!.Flush(); Session.RecordCheckpoint(_metadata()); }
+            }
             if (LastPath.Length == 0) { Status = "请先开始一次统计。"; return ""; }
             string path = OperationStatisticsFile.ExportCsv(LastPath);
             Status = "CSV已导出：" + path; return path;

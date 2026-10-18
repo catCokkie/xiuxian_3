@@ -10,6 +10,78 @@ namespace Xiuxian.Scripts.Tests;
 
 public partial class GameplaySmokeTest
 {
+    private void RunInputExperienceChecks(PrototypeRootController root, ServiceLocator s)
+    {
+        var input = s.InputActivityState!; var player = s.PlayerProgressState!;
+        var recorder = root.OperationStatistics!; var action = s.PlayerActionState!;
+        var savedInput = input.ToDictionary(); var savedPlayer = player.ToDictionary(); var savedAction = action.ToDictionary();
+        var savedGrowth = s.ActivityConversionService!.ToDictionary();
+        int oldLimit = input.MaxInputPerMinute; bool oldAuto = player.AutoBreakthrough;
+        var conversion = s.ActivityConversionService!;
+        try
+        {
+            recorder.Stop(); player.AutoBreakthrough = false; input.MaxInputPerMinute = 600;
+            foreach (string mode in new[] { "cultivation", "dungeon" })
+            {
+                action.SetAction(mode); input.ResetCurrentTick();
+                double before = player.RealmExp; double activeBefore = input.TotalActiveSeconds;
+                for (int i = 0; i < 20; i++) input.RegisterKeyDown();
+                input.FlushPendingInput();
+                double expected = 20 * (mode == "cultivation" ? .35 : .28);
+                Check(Math.Abs(player.RealmExp - before - expected) < .000001,
+                    $"experience: {mode} zero-time boundary grants the same input experience ({expected}) as a normal frame; actual {player.RealmExp - before}");
+                Check(input.TotalActiveSeconds == activeBefore, "experience: boundary settlement never manufactures active time");
+                input._Process(1);
+                Check(Math.Abs(player.RealmExp - before - expected) < .000001, "experience: next frame never pays a boundary batch twice");
+            }
+            action.SetAction("cultivation");
+            foreach (string boundary in new[] { "start", "export", "stop" })
+            {
+                recorder.Stop(); input.ResetCurrentTick();
+                if (boundary != "start") recorder.Start(BookTabsController.OperationStatisticsDirectory());
+                double before = player.RealmExp, paidBefore = conversion.SessionInputExperience;
+                for (int i = 0; i < 20; i++) input.RegisterKeyDown();
+                if (boundary == "start") recorder.Start(BookTabsController.OperationStatisticsDirectory());
+                else if (boundary == "export") recorder.Export();
+                else recorder.Stop();
+                Check(Math.Abs(player.RealmExp - before - 7) < .000001
+                    && Math.Abs(conversion.SessionInputExperience - paidBefore - 7) < .000001,
+                    "experience: actual statistics " + boundary + " preserves all input experience and attribution");
+                recorder.Stop();
+                var rows = File.ReadLines(recorder.LastPath).Select(x => JsonSerializer.Deserialize<OperationStatisticsRow>(x)!).ToArray();
+                double startPaid = double.Parse(rows[0].Metadata!["process_input_experience"], System.Globalization.CultureInfo.InvariantCulture);
+                double endPaid = double.Parse(rows.Last().Metadata!["process_input_experience"], System.Globalization.CultureInfo.InvariantCulture);
+                Check(Math.Abs(endPaid - startPaid - (boundary == "start" ? 0 : 7)) < .000001,
+                    "experience: log snapshots reconcile only the recording interval for " + boundary);
+                if (boundary == "export") Check(rows.Any(x => x.Kind == "checkpoint" && x.Metadata!.ContainsKey("process_input_experience")),
+                    "experience: live export persists a non-additive experience checkpoint");
+            }
+            input.ResetCurrentTick(); input.MaxInputPerMinute = 5;
+            double cappedBefore = player.RealmExp; long acceptedBefore = input.SessionAcceptedInputCount;
+            for (int i = 0; i < 20; i++) input.RegisterKeyDown(); input.FlushPendingInput();
+            Check(Math.Abs(player.RealmExp - cappedBefore - 1.75) < .000001 && input.SessionAcceptedInputCount - acceptedBefore == 5,
+                "experience: capped boundary rewards only five effective inputs rather than twenty raw inputs");
+            input.RegisterKeyDown(); input.FlushPendingInput();
+            Check(Math.Abs(player.RealmExp - cappedBefore - 1.75) < .000001, "experience: exhausted input allowance does not grant extra experience");
+            input.ResetCurrentTick(); double movementBefore = player.RealmExp, qiBefore = s.ResourceWalletState!.Lingqi;
+            input.RegisterMouseMove(600); input.FlushPendingInput();
+            Check(player.RealmExp == movementBefore && s.ResourceWalletState.Lingqi > qiBefore,
+                "experience: movement-only boundary grants AP resources without fabricating key experience");
+            double growthBefore = conversion.SessionOnlineBasicGrowthExperience;
+            if (conversion.GrowthClock.LastSettledUnix <= 0) conversion.GrowthClock.Claim(Time.GetUnixTimeFromSystem());
+            double claimAt = Math.Max(Time.GetUnixTimeFromSystem(), conversion.GrowthClock.LastSettledUnix) + 10;
+            var growth = conversion.ApplyOnlineBasicGrowth(claimAt);
+            Check(growth.RealmExpGain > 0 && Math.Abs(conversion.SessionOnlineBasicGrowthExperience - growthBefore - growth.RealmExpGain) < .000001,
+                "experience: actual online time growth is attributed separately from input experience");
+        }
+        finally
+        {
+            recorder.Stop(); input.MaxInputPerMinute = oldLimit; player.AutoBreakthrough = oldAuto;
+            input.FromDictionary(savedInput); player.FromDictionary(savedPlayer); action.FromDictionary(savedAction); input.ResetCurrentTick();
+            conversion.FromDictionary(savedGrowth);
+        }
+    }
+
     private void RunMousePerformanceChecks(PrototypeRootController root, ServiceLocator s)
     {
         var tabs = Descendants(root).OfType<BookTabsController>().Single();

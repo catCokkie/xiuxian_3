@@ -32,6 +32,11 @@ namespace Xiuxian.Scripts.Services
         private PlayerProgressState _progressState = null!;
         private CultivationRhythmState? _rhythmState;
         private PlayerActionState _actionState = null!;
+        // Process-local attribution counters; never restored from player saves.
+        public double SessionInputExperience { get; private set; }
+        public double SessionOnlineBasicGrowthExperience { get; private set; }
+        public double CurrentInputExperienceRate => CultivationInputExpEnabled && _actionState?.ActionId == PlayerActionState.ActionCultivation
+            ? CultivationExpPerInput : BaseExpPerInput;
 
         public override void _Ready()
         {
@@ -82,7 +87,8 @@ namespace Xiuxian.Scripts.Services
 
         private void ApplySettlement(double apFinal, double activeSeconds)
         {
-            if (activeSeconds <= 0.0) return;
+            if (activeSeconds <= 0.0 && apFinal <= 0.0 && _activityState.InputEventsThisSecond <= 0) return;
+            activeSeconds = System.Math.Max(0, activeSeconds);
             _progressState.AddRealmActiveSeconds(activeSeconds);
             var services = ServiceLocator.Instance;
             var result = ResourceConversionRules.Calculate(
@@ -106,6 +112,7 @@ namespace Xiuxian.Scripts.Services
             _walletState.AddLingqi(lingqiGain);
             _walletState.AddInsight(insightGain);
             _progressState.AddRealmExp(realmExpGain);
+            SessionInputExperience += realmExpGain;
 
             EmitSignal(SignalName.SettlementApplied, apFinal, lingqiGain, insightGain, realmExpGain, activeSeconds);
             services?.CookingState?.AdvanceMeal(activeSeconds);

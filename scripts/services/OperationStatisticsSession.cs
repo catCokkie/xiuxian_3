@@ -83,10 +83,15 @@ public sealed class OperationStatisticsSession
         _bucketStart = ElapsedSeconds; _bucket = new();
     }
 
-    public void Stop()
+    public void RecordCheckpoint(Dictionary<string, string> metadata)
+    {
+        if (!Stopped) Emit("checkpoint", new(), metadata: metadata);
+    }
+
+    public void Stop(Dictionary<string, string>? metadata = null)
     {
         if (Stopped) return;
-        Flush(); Emit("session_end", Totals); Stopped = true;
+        Flush(); Emit("session_end", Totals, metadata: metadata); Stopped = true;
     }
 
     private void Emit(string kind, OperationStatisticsCounts counts, string eventId = "", Dictionary<string, string>? metadata = null)
@@ -117,7 +122,7 @@ public sealed class OperationStatisticsFile : IDisposable
     {
         string output = System.IO.Path.ChangeExtension(path, ".csv");
         using var writer = new StreamWriter(output, false, new UTF8Encoding(true));
-        writer.WriteLine("schema,session,kind,start_seconds,end_seconds,duration_seconds,scenario,action,region,battle,realm,book_open,page,work_mode,capture,event,raw_keys,raw_clicks,raw_scroll,raw_joy_buttons,raw_joy_axes,raw_total,accepted_keys,accepted_clicks,accepted_scroll,accepted_joy_buttons,accepted_joy_axes,accepted_total,limited_total,mouse_distance_px,raw_ap,accepted_ap,active_seconds");
+        writer.WriteLine("schema,session,kind,start_seconds,end_seconds,duration_seconds,scenario,action,region,battle,realm,book_open,page,work_mode,capture,event,raw_keys,raw_clicks,raw_scroll,raw_joy_buttons,raw_joy_axes,raw_total,accepted_keys,accepted_clicks,accepted_scroll,accepted_joy_buttons,accepted_joy_axes,accepted_total,limited_total,mouse_distance_px,raw_ap,accepted_ap,active_seconds,process_effective_inputs,process_input_experience,process_online_basic_experience");
         using var reader = new StreamReader(new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite));
         string? line;
         while ((line = reader.ReadLine()) != null)
@@ -128,7 +133,10 @@ public sealed class OperationStatisticsFile : IDisposable
                 c.Scenario, c.Action, c.Region, c.Battle, c.Realm, c.BookOpen, c.Page, c.WorkMode, c.Capture, r.Event,
                 n.Keys, n.Clicks, n.Scroll, n.JoyButtons, n.JoyAxes, n.RawTotal, n.AcceptedKeys, n.AcceptedClicks,
                 n.AcceptedScroll, n.AcceptedJoyButtons, n.AcceptedJoyAxes, n.AcceptedTotal, n.LimitedTotal,
-                n.MouseDistance, n.RawAp, n.AcceptedAp, n.ActiveSeconds };
+                n.MouseDistance, n.RawAp, n.AcceptedAp, n.ActiveSeconds,
+                r.Metadata?.GetValueOrDefault("process_effective_inputs") ?? "",
+                r.Metadata?.GetValueOrDefault("process_input_experience") ?? "",
+                r.Metadata?.GetValueOrDefault("process_online_basic_experience") ?? "" };
             writer.WriteLine(string.Join(",", values.Select(value => "\"" + Convert.ToString(value, CultureInfo.InvariantCulture)!.Replace("\"", "\"\"") + "\"")));
         }
         return output;

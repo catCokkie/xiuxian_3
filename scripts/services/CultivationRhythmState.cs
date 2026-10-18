@@ -210,12 +210,13 @@ namespace Xiuxian.Scripts.Services
 
         private void OnSettlementApplied(double apFinal, double lingqiGain, double insightGain, double realmExpGain, double activeSeconds)
         {
-            if (!Enabled || activeSeconds <= 0.0)
+            if (!Enabled)
             {
                 return;
             }
 
             _cycleLingqi += lingqiGain; _cycleInsight += insightGain; _cycleExp += realmExpGain;
+            if (activeSeconds <= 0.0) return; // Count input rewards without advancing the active-time cycle.
             CurrentCycleActiveSeconds += activeSeconds;
             double requiredSeconds = CultivationRhythmRules.GetCycleDurationSeconds(CycleMinutes);
 

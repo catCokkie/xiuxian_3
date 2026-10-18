@@ -22,6 +22,36 @@ def row(kind, raw=0, effective=0, start=0, end=0, scenario="typing"):
 
 
 class OperationAnalysisTests(unittest.TestCase):
+    def experience_rows(self):
+        start = row("session_start"); end = row("session_end", 20, 20, 120, 120)
+        start["Metadata"] = {"process_input_experience": "10", "process_effective_inputs": "100", "process_online_basic_experience": "5",
+                             "base_input_experience_rate": ".28", "cultivation_input_experience_rate": ".35", "cultivation_input_bonus_enabled": "True"}
+        end["Metadata"] = {"process_input_experience": "16.3", "process_effective_inputs": "120", "process_online_basic_experience": "8.36"}
+        a = row("sample", 10, 10, 0, 60); a["Context"]["Action"] = "cultivation"
+        return [start, a, row("sample", 10, 10, 60, 120), end]
+
+    def test_experience_reconciles_mode_rates_and_excludes_time_growth(self):
+        result = analysis.analyze([self.write("experience.jsonl", self.experience_rows())])
+        comparison = result["ExperienceComparisons"][0]
+        self.assertAlmostEqual(6.3, comparison["ExpectedInputExperience"])
+        self.assertAlmostEqual(6.3, comparison["ActualInputExperience"])
+        self.assertAlmostEqual(3.36, comparison["OnlineBasicExperience"])
+        self.assertTrue(comparison["Balanced"])
+
+    def test_export_checkpoint_does_not_claim_later_inputs_were_already_paid(self):
+        rows = self.experience_rows(); rows[-1]["Kind"] = "checkpoint"
+        rows.append(row("sample", 50, 50, 120, 180))
+        result = analysis.analyze([self.write("ongoing.jsonl", rows)])
+        self.assertEqual(20, result["ExperienceComparisons"][0]["EffectiveInputs"])
+        self.assertTrue(result["ExperienceComparisons"][0]["Balanced"])
+        self.assertEqual(70, sum(g["AcceptedTotal"] for g in result["Groups"]))
+
+    def test_missing_experience_payment_is_reported(self):
+        rows = self.experience_rows(); rows[-1]["Metadata"]["process_input_experience"] = "10"
+        result = analysis.analyze([self.write("missing.jsonl", rows)])
+        self.assertFalse(result["ExperienceComparisons"][0]["Balanced"])
+        self.assertTrue(any("input experience" in warning for warning in result["Warnings"]))
+
     def setUp(self):
         cache = REPO / ".godot"
         cache.mkdir(exist_ok=True)
