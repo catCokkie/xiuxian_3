@@ -95,7 +95,7 @@ namespace Xiuxian.Scripts.Services
                     RecipeId = spec.RecipeId,
                     SystemId = PlayerActionState.ModeAlchemy,
                     DisplayName = spec.DisplayName,
-                    Inputs = new[] { new MaterialCost(spec.MaterialItemId, spec.MaterialCount) },
+                    Inputs = spec.Inputs,
                     LingqiCost = spec.LingqiCost,
                     RequiredInputEvents = spec.RequiredInputs,
                     Outputs = new[] { new MaterialOutput(spec.OutputPotionId, spec.OutputCount) },

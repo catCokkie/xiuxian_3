@@ -68,7 +68,7 @@ public class HuntAndRetryTests
         save.SetValue("action", "mode", action); save.SetValue("challenge_goal", "state", goal);
         save.SetValue("dungeon", "runtime", new Dictionary<string, object> { ["player_hp"] = 7 });
         SaveMigrationRules.MigrateToLatest(save, 24);
-        Assert.Equal(25, save.GetValue("meta", "version", 0)); Assert.Equal("mining", action["action_id"]);
+        Assert.Equal(SaveMigrationRules.LatestVersion, save.GetValue("meta", "version", 0)); Assert.Equal("mining", action["action_id"]);
         Assert.Empty((Dictionary<string, object>)action["dungeon_hunts"]);
         Assert.Empty((Dictionary<string, object>)goal["previous_boss_report"]);
         Assert.Equal(7, ((Dictionary<string, object>)save.GetValue("dungeon", "runtime", null!))["player_hp"]);

@@ -288,7 +288,9 @@ public partial class BackpackGridController : VBoxContainer
         cell.AddChild(countLabel);
 
         // Hover handling for tooltip
-        cell.MouseEntered += () => OnCellHover(cell, $"{displayName} x{count}");
+        string effect = itemId == SuppressionRules.PotionId
+            ? "\n挑战准备选择抑生丹后，回血敌人开战消耗1颗。\n阻断前5回合回血，第6回合恢复。\n不恢复自身气血，与镇灵符互为替代。" : "";
+        cell.MouseEntered += () => OnCellHover(cell, $"{displayName} x{count}" + effect);
         cell.MouseExited += HideDetail;
 
         return cell;

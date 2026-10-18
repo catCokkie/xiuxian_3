@@ -1083,17 +1083,18 @@ public partial class BookTabsController : Control
         int huiqi = potions.TryGetValue("potion_huiqi_dan", out int huiqiCount) ? huiqiCount : 0;
         int juling = potions.TryGetValue("potion_juling_san", out int julingCount) ? julingCount : 0;
 
-        if (huiqi <= 0 && juling <= 0)
+        int suppression = potions.GetValueOrDefault(SuppressionRules.PotionId);
+        if (huiqi <= 0 && juling <= 0 && suppression <= 0)
         {
             return "结果：当前无战斗丹药，续航与战斗容错偏弱";
         }
 
         if (huiqi < 2)
         {
-            return $"回气丹 {huiqi}，聚灵散 {juling}，续航略紧";
+            return $"回气丹 {huiqi}，聚灵散 {juling}，抑生丹 {suppression}；恢复储备略紧，禁疗丹不回血";
         }
 
-        return $"回气丹 {huiqi}，聚灵散 {juling}，可支撑连续战斗";
+        return $"回气丹 {huiqi}，聚灵散 {juling}，抑生丹 {suppression}；恢复与禁疗分别消耗";
     }
 
     private string BuildLingqiStatusSummary()
@@ -1456,6 +1457,9 @@ public partial class BookTabsController : Control
         }
 
         string recipeId = _cultivationAlchemyRecipeOption.GetItemMetadata((int)index).AsString();
+        var definition = ActivityRegistry.GetRecipe(recipeId);
+        if (definition == null || !RecipeUnlockRules.Available(definition, _playerProgressState?.RealmLevel ?? 1,
+            GetAlchemyMasteryLevel(), _levelConfigLoader?.GetBossDefeatedLevelIds())) return;
         _alchemyState.SelectRecipe(recipeId);
         RefreshDynamicTabContent();
     }
@@ -1780,6 +1784,14 @@ public partial class BookTabsController : Control
             }
         }
 
+        for (int i = 0; i < _cultivationAlchemyRecipeOption.ItemCount; i++)
+        {
+            var recipe = ActivityRegistry.GetRecipe(_cultivationAlchemyRecipeOption.GetItemMetadata(i).AsString())!;
+            bool available = RecipeUnlockRules.Available(recipe, _playerProgressState?.RealmLevel ?? 1, GetAlchemyMasteryLevel(), _levelConfigLoader?.GetBossDefeatedLevelIds());
+            _cultivationAlchemyRecipeOption.SetItemDisabled(i, !available);
+            _cultivationAlchemyRecipeOption.SetItemTooltip(i, available ? "" : RecipeUnlockRules.Requirements(recipe));
+        }
+
         if (_alchemyState != null && !string.IsNullOrEmpty(_alchemyState.SelectedRecipeId))
         {
             for (int i = 0; i < _cultivationAlchemyRecipeOption.ItemCount; i++)
@@ -1799,7 +1811,7 @@ public partial class BookTabsController : Control
         _cultivationAlchemyStartButton.Disabled = !canStart;
         _cultivationAlchemyStartButton.TooltipText = canStart
             ? "满足材料后，切到炼丹模式即可推进当前批次。"
-            : "请选择可用丹方，并准备足够灵草与灵气。";
+            : "请选择可用丹方；材料、保留量与开放条件见生产条件。";
     }
 
     private void RefreshTalismanControls()

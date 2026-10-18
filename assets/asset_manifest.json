@@ -1447,6 +1447,19 @@
         "weight": 400
       },
       "sha256": "84763e4b14eb9a4e0a61e681bd956c61b300c68320d5eb802700ffef6290f0c4"
+    },
+    {
+      "key": "item:potion_yangyuan_dan",
+      "path": "res://assets/items/consumables/potion_yangyuan_dan_v1.svg",
+      "category": "item",
+      "source": {
+        "method": "project_vector",
+        "recipe": "suppression_bottle",
+        "accent": "jade"
+      },
+      "variant": 42,
+      "family": "consumables",
+      "sha256": "78208e2a16f5712f80adda8e9660da77b403b059b02fdd659edb76eb30d8cb58"
     }
   ]
 }

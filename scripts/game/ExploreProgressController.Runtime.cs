@@ -976,6 +976,7 @@ namespace Xiuxian.Scripts.Game
             SyncControllerStateFromLogic();
             _battleMonsterIndex = _battleTrackVisualizer.ResolveBattleMonsterIndex(_battleMonsterIndex);
             _usedHealPotionThisBattle = false;
+            _usedSuppressionPotion = false;
             _hasLingqiDropBuffThisBattle = false;
             _battleConsumableModifier = default;
             _consumedPotionsThisBattle.Clear();
@@ -1020,6 +1021,7 @@ namespace Xiuxian.Scripts.Game
             SyncControllerStateFromLogic();
             _battleMonsterIndex = _battleTrackVisualizer.ResolveBattleMonsterIndex(_battleMonsterIndex);
             _usedHealPotionThisBattle = false;
+            _usedSuppressionPotion = false;
             _hasLingqiDropBuffThisBattle = false;
             _battleConsumableModifier = default;
             _consumedPotionsThisBattle.Clear();
@@ -1078,7 +1080,7 @@ namespace Xiuxian.Scripts.Game
                 monsterProfile: ResolveCurrentMonsterProfile(),
                 criticalRoll: Random.Shared.NextDouble,
                 healPerRound: activeMeal.HealPerRound,
-                suppressMonsterHealingRounds: TalismanRules.GetSuppressionRounds(_battleTalismans),
+                suppressMonsterHealingRounds: BattleSuppressionRounds,
                 incomingDamageReduction: activeMeal.Id == "food_iron_fish_meal" && IsBossChallengeBattle() ? .15 : 0,
                 extraModifiers: modifiers,
                 roundObserved: _bossAttempt.Observe);
@@ -1165,6 +1167,7 @@ namespace Xiuxian.Scripts.Game
             _lastBattleEndedByBossTimeout = false;
             _bossWeaknessInsightApplied = false;
             _usedHealPotionThisBattle = false;
+            _usedSuppressionPotion = false;
             _hasLingqiDropBuffThisBattle = false;
             _consumedPotionsThisBattle.Clear();
             _battleTalismans.Clear();
@@ -1628,6 +1631,7 @@ namespace Xiuxian.Scripts.Game
                 ["boss_attempt"] = SaveValueConversionRules.ToVariantDictionary(_bossAttempt.ToPlainDictionary()),
                 ["progress_rate_remainders"] = rateRemainders,
                 ["used_heal_potion"] = _usedHealPotionThisBattle,
+                ["used_suppression_potion"] = logicState.InBattle && _usedSuppressionPotion,
                 ["has_lingqi_drop_buff"] = _hasLingqiDropBuffThisBattle,
                 ["move_frame_counter"] = logicState.MoveFrameCounter,
                 ["queue_move_input_pending"] = trackState.QueueMoveInputPending,
@@ -1659,6 +1663,8 @@ namespace Xiuxian.Scripts.Game
             if (data.ContainsKey("progress_rate_remainders")) foreach (var entry in (Godot.Collections.Dictionary<string, Variant>)data["progress_rate_remainders"])
                 _progressRateByAction[entry.Key] = new ProgressRateAccumulator { Remainder = Math.Clamp(entry.Value.AsDouble(), 0, .999999999) };
             _usedHealPotionThisBattle = data.ContainsKey("used_heal_potion") && data["used_heal_potion"].AsBool();
+            _usedSuppressionPotion = data.TryGetValue("used_suppression_potion", out var suppression) && suppression.VariantType == Variant.Type.Bool && suppression.AsBool()
+                && data.TryGetValue("battle_state", out var battleState) && battleState.AsString() == "in_battle";
             _hasLingqiDropBuffThisBattle = data.ContainsKey("has_lingqi_drop_buff") && data["has_lingqi_drop_buff"].AsBool();
             _battleTalismans.Clear();
             if (data.ContainsKey("battle_talismans")) foreach (string id in (Godot.Collections.Array<string>)data["battle_talismans"]) _battleTalismans.Add(id);
@@ -2612,8 +2618,9 @@ namespace Xiuxian.Scripts.Game
 
         private string BuildSuppressionSuffix()
         {
-            int rounds = TalismanRules.GetSuppressionRounds(_battleTalismans);
-            return rounds <= 0 ? "" : _battleRoundCounter < rounds ? $" · 镇灵：前{rounds}回合禁疗" : " · 镇灵已结束";
+            int rounds = BattleSuppressionRounds;
+            string source = _usedSuppressionPotion ? "抑生丹" : "镇灵符";
+            return rounds <= 0 ? "" : _battleRoundCounter < rounds ? $" · {source}：前{rounds}回合禁疗" : $" · {source}禁疗已结束";
         }
 
         private string BuildMiningProgressText()
@@ -2995,6 +3002,7 @@ namespace Xiuxian.Scripts.Game
 
             bool allowConsumables = _actionState?.ConsumablePolicy == "all" || (_actionState?.ConsumablePolicy == "boss_only" && IsBossChallengeBattle());
             if (!allowConsumables) return;
+            TryUseSuppressionPotion(isBattleStart);
 
             BattleConsumableState state = new(
                 PlayerCurrentHp: _playerHp,
@@ -3041,7 +3049,8 @@ namespace Xiuxian.Scripts.Game
             List<BackpackConsumableUsage> backpackUsages = ActivityEffectRules.DetermineAutoUseBackpackConsumables(
                 state,
                 _backpackState.GetSpendableItemEntries(),
-                TalismanRules.GetMaxTalismansPerBattle(talismanMasteryLevel), ResolveCurrentMonsterProfile()?.StrategyTag ?? "", ResolveCurrentMonsterProfile()?.HealPerRound ?? 0);
+                TalismanRules.GetMaxTalismansPerBattle(talismanMasteryLevel), ResolveCurrentMonsterProfile()?.StrategyTag ?? "",
+                _actionState?.SuppressionChoice == "talisman" && !_usedSuppressionPotion ? ResolveCurrentMonsterProfile()?.HealPerRound ?? 0 : 0);
             for (int i = 0; i < backpackUsages.Count; i++)
             {
                 BackpackConsumableUsage usage = backpackUsages[i];

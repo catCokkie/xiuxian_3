@@ -449,6 +449,7 @@ public static class UiText
             "formation_harvest_array" => "丰饶阵盘",
             "formation_craft_array" => "工巧阵盘",
             "potion_huiqi_dan" => "回气丹",
+            "potion_yangyuan_dan" => "抑生丹",
             "potion_juling_san" => "聚灵散",
             "talisman_burst_charm" => "炸裂符",
             _ => itemId

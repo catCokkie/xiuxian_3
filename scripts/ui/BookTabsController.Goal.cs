@@ -45,7 +45,7 @@ public partial class BookTabsController
     private IEnumerable<string> RelevantPreparationRecipes(MonsterStatProfile boss)
     {
         yield return "recipe_huiqi_dan";
-        string counter = ChallengePreparationRules.ChooseTalisman(boss.StrategyTag, 4, boss.HealPerRound);
+        string counter = PreparationCounter(boss);
         if (counter != "") yield return counter;
     }
     private void RefreshChallengeGoalUi(bool hasBoss, string levelId, MonsterStatProfile boss)

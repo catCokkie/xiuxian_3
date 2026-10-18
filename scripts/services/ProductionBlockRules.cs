@@ -40,7 +40,7 @@ namespace Xiuxian.Scripts.Services
             IReadOnlyDictionary<string, int>? reserves, int mastery, CraftingProductionPlan? plan = null, int requiredRealm = 0)
         {
             if (!AlchemyRules.TryGetRecipe(recipeId, out var recipe)) return Unavailable(recipeId);
-            return Check(new[] { new MaterialCost(recipe.MaterialItemId, recipe.MaterialCount) }, recipe.LingqiCost,
+            return Check(recipe.Inputs, recipe.LingqiCost,
                 lingqi, inventory, reserves, mastery, recipe.RequiredMasteryLevel, plan, requiredRealm);
         }
         public static ProductionCheck Smithing(EquipmentStatProfile equipment, double lingqi, IReadOnlyDictionary<string, int> inventory,

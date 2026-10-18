@@ -49,6 +49,8 @@ def shape(kind, color=JADE, variant=0):
         return poly('4,16 10,9 21,10 25,14 29,8 29,24 25,19 18,23 10,23',color) + poly('12,10 16,5 21,10',GOLD) + rect(9,14,3,3,OUTLINE) + line('17,12 20,16 17,21',light)
     if kind == 'bottle':
         return rect(12,3,8,4,GOLD,True) + poly('12,7 20,7 20,12 25,16 25,27 7,27 7,16 12,12',light) + rect(9,18,14,7,color) + rect(11,12,3,5,'#FFFFFF') + rect(14,20,4,3,GOLD)
+    if kind == 'suppression_bottle':
+        return rect(11,4,10,4,GOLD,True) + poly('12,8 20,8 20,12 27,16 27,27 5,27 5,16 12,12',color) + rect(11,16,10,9,light) + line('13,19 19,19') + line('13,22 19,22')
     if kind == 'powder':
         return poly('7,5 25,5 21,12 26,18 26,27 6,27 6,18 11,12',light) + rect(8,9,16,3,GOLD) + poly('9,24 13,18 19,19 23,24',color,False)
     if kind == 'seal':
@@ -138,7 +140,7 @@ ITEMS = {
  'food_spirit_porridge':('soup','bone'), 'food_fruit_jelly':('food','gold'), 'food_dragon_soup':('soup','gold'),
  'formation_spirit_plate':('plate','jade'), 'formation_guard_flag':('flag','iron'),
  'formation_harvest_array':('plate','gold'), 'formation_craft_array':('plate','violet'),
- 'potion_huiqi_dan':('bottle','red'), 'potion_juling_san':('powder','jade'), 'talisman_burst_charm':('talisman','gold'),
+ 'potion_huiqi_dan':('bottle','red'), 'potion_juling_san':('powder','jade'), 'potion_yangyuan_dan':('suppression_bottle','jade'), 'talisman_burst_charm':('talisman','gold'),
 }
 UI = {
  'book':('book','jade'), 'lock':('lock','jade'), 'coin':('coin','gold'), 'backpack':('backpack','jade'),

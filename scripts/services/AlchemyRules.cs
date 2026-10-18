@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace Xiuxian.Scripts.Services
 {
@@ -14,7 +15,10 @@ namespace Xiuxian.Scripts.Services
             string OutputPotionId,
             int OutputCount,
             int RequiredInputs,
-            int RequiredMasteryLevel = 1);
+            int RequiredMasteryLevel = 1, MaterialCost[]? AdditionalInputs = null)
+        {
+            public MaterialCost[] Inputs { get; } = new[] { new MaterialCost(MaterialItemId, MaterialCount) }.Concat(AdditionalInputs ?? Array.Empty<MaterialCost>()).ToArray();
+        }
 
         public readonly record struct AlchemyProgressDecision(float NextProgress, bool CompletedBatch);
 
@@ -24,12 +28,14 @@ namespace Xiuxian.Scripts.Services
             string MaterialItemId,
             int MaterialCount,
             double LingqiCost,
-            double InsightCost);
+            double InsightCost, MaterialCost[]? Inputs = null);
 
         private static readonly RecipeSpec[] Recipes =
         {
             new("recipe_huiqi_dan", "回气丹", "spirit_herb", 2, 50.0, "potion_huiqi_dan", 2, 200, 1),
             new("recipe_juling_san", "聚灵散", "spirit_herb", 3, 80.0, "potion_juling_san", 1, 220, 2),
+            new(RecipeUnlockRules.Yangyuan, "抑生丹", "spirit_herb", 3, 70, SuppressionRules.PotionId, 1, 260, 2,
+                new[] { new MaterialCost("spirit_pearl", 1) }),
         };
 
         public static IReadOnlyList<RecipeSpec> GetRecipes() => Recipes;
@@ -77,7 +83,7 @@ namespace Xiuxian.Scripts.Services
                 recipe.MaterialItemId,
                 recipe.MaterialCount,
                 recipe.LingqiCost,
-                0.0);
+                0.0, recipe.Inputs);
         }
     }
 }

@@ -56,6 +56,14 @@ namespace Xiuxian.Scripts.Services
         public string ActionTargetId => _actionTargetId;
         public string ActionVariant => _actionVariant;
         public string ConsumablePolicy { get; private set; } = "boss_only";
+        public string SuppressionChoice { get; private set; } = "talisman";
+        public void SetSuppressionChoice(string choice)
+        {
+            string next = SuppressionRules.Normalize(choice);
+            if (SuppressionChoice == next) return;
+            SuppressionChoice = next;
+            EmitSignal(SignalName.ActionChanged, _actionId, _actionTargetId, _actionVariant);
+        }
         public bool WorkMode { get; private set; }
         public void SetWorkMode(bool work)
         {
@@ -126,6 +134,7 @@ namespace Xiuxian.Scripts.Services
                 ["action_target_id"] = _actionTargetId,
                 ["action_variant"] = _actionVariant,
                 ["consumable_policy"] = ConsumablePolicy,
+                ["suppression_choice"] = SuppressionChoice,
                 ["work_mode"] = WorkMode,
                 ["dungeon_hunts"] = _dungeonHunts.Duplicate(),
             };
@@ -133,6 +142,8 @@ namespace Xiuxian.Scripts.Services
 
         public void FromDictionary(Godot.Collections.Dictionary<string, Variant> data)
         {
+            SuppressionChoice = SuppressionRules.Normalize(data.TryGetValue("suppression_choice", out var choice)
+                && choice.VariantType == Variant.Type.String ? choice.AsString() : "talisman");
             _dungeonHunts.Clear();
             if (data.TryGetValue("dungeon_hunts", out var hunts) && hunts.VariantType == Variant.Type.Dictionary)
                 foreach (var item in (Godot.Collections.Dictionary<string, Variant>)hunts)

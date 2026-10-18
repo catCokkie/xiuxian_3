@@ -147,9 +147,9 @@ namespace Xiuxian.Scripts.Services
                 : report.Result == "double_knockout" ? "本次双方同时倒下，优先改善生存或先手；可比较护具和装备速度。"
                 : "优先比较护具、强化与气血；休整达到出战条件后再重试。" };
             if (report.StatisticsComplete && report.EnemyHealing > 0 && report.EnemyHealing >= Math.Max(1, report.DamageToBoss / 4))
-                advice.Add(report.Talismans.GetValueOrDefault(RecipeUnlockRules.Zhenling) > 0
-                    ? $"本次已使用镇灵符，前5回合之后敌方仍实际回血{report.EnemyHealing}；可提高持续伤害，重复携带不会延长禁疗。"
-                    : $"敌方本次实际回血{report.EnemyHealing}，可提高持续伤害，或选择镇灵符阻断前5回合回血（第6回合恢复）；制作条件见挑战准备。");
+                advice.Add(report.Talismans.GetValueOrDefault(RecipeUnlockRules.Zhenling) > 0 || report.Potions.GetValueOrDefault(SuppressionRules.PotionId) > 0
+                    ? $"本次已使用{(report.Potions.GetValueOrDefault(SuppressionRules.PotionId) > 0 ? "抑生丹" : "镇灵符")}，前5回合之后敌方仍实际回血{report.EnemyHealing}；可提高持续伤害，重复携带不会延长禁疗。"
+                    : $"敌方本次实际回血{report.EnemyHealing}，可提高持续伤害，或选择镇灵符/抑生丹阻断前5回合回血（第6回合恢复）；制作条件见挑战准备。");
             else if (report.StatisticsComplete && report.Potions.Count == 0 && report.Result != "timeout")
                 advice.Add("可检查气血补给与消耗策略，也可继续走装备路线；准备仍可跳过。");
             return advice;

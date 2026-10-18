@@ -92,6 +92,12 @@ public partial class LayoutSmokeTest : Node
                 { GetWindow().Size = size; await Settle(); await CheckGainPresentation(size); }
                 GD.Print($"FEEDBACK LAYOUT COMPLETE: {_checks} checks"); GetTree().Quit(0); return;
             }
+            if (OS.GetCmdlineUserArgs().Contains("--suppression-layout"))
+            {
+                foreach (var size in new[] { new Vector2I(1600, 900), new Vector2I(1280, 720), new Vector2I(1024, 768), new Vector2I(800, 600) })
+                { GetWindow().Size = size; await Settle(); await CheckSuppressionPresentation(size); }
+                GD.Print($"SUPPRESSION LAYOUT COMPLETE: {_checks} checks"); GetTree().Quit(0); return;
+            }
             if (OS.GetCmdlineUserArgs().Contains("--hunt-retry-layout"))
             {
                 ServiceLocator.Instance!.PlayerProgressState!.FromDictionary(new() { ["realm_level"] = 5 });
@@ -167,6 +173,7 @@ public partial class LayoutSmokeTest : Node
                 Check(Inside(GetViewport().GetVisibleRect(), _book.GetGlobalRect()), scenario + ": book fits viewport");
                 await CheckGainPresentation(dimensions);
                 await CheckHuntRetryPresentation(dimensions);
+                await CheckSuppressionPresentation(dimensions);
                 var basicGrowth = (Label)_tabs.FindChild("HomeBasicGrowth", true, false);
                 Check(basicGrowth.Text.Contains("线上线下共用") && basicGrowth.Size.X <= basicGrowth.GetParent<Control>().Size.X,
                     scenario + ": quiet growth explanation wraps within the existing home card");
@@ -331,7 +338,7 @@ public partial class LayoutSmokeTest : Node
                 reviewToggle.ButtonPressed = true; await Settle();
                 var reviewDetails = (Control)_tabs.FindChild("BossReviewDetails", true, false);
                 var reviewSummary = (Label)_tabs.FindChild("BossReviewSummary", true, false);
-                Check(reviewSummary.Text.Contains("敌方实际回血45") && reviewSummary.Text.Contains("调整2") && reviewSummary.Text.Contains("镇灵符阻断前5回合"),
+                Check(reviewSummary.Text.Contains("敌方实际回血45") && reviewSummary.Text.Contains("调整2") && reviewSummary.Text.Contains("镇灵符/抑生丹阻断前5回合"),
                     scenario + ": Boss review shows actual recovery and at most two honest adjustment directions");
                 Check(reviewSummary.Size.X <= reviewDetails.Size.X && reviewSummary.IsVisibleInTree(), scenario + ": long Boss review wraps inside the scrollable home");
                 foreach (Control control in reviewDetails.GetNode<Control>("BossReviewActions").GetChildren())

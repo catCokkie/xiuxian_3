@@ -30,6 +30,10 @@ namespace Xiuxian.Scripts.Tests
                 var s = ServiceLocator.Instance!;
                 var root = GetNode<PrototypeRootController>("PrototypeRoot");
                 var controller = root.GetNode<ExploreProgressController>("ExploreProgressController");
+                if (Array.IndexOf(OS.GetCmdlineUserArgs(), "--suppression-smoke") >= 0)
+                {
+                    RunSuppressionChecks(root, controller, s); GD.Print($"SUPPRESSION SUCCESS: {_checks} checks"); GetTree().Quit(0); return;
+                }
                 if (Array.IndexOf(OS.GetCmdlineUserArgs(), "--hunt-retry-smoke") >= 0)
                 {
                     RunHuntRetryChecks(root, controller, s); GD.Print($"HUNT RETRY SUCCESS: {_checks} checks"); GetTree().Quit(0); return;
@@ -209,6 +213,7 @@ namespace Xiuxian.Scripts.Tests
                 RunInputExperienceChecks(root, s);
                 RunGainFeedbackChecks(root, s);
                 RunHuntRetryChecks(root, controller, s);
+                RunSuppressionChecks(root, controller, s);
                 GD.Print($"SMOKE SUCCESS: {_checks} checks");
                 if (Array.IndexOf(OS.GetCmdlineUserArgs(), "--render-smoke") >= 0) CaptureUi(root);
                 else GetTree().Quit(0);

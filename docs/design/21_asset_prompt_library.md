@@ -72,6 +72,8 @@ Constraints: no text, numbers, rarity frame, level badge, shadow, scenery or wat
 
 装备提示词按“系列 + 槽位 + 基础造型”组合。实例词条、强化等级、品质采用运行时叠加；新增模板只需新增 `equipment:<template_id>`，不会扩大为“模板 × 品质 × 强化等级”的图片矩阵。
 
+抑生丹的具体简报：`one squat jade-green ceramic medicine bottle, a wide low body, copper stopper, ivory label with two plain horizontal bars; warm brown outline, no highlights, no text, transparent padding, readable at 28px`。稳定键`item:potion_yangyuan_dan`，源构形`build_vector_assets.py`的`suppression_bottle`；用宽瓶轮廓和双横封签区分回气丹与催熟灵液，颜色不作为唯一识别手段。
+
 ## C：区域与地点题图
 
 ```text
