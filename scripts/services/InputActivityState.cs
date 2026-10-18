@@ -71,6 +71,18 @@ namespace Xiuxian.Scripts.Services
         private double _pendingIdleSecondsBeforeBatch;
         private bool _hasPendingIdleSnapshot;
 
+        // Settle a session boundary without advancing time or resetting the input/AP window.
+        // Calling this only when pending data exists keeps logging controls from emitting idle ticks.
+        public void FlushPendingInput()
+        {
+            lock (_pendingLock)
+            {
+                if (_pendingKeyDown == 0 && _pendingMouseClick == 0 && _pendingMouseScroll == 0
+                    && _pendingMouseMove == 0 && _pendingJoypadButton == 0 && _pendingJoypadAxis == 0) return;
+            }
+            _Process(0);
+        }
+
         public override void _Process(double delta)
         {
             _runtimeSeconds += delta;
@@ -347,6 +359,7 @@ namespace Xiuxian.Scripts.Services
 
             _acceptedInputWindow.Clear();
             _acceptedInputCountInWindow = 0;
+            _acceptedApInWindow = 0;
         }
     }
 }

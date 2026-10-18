@@ -4063,10 +4063,9 @@ public partial class BookTabsController : Control
             return;
         }
 
-        bool enabled = IsPrivacyInputCollectionEnabled();
-        _privacyCollectionStatusLabel.Text = enabled
-            ? UiText.PrivacyCollectionRunning(GetPrivacySessionOperationCount())
-            : UiText.PrivacyCollectionPaused;
+        var hook = ServiceLocator.Instance?.InputHookService;
+        _privacyCollectionStatusLabel.Text = (hook?.CaptureStatus ?? "采集服务未就绪")
+            + $" · 本次启动已采集 {GetPrivacySessionOperationCount():N0} 次原始输入";
     }
 
     private long GetPrivacySessionOperationCount()

@@ -57,7 +57,8 @@ public partial class GameplaySmokeTest
             Check(rows.Where(r => r.Kind == "sample").Sum(r => r.Counts.RawTotal) == 161 && rows.Last().Counts.RawTotal == 161, "statistics: persisted sample sum matches final total exactly once");
             Check(rows.Count(r => r.Kind == "game_event" && r.Event == "result_craft") == 1, "statistics: loading an event history does not manufacture new results");
             Check(!File.ReadAllText(path).Contains("Do not copy"), "statistics: free-form game log messages are never copied");
-            Check(rows[0].Metadata!["input_limit"] == "20" && rows[0].Metadata!.ContainsKey("started_utc"), "statistics: recording identifies actual cap and start time");
+            Check(rows[0].Metadata!["input_limit"] == "20" && rows[0].Metadata!.ContainsKey("started_utc")
+                && rows[0].Metadata!["input_counting_revision"] == "2", "statistics: recording identifies actual cap, start time and counting revision");
             input.RegisterKeyDown(); input._Process(1);
             Check(recorder.Session.Totals.RawTotal == 161 && !recorder.IsRecording, "statistics: stop detaches input observer");
             string oldId = recorder.Session.Id; start.EmitSignal(Button.SignalName.Pressed);
@@ -68,5 +69,62 @@ public partial class GameplaySmokeTest
             Check(input.InputEventsThisSecond == 1 && s.InputHookService!.IsPaused, "statistics: file failure leaves gameplay input operational and real hooks disabled");
         }
         finally { recorder.Stop(); input.MaxInputPerMinute = originalLimit; input.FromDictionary(saved); input.ResetCurrentTick(); }
+        RunInputCaptureBoundaryChecks(root, s);
+    }
+
+    private void RunInputCaptureBoundaryChecks(PrototypeRootController root, ServiceLocator s)
+    {
+        var input = s.InputActivityState!; var hook = s.InputHookService!; var recorder = root.OperationStatistics!;
+        var activityField = typeof(InputHookService).GetField("_activityState", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!;
+        var oldActivity = activityField.GetValue(hook);
+        var saved = input.ToDictionary(); int oldLimit = input.MaxInputPerMinute;
+        bool oldPaused = hook.IsPaused;
+        try
+        {
+            activityField.SetValue(hook, input); input.ResetCurrentTick(); input.MaxInputPerMinute = 100;
+            for (int i = 0; i < 5; i++) input.RegisterKeyDown();
+            recorder.Start(BookTabsController.OperationStatisticsDirectory());
+            Check(recorder.Session!.Totals.RawTotal == 0, "capture: queued inputs from before recording are excluded");
+            for (int i = 0; i < 4; i++) input.RegisterKeyDown();
+            input.RegisterMouseClick(); input.RegisterMouseClick(); hook.SetPaused(true); input._Process(1);
+            Check(recorder.Session.Totals.RawTotal == 6, "capture: pause preserves all already captured pending inputs");
+            long before = input.SessionRawInputCount;
+            hook._Input(new InputEventKey { Pressed = true });
+            Check(input.SessionRawInputCount == before && hook.CaptureStatus.Contains("暂停"), "capture: paused fallback rejects new inputs and reports paused state");
+            hook.SetPaused(false);
+            hook._Input(new InputEventKey { Pressed = true });
+            hook._Input(new InputEventKey { Pressed = true, Echo = true });
+            hook._Input(new InputEventKey { Pressed = false });
+            for (int i = 0; i < 2; i++) hook._Input(new InputEventMouseButton { Pressed = true, ButtonIndex = MouseButton.Left });
+            for (int i = 0; i < 4; i++) hook._Input(new InputEventMouseButton { Pressed = true, ButtonIndex = MouseButton.WheelUp, Factor = .25f });
+            for (int i = 0; i < 4; i++) hook._Input(new InputEventMouseButton { Pressed = true, ButtonIndex = MouseButton.WheelLeft, Factor = .25f });
+            input._Process(1);
+            Check(recorder.Session.Totals.Keys == 6, "capture: fallback counts repeated keydown consistently with global capture and ignores release");
+            Check(recorder.Session.Totals.Clicks == 4 && recorder.Session.Totals.Scroll == 2, "capture: fractional vertical and horizontal wheels accumulate as scroll rather than clicks");
+            Check(hook.CaptureStatus.Contains("仅游戏窗口"), "capture: disconnected hook honestly identifies in-app-only fallback");
+            for (int i = 0; i < 4; i++) input.RegisterKeyDown();
+            string csv = recorder.Export();
+            Check(recorder.Session.Totals.RawTotal == 16 && File.Exists(csv) && recorder.IsRecording, "capture: export includes queued input without stopping recording");
+            input._Process(1);
+            Check(recorder.Session.Totals.RawTotal == 16, "capture: exported pending input is not counted again next frame");
+            for (int i = 0; i < 3; i++) input.RegisterKeyDown();
+            recorder.Stop();
+            var rows = File.ReadLines(recorder.LastPath).Select(x => JsonSerializer.Deserialize<OperationStatisticsRow>(x)!).ToArray();
+            Check(recorder.Session.Totals.RawTotal == 19 && rows.Last().Counts.RawTotal == 19
+                && rows.Where(x => x.Kind == "sample").Sum(x => x.Counts.RawTotal) == 19, "capture: stopping before next frame preserves exact disk and session totals");
+            input._Process(1);
+            Check(recorder.Session.Totals.RawTotal == 19, "capture: stopped recording never duplicates a flushed tail");
+            input.ResetCurrentTick(); input.MaxInputPerMinute = 3;
+            for (int i = 0; i < 3; i++) input.RegisterKeyDown(); input._Process(1);
+            hook.SetPaused(true); hook.SetPaused(false); input.RegisterKeyDown(); input._Process(1);
+            Check(input.InputEventsThisSecond == 0, "capture: pause cannot reset or bypass the shared input cap");
+            hook.StartHook();
+            Check(!hook.IsHookActive, "capture: smoke mode refuses to start real system hooks even on an explicit reconnect");
+        }
+        finally
+        {
+            recorder.Stop(); hook.SetPaused(oldPaused); activityField.SetValue(hook, oldActivity);
+            input.MaxInputPerMinute = oldLimit; input.FromDictionary(saved); input.ResetCurrentTick();
+        }
     }
 }

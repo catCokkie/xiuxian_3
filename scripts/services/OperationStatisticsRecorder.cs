@@ -26,6 +26,8 @@ public sealed class OperationStatisticsRecorder : IDisposable
     public bool Start(string directory)
     {
         if (IsRecording) return true;
+        // Exclude data queued before the user started this recording.
+        _input.FlushPendingInput();
         try
         {
             _file = new(directory); LastPath = _file.Path;
@@ -68,6 +70,8 @@ public sealed class OperationStatisticsRecorder : IDisposable
         if (!IsRecording) return;
         try
         {
+            _input.FlushPendingInput();
+            if (!IsRecording) return; // A write failure during the boundary flush already closed the file.
             Session!.Observe(new(Math.Max(0, _clock.Elapsed.TotalSeconds - _lastObservedSeconds), default, default, 0, 0, 0, 0));
             Session.Stop(); Status = "统计已停止，日志已保留。";
         }
@@ -78,7 +82,7 @@ public sealed class OperationStatisticsRecorder : IDisposable
     {
         try
         {
-            if (IsRecording) Session!.Flush();
+            if (IsRecording) { _input.FlushPendingInput(); if (IsRecording) Session!.Flush(); }
             if (LastPath.Length == 0) { Status = "请先开始一次统计。"; return ""; }
             string path = OperationStatisticsFile.ExportCsv(LastPath);
             Status = "CSV已导出：" + path; return path;
