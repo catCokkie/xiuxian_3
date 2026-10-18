@@ -6,6 +6,21 @@
 
 ---
 
+## 输入与成果的反馈规则
+
+每次有效输入的收益通过实际结算事件驱动显示。采用三层反馈：底栏的即时增量、修炼页的精确累计与下一步、动态中的可回看成果。
+
+- 底栏保留固定收益位，例如“输入实得 +0.35 经验”。连续输入在同一位置累加，停止2.5秒后下一段重新计数；经验条直接显示分子/分母，境界名旁保留百分比，避免同一条内叠字。
+- 修炼页依次呈现境界与精确经验、短段收益、当前活动、资源及成长说明、下一步。短段收益列有效输入次数和实际到账的灵气、悟性；下一境界显示精确经验缺口，满足条件时提示手动突破，经验已足但受Boss门控时明确说明。终点只说明境界上限和经验保留。
+- 制作完成、突破、精通、新装备和胜利沿用已有真实事件。底栏短暂展示成果，修炼页保留最近一项摘要，长文单行省略并可悬停查看；“成果回看”进入动态。读档加载历史和战败不产生新的正向成果或奖励。
+- 暂停采集、有效输入窗口已满、纯鼠标移动和时间静修分别说明。收益来自实际结算，不用原始事件数推算到账，不放大资源或伪造进度；静修仍静默结算，只在固定位置短暂更新来源数字。
+- 配色沿用暖纸、棕色和少量金色。输入收益仅带约0.45秒的轻微变亮；可关闭“收益微光”，工作模式自动关闭微光，保留数字及收益。固定标签更新不超过10Hz，页面构建沿用4Hz合并；提示不抢焦点、不增加逐次弹窗、音效或节点。
+- 800×600同样保留首屏收益和活动选择；精确数字嵌入进度条、成长说明下移，避免重复说明挤掉操作区。成果全文与完整记录通过悬停及动态查看。
+
+交互参考：[Melvor Idle v1.2 官方更新](https://news.melvoridle.com/major-update-v1-2/)的同类收益合并、紧凑通知及经验通知偏好；[Rusty's Retirement 官方介绍](https://store.steampowered.com/app/2666510/Rustys_Retirement/)的屏幕底部陪伴与减少干扰。这里借鉴信息呈现和注意力控制，游戏推进仍遵守本项目输入规则。
+
+---
+
 ## 通用风格前缀
 
 > 所有提示词前加这段，确保风格一致。
@@ -42,10 +57,13 @@ Work mode uses the compact height and a quiet activity summary.
 Background: warm dark brown, rounded top corners.
 
 Row 1: small draggable handle, 24px companion portrait, current activity summary;
-right-aligned realm XP / cultivation rhythm. Hide enemy cards in compact mode.
+right-aligned actual gain feedback, merging consecutive input gains in place.
+Use subtle optional highlights; work mode keeps numbers and suppresses motion.
+Hide enemy cards in compact mode.
 Row 2: realm label, unlocked activity dropdown, localized dungeon selector,
 work mode button, book button with unread badge, resize grip.
-Row 3: cultivation caption and progress, breakthrough button, exploration caption and progress.
+Row 3: cultivation caption and exact XP numerator/denominator inside progress,
+breakthrough button, exploration caption and progress. Do not overlay a second XP percentage.
 Do not place selectors on top of progress bars. Reserve width for long disabled breakthrough
 and exit-work-mode labels; clip long dropdown text within its allotted width.
 During battle, replace the compact summary with player/enemy stage and round information.

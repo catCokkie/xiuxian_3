@@ -56,6 +56,7 @@ namespace Xiuxian.Scripts.Game
         private ExploreProgressController? _exploreProgressController;
         private CloudSaveSyncService? _cloudSaveSyncService;
         private ToastController? _toastController;
+        public Xiuxian.Scripts.UI.ProgressFeedbackController ProgressFeedback { get; private set; } = null!;
         private StatePersistenceManager _persistenceManager = new();
         private bool _cloudSyncEnabled;
         private long _lastLoadedSavedUnix;
@@ -269,6 +270,8 @@ namespace Xiuxian.Scripts.Game
             }
 
             SetupOperationStatistics();
+            ProgressFeedback = new() { Name = "ProgressFeedback" };
+            AddChild(ProgressFeedback);
             CallDeferred(nameof(LoadAllState));
         }
 

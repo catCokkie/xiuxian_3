@@ -47,6 +47,8 @@ public partial class MainBarLayoutController : Control
     private Button? _workButton;
     private Label _exploreCaption = null!;
     private Label _cultivationCaption = null!;
+    private PanelContainer _gainPanel = null!;
+    private Label _gainHud = null!, _exactExperience = null!;
 
     public override void _Ready()
     {
@@ -59,6 +61,7 @@ public partial class MainBarLayoutController : Control
         _exploreProgressBar = GetNode<ProgressBar>("Chrome/ExploreProgressBar");
         _cultivationLabel = GetNode<Label>("Chrome/CultivationLabel");
         _cultivationProgressBar = GetNode<ProgressBar>("Chrome/CultivationProgressBar");
+        _cultivationProgressBar.ShowPercentage = false;
         _breakthroughButton = GetNode<Button>("Chrome/BreakthroughButton");
         _battleTrack = GetNode<Panel>("Chrome/BattleTrack");
         _validationPanel = GetNode<Panel>("Chrome/ConfigValidationPanel");
@@ -86,6 +89,19 @@ public partial class MainBarLayoutController : Control
         _cultivationCaption = new Label { Text = "修炼", MouseFilter = MouseFilterEnum.Ignore };
         GetNode<Control>("Chrome").AddChild(_exploreCaption);
         GetNode<Control>("Chrome").AddChild(_cultivationCaption);
+        _gainPanel = new PanelContainer { Name = "GainFeedbackHud", MouseFilter = MouseFilterEnum.Ignore };
+        var gainStyle = new StyleBoxFlat { BgColor = new Color("5B4838"), BorderColor = new Color("9E8052"),
+            BorderWidthLeft = 2, ContentMarginLeft = 8, ContentMarginRight = 8 };
+        gainStyle.SetCornerRadiusAll(4); _gainPanel.AddThemeStyleboxOverride("panel", gainStyle);
+        _gainHud = new Label { Name = "GainHudText", Text = "日常输入，积少成多", ClipText = true, MouseFilter = MouseFilterEnum.Ignore };
+        _gainHud.AddThemeFontSizeOverride("font_size", 14); _gainHud.AddThemeColorOverride("font_color", new Color("FFE3A8"));
+        _gainPanel.AddChild(_gainHud); GetNode<Control>("Chrome").AddChild(_gainPanel);
+        _exactExperience = new Label { Name = "ExactExperience", HorizontalAlignment = HorizontalAlignment.Center,
+            VerticalAlignment = VerticalAlignment.Center, ClipText = true, MouseFilter = MouseFilterEnum.Ignore };
+        _exactExperience.AddThemeFontSizeOverride("font_size", 12);
+        _exactExperience.AddThemeColorOverride("font_color", new Color("FFF9EC"));
+        _cultivationProgressBar.AddChild(_exactExperience);
+        _exactExperience.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
         _realmStageLabel.ClipText = true;
         _realmStageLabel.AddThemeColorOverride("font_color", new Color("FFF6E2"));
         if (_levelOptionButton != null) { _levelOptionButton.ClipText = true; _levelOptionButton.FitToLongestItem = false; }
@@ -128,6 +144,20 @@ public partial class MainBarLayoutController : Control
         _expanded = expanded;
         Size = new Vector2(Size.X, expanded ? 210 : 96);
         UpdateRightAnchoredLayout();
+    }
+
+    public void PaintGainFeedback(string message, double experience, double required, bool capped)
+    {
+        _gainHud.Text = message;
+        _gainHud.TooltipText = message;
+        _exactExperience.Text = capped ? $"已保留 {experience:0.##} 经验" : $"{experience:0.##} / {required:0.##}";
+        _cultivationProgressBar.TooltipText = _exactExperience.Text;
+    }
+
+    public void PaintGainPulse(float pulse)
+    {
+        _gainPanel.Modulate = Colors.White.Lerp(new Color("FFDC91"), pulse * .35f);
+        _cultivationProgressBar.Modulate = Colors.White.Lerp(new Color("FFDC91"), pulse * .3f);
     }
 
     public override void _Input(InputEvent @event)
@@ -240,7 +270,9 @@ public partial class MainBarLayoutController : Control
         Place(_battleTrack, 48, 6, _expanded ? width - 60 : Mathf.Max(200, width - 376), _expanded ? 138 : 26);
         _battleTrack.ClipContents = true;
         Place(_cultivationLabel, width - 312, 7, 300, 22);
-        _cultivationLabel.Visible = !_expanded;
+        _cultivationLabel.Visible = false;
+        Place(_gainPanel, width - 312, 6, 300, 24);
+        _gainPanel.Visible = !_expanded;
         _activityRateLabel.Visible = false;
         _zoneLabel.Visible = false;
         _validationPanel.Visible = false;

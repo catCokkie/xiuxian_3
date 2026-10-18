@@ -143,7 +143,10 @@ public partial class BookTabsController
         panel.AddThemeStyleboxOverride("panel", PaperStyle());
         _cultivationRoot.AddChild(panel);
         VBoxContainer body = new(); body.AddThemeConstantOverride("separation", 8); panel.AddChild(body);
-        Label heading = new() { Text = title }; heading.AddThemeFontSizeOverride("font_size", 16); body.AddChild(heading);
+        if (title.Length > 0)
+        {
+            Label heading = new() { Text = title }; heading.AddThemeFontSizeOverride("font_size", 16); body.AddChild(heading);
+        }
         return body;
     }
 
@@ -160,17 +163,21 @@ public partial class BookTabsController
         _cultivationRoot.SetAnchorsPreset(LayoutPreset.TopLeft);
         _cultivationRoot.AddThemeConstantOverride("separation", 12);
 
-        VBoxContainer summary = HomeSection("境界与资源");
+        VBoxContainer summary = HomeSection("");
+        summary.AddThemeConstantOverride("separation", 4);
         HFlowContainer realmRow = new(); summary.AddChild(realmRow);
         _homeRealm = new Label(); _homeRealm.AddThemeFontSizeOverride("font_size", 18); realmRow.AddChild(_homeRealm);
         _cultivationBreakthroughButton.Reparent(realmRow);
-        _homeRealmProgress = new ProgressBar { Name = "HomeRealmProgress", CustomMinimumSize = new Vector2(0, 12), ShowPercentage = false };
+        _homeRealmProgress = new ProgressBar { Name = "HomeRealmProgress", CustomMinimumSize = new Vector2(0, 20), ShowPercentage = false };
         summary.AddChild(_homeRealmProgress);
-        _homeResources = new Label { AutowrapMode = TextServer.AutowrapMode.WordSmart }; summary.AddChild(_homeResources);
-        _homeBasicGrowth = new Label { Name = "HomeBasicGrowth", AutowrapMode = TextServer.AutowrapMode.WordSmart,
-            TooltipText = "阅读、思考时也积累灵气、悟性与经验，每10秒自动结算。静修每24小时一轮：前30分钟3.36经验/分钟，随后至4小时2.24、至8小时1.68，其余0.84。线上线下延续同一轮，重启不刷新；真实输入另有收益和活动推进，静修不代做配方或挑战。时间倒退时等待时钟恢复，输入收益照常。" };
-        _homeBasicGrowth.AddThemeFontSizeOverride("font_size", 13); summary.AddChild(_homeBasicGrowth);
-        summary.AddChild(_cultivationStatusLabel);
+        _homeExactExperience = new Label { Name = "HomeExactExperience", HorizontalAlignment = HorizontalAlignment.Center,
+            VerticalAlignment = VerticalAlignment.Center, MouseFilter = MouseFilterEnum.Ignore, ClipText = true };
+        _homeExactExperience.AddThemeFontSizeOverride("font_size", 12);
+        _homeRealmProgress.AddChild(_homeExactExperience);
+        _homeExactExperience.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
+        _homeStoredExperience = new Label { Name = "HomeStoredExperience", Visible = false };
+        summary.AddChild(_homeStoredExperience);
+        BuildGainFeedback(summary);
         BuildChapterUi();
 
         VBoxContainer activity = HomeSection("当前活动");
@@ -200,12 +207,19 @@ public partial class BookTabsController
         Move("body_cultivation", _cultivationBodyCultivationOption, _cultivationBodyCultivationStartButton);
         foreach (var child in oldMealRow.GetChildren().OfType<Control>().ToArray()) Move("cooking", child);
         Button equipment = new() { Text = "前往装备强化" }; equipment.Pressed += () => SetActiveLeftTab("EquipmentTab"); _homeActions["smithing"].AddChild(equipment);
-        _homeActions["cultivation"].AddChild(new Label { Text = "正常键鼠操作即可积累修炼收益。", AutowrapMode = TextServer.AutowrapMode.WordSmart });
+        _homeActions["cultivation"].AddChild(new Label { Text = "正常键鼠操作即可积累修炼收益。", CustomMinimumSize = new Vector2(260, 0), AutowrapMode = TextServer.AutowrapMode.WordSmart });
 
         _cultivationAlchemyStartButton.Hide();
         _cultivationTalismanStartButton.Hide();
         BuildProductionControls(activity);
         BuildMealUsageControls(activity);
+
+        VBoxContainer resources = HomeSection("资源与成长说明");
+        _homeResources = new Label { AutowrapMode = TextServer.AutowrapMode.WordSmart }; resources.AddChild(_homeResources);
+        _homeBasicGrowth = new Label { Name = "HomeBasicGrowth", AutowrapMode = TextServer.AutowrapMode.WordSmart,
+            TooltipText = "阅读、思考时也积累灵气、悟性与经验，每10秒自动结算。静修每24小时一轮：前30分钟3.36经验/分钟，随后至4小时2.24、至8小时1.68，其余0.84。线上线下延续同一轮，重启不刷新；真实输入另有收益和活动推进，静修不代做配方或挑战。时间倒退时等待时钟恢复，输入收益照常。" };
+        _homeBasicGrowth.AddThemeFontSizeOverride("font_size", 13); resources.AddChild(_homeBasicGrowth);
+        resources.AddChild(_cultivationStatusLabel);
 
         VBoxContainer next = HomeSection("下一步");
         _homeNextStep = new Label { AutowrapMode = TextServer.AutowrapMode.WordSmart }; next.AddChild(_homeNextStep);
@@ -231,8 +245,12 @@ public partial class BookTabsController
         _homeRealm.Text = capped ? RealmBreakthroughRules.DisplayName(_playerProgressState.RealmLevel)
             + (_playerProgressState.RealmLevel == 10 ? " · 筑基初成" : " · 旧档境界保留") : UiText.RealmStage(_playerProgressState.RealmLevel, percent);
         _homeRealmProgress!.Visible = !capped;
+        _homeStoredExperience!.Visible = capped;
+        _homeStoredExperience.Text = $"已保留经验 {_playerProgressState.RealmExp:0.##}";
         _cultivationBreakthroughButton.Visible = !capped;
         _homeRealmProgress!.Value = Math.Clamp(percent, 0, 100);
+        _homeExactExperience!.Text = capped ? $"已保留经验 {_playerProgressState.RealmExp:0.##}"
+            : $"当前经验 {_playerProgressState.RealmExp:0.##} / {_playerProgressState.RealmExpRequired:0.##}";
         _homeRealm.TooltipText = _homeRealmProgress.TooltipText = $"当前经验 {_playerProgressState.RealmExp:0.##} / 本层需求 {_playerProgressState.RealmExpRequired:0.##}。百分比保留一位小数；突破会扣除本层需求，溢出经验保留。";
         _homeResources!.Text = $"灵气 {_resourceWalletState?.Lingqi ?? 0:N0}    悟性 {_resourceWalletState?.Insight ?? 0:N0}    灵石 {_resourceWalletState?.SpiritStones ?? 0:N0}";
         double basicRate = (ServiceLocator.Instance?.ActivityConversionService?.GrowthClock.InputsPerMinute ?? 12) * GameBalanceConstants.ResourceConversion.BaseExpPerInput;

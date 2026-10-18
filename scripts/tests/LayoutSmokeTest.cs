@@ -83,6 +83,15 @@ public partial class LayoutSmokeTest : Node
             await Settle();
             _book.SetVisibleImmediate(true);
             await Settle();
+            if (OS.GetCmdlineUserArgs().Contains("--feedback-layout"))
+            {
+                var feedbackServices = ServiceLocator.Instance!;
+                feedbackServices.PlayerProgressState!.FromDictionary(new() { ["realm_level"] = 9, ["realm_exp"] = 700.0 });
+                feedbackServices.EventLogState!.AddEvent(EventLogState.CategoryCraft, "回气丹炼制完成 ×1；这一条很长的成果记录应当只显示一行摘要并保留全文查看入口。", accentId: EventLogState.AccentHighlight);
+                foreach (var size in new[] { new Vector2I(1600, 900), new Vector2I(1280, 720), new Vector2I(1024, 768), new Vector2I(800, 600) })
+                { GetWindow().Size = size; await Settle(); await CheckGainPresentation(size); }
+                GD.Print($"FEEDBACK LAYOUT COMPLETE: {_checks} checks"); GetTree().Quit(0); return;
+            }
             Check(!PageRoot("CultivationScroll").FindChild("MasteryDetails", true, false).Get("visible").AsBool(), "new player: detailed systems collapsed");
             Check(((OptionButton)_tabs.FindChild("HomeActivityPicker", true, false)).ItemCount == ProgressiveUnlockRules.GetUnlockedActionModes(1).Count, "new player: activity picker respects unlocks");
             await Capture("home_new");
@@ -149,6 +158,7 @@ public partial class LayoutSmokeTest : Node
                 await Settle();
                 string scenario = dimensions.ToString();
                 Check(Inside(GetViewport().GetVisibleRect(), _book.GetGlobalRect()), scenario + ": book fits viewport");
+                await CheckGainPresentation(dimensions);
                 var basicGrowth = (Label)_tabs.FindChild("HomeBasicGrowth", true, false);
                 Check(basicGrowth.Text.Contains("线上线下共用") && basicGrowth.Size.X <= basicGrowth.GetParent<Control>().Size.X,
                     scenario + ": quiet growth explanation wraps within the existing home card");

@@ -98,6 +98,7 @@ public partial class GameplaySmokeTest
             {
                 s.InputActivityState!.RegisterMouseMove(10); s.InputActivityState._Process(1.0 / 60);
                 tabs._Process(1.0 / 60);
+                root.ProgressFeedback._Process(1.0 / 60);
             }
             GD.Print($"MOUSE PERF: visible={visible} frames=120 refreshes={tabs.DynamicContentRefreshCount - beforeRefreshes} allocated_bytes={GC.GetAllocatedBytesForCurrentThread() - beforeBytes} elapsed_ms={clock.Elapsed.TotalMilliseconds:0.###}");
             long refreshes = tabs.DynamicContentRefreshCount - beforeRefreshes;

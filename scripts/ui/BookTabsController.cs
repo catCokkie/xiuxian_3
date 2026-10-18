@@ -209,6 +209,7 @@ public partial class BookTabsController : Control
         ["auto_save_interval_sec"] = 10,
         ["cloud_sync"] = false,
         ["milestone_tips"] = true,
+        ["gain_feedback_motion"] = true,
         ["global_debug_overlay"] = false,
         [PrivacyInputCollectionSettingKey] = true,
         [PrivacyNoticeAcknowledgedSettingKey] = false,
@@ -3807,6 +3808,7 @@ public partial class BookTabsController : Control
     private void UpdateSettingsControlsFromState()
     {
         _isApplyingSettingsUi = true;
+        if (_gainMotion != null) _gainMotion.ButtonPressed = GainMotionEnabled;
 
         _languageOption.Selected = _settings["language"].AsString() == "en-US" ? 1 : 0;
         _keepOnTopCheck.ButtonPressed = _settings["keep_on_top"].AsBool();
@@ -3881,6 +3883,7 @@ public partial class BookTabsController : Control
         _settings["auto_save_interval_sec"] = 10;
         _settings["cloud_sync"] = false;
         _settings["milestone_tips"] = true;
+        _settings["gain_feedback_motion"] = true;
         _settings["global_debug_overlay"] = false;
         _settings[PrivacyInputCollectionSettingKey] = true;
         _cultivationRhythmState?.SetEnabled(true);
