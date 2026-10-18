@@ -267,14 +267,14 @@ namespace Xiuxian.Scripts.Services
             return true;
         }
 
-        public string RollSpawnMonsterId(RandomNumberGenerator rng)
+        public string RollSpawnMonsterId(RandomNumberGenerator rng, Func<string, int, int>? adjustWeight = null, bool useWeightedTable = false)
         {
             if (!TryGetActiveLevel(out var level))
             {
                 return string.Empty;
             }
 
-            if (_activeLevelMonsterWave.Count > 0)
+            if (_activeLevelMonsterWave.Count > 0 && !useWeightedTable)
             {
                 _activeLevelWaveIndex = Math.Clamp(_activeLevelWaveIndex, 0, _activeLevelMonsterWave.Count - 1);
                 string waveMonsterId = _activeLevelMonsterWave[_activeLevelWaveIndex];
@@ -294,7 +294,8 @@ namespace Xiuxian.Scripts.Services
                 if (item.VariantType == Variant.Type.Dictionary)
                 {
                     var dict = (Godot.Collections.Dictionary<string, Variant>)item;
-                    totalWeight += Math.Max(0, dict.ContainsKey("weight") ? dict["weight"].AsInt32() : 0);
+                    int weight = Math.Max(0, dict.ContainsKey("weight") ? dict["weight"].AsInt32() : 0);
+                    totalWeight += adjustWeight?.Invoke(LevelConfigProvider.GetString(dict, "monster_id", ""), weight) ?? weight;
                 }
             }
 
@@ -314,6 +315,7 @@ namespace Xiuxian.Scripts.Services
 
                 var dict = (Godot.Collections.Dictionary<string, Variant>)item;
                 int weight = Math.Max(0, dict.ContainsKey("weight") ? dict["weight"].AsInt32() : 0);
+                weight = adjustWeight?.Invoke(LevelConfigProvider.GetString(dict, "monster_id", ""), weight) ?? weight;
                 if (weight <= 0)
                 {
                     continue;

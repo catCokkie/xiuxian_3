@@ -58,7 +58,7 @@ public sealed class EquipmentInheritanceRulesTests
         var saved = (Dictionary<string, object>)store.GetValue("equipment", "equipped", null!);
         Assert.Empty((List<object>)saved["__instances"]);
         Assert.Equal(Source, EquippedItemsPersistenceRules.FromPlainDictionary(saved)[Source.Slot]);
-        Assert.Equal(24, store.GetValue("meta", "version", 0));
+        Assert.Equal(SaveMigrationRules.LatestVersion, store.GetValue("meta", "version", 0));
     }
 
     [Fact]
@@ -77,6 +77,6 @@ public sealed class EquipmentInheritanceRulesTests
         SaveMigrationRules.MigrateToLatest(copy, 24);
         Assert.Single((List<object>)saved["__instances"]);
         Assert.Equal(Source, EquippedItemsPersistenceRules.FromPlainDictionary(saved)[Source.Slot]);
-        Assert.False(SaveMigrationRules.NeedsMigration(24));
+        Assert.False(SaveMigrationRules.NeedsMigration(SaveMigrationRules.LatestVersion));
     }
 }

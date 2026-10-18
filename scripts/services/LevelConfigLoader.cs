@@ -30,7 +30,8 @@ namespace Xiuxian.Scripts.Services
                 _provider.TryGetMonster,
                 _provider.TryGetDropTable,
                 _runtimeStateService.ResolveDropTableForLevel,
-                DropEconomyService.BuildDropEntrySpecs);
+                DropEconomyService.BuildDropEntrySpecs,
+                HuntWeight);
         }
 
         public string ActiveLevelId => _activeLevelManager.ActiveLevelId;
@@ -98,7 +99,8 @@ namespace Xiuxian.Scripts.Services
         public bool TryGetDropTable(string dropTableId, out Godot.Collections.Dictionary<string, Variant> dropTableData) => _provider.TryGetDropTable(dropTableId, out dropTableData);
         public string RollSpawnMonsterId()
         {
-            string rolled = _activeLevelManager.RollSpawnMonsterId(_rng);
+            string target = HuntTarget();
+            string rolled = _activeLevelManager.RollSpawnMonsterId(_rng, (id, weight) => DungeonHuntRules.Weight(weight, id == target), target != "");
             double bonus = SubsystemMasteryRules.GetEffectValue(PlayerActionState.ModeDungeon,
                 ServiceLocator.Instance?.SubsystemMasteryState?.GetLevel(PlayerActionState.ModeDungeon) ?? 1, "dungeon_elite_rate_bonus");
             if (bonus <= 0 || _rng.Randf() >= bonus || (TryGetMonsterStatProfile(rolled, out var current) && current.MoveCategory == "elite")) return rolled;
@@ -112,7 +114,11 @@ namespace Xiuxian.Scripts.Services
         public Godot.Collections.Array<string> GetBossDefeatedLevelIds() => _activeLevelManager.GetBossClearedLevelIds();
         public bool TryGetMonsterVisualConfig(string monsterId, out string portraitPath, out string animationType, out double animationSpeed, out double animationAmplitude, out Color tint) => _monsterConfigService.TryGetMonsterVisualConfig(monsterId, out portraitPath, out animationType, out animationSpeed, out animationAmplitude, out tint);
         public bool TryGetMonsterMoveRule(string monsterId, out string moveCategory, out int inputsPerMove) => _monsterConfigService.TryGetMonsterMoveRule(monsterId, out moveCategory, out inputsPerMove);
-        public bool TryGetActiveWaveProgress(out int nextSpawnIndex, out int waveCount, out string nextMonsterId) => _activeLevelManager.TryGetActiveWaveProgress(out nextSpawnIndex, out waveCount, out nextMonsterId);
+        public bool TryGetActiveWaveProgress(out int nextSpawnIndex, out int waveCount, out string nextMonsterId)
+        {
+            if (HuntTarget() == "") return _activeLevelManager.TryGetActiveWaveProgress(out nextSpawnIndex, out waveCount, out nextMonsterId);
+            nextSpawnIndex = waveCount = 0; nextMonsterId = ""; return false;
+        }
         public Dictionary<string, int> RollMonsterDrops(string monsterId) => _runtimeStateService.RollMonsterDrops(monsterId);
         public Godot.Collections.Array<string> GetLastEquipmentDropTemplateIds() => _runtimeStateService.GetLastEquipmentDropTemplateIds();
         public EquipmentInstanceData[] GetLastGeneratedEquipmentDrops() => _runtimeStateService.GetLastGeneratedEquipmentDrops();

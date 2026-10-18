@@ -21,6 +21,7 @@ namespace Xiuxian.Scripts.Services
         private readonly TryGetDropTableDelegate _tryGetDropTable;
         private readonly ResolveDropTableDelegate _resolveDropTableForActiveLevel;
         private readonly BuildDropEntrySpecsDelegate _buildDropEntrySpecs;
+        private readonly Func<string, string, int, int>? _adjustWeight;
 
         public OfflineProjectionService(
             LevelConfigProvider provider,
@@ -30,7 +31,8 @@ namespace Xiuxian.Scripts.Services
             TryGetMonsterDelegate tryGetMonster,
             TryGetDropTableDelegate tryGetDropTable,
             ResolveDropTableDelegate resolveDropTableForActiveLevel,
-            BuildDropEntrySpecsDelegate buildDropEntrySpecs)
+            BuildDropEntrySpecsDelegate buildDropEntrySpecs,
+            Func<string, string, int, int>? adjustWeight = null)
         {
             _provider = provider;
             _getActiveLevelIndex = getActiveLevelIndex;
@@ -40,6 +42,7 @@ namespace Xiuxian.Scripts.Services
             _tryGetDropTable = tryGetDropTable;
             _resolveDropTableForActiveLevel = resolveDropTableForActiveLevel;
             _buildDropEntrySpecs = buildDropEntrySpecs;
+            _adjustWeight = adjustWeight;
         }
 
         public List<DungeonOfflineProjectionRules.MonsterSettlementSpec> BuildOfflineMonsterSettlementSpecs(string levelId = "")
@@ -73,6 +76,7 @@ namespace Xiuxian.Scripts.Services
                 var dict = (Godot.Collections.Dictionary<string, Variant>)item;
                 string monsterId = LevelConfigProvider.GetString(dict, "monster_id", "");
                 int weight = Math.Max(0, dict.ContainsKey("weight") ? dict["weight"].AsInt32() : 0);
+                weight = _adjustWeight?.Invoke(LevelConfigProvider.GetString(level, "level_id", ""), monsterId, weight) ?? weight;
                 if (string.IsNullOrEmpty(monsterId) || weight <= 0 || !_tryGetMonsterStatProfile(monsterId, out MonsterStatProfile monsterProfile))
                 {
                     continue;
@@ -136,6 +140,7 @@ namespace Xiuxian.Scripts.Services
                 var dict = (Godot.Collections.Dictionary<string, Variant>)item;
                 string monsterId = LevelConfigProvider.GetString(dict, "monster_id", "");
                 int weight = Math.Max(0, dict.ContainsKey("weight") ? dict["weight"].AsInt32() : 0);
+                weight = _adjustWeight?.Invoke(resolvedLevelId, monsterId, weight) ?? weight;
                 if (string.IsNullOrEmpty(monsterId) || weight <= 0)
                 {
                     continue;
@@ -148,7 +153,7 @@ namespace Xiuxian.Scripts.Services
             return totalWeight > 0.0 ? weightedRolls / totalWeight : 0.0;
         }
 
-        private Dictionary<string, double> BuildOfflineAverageItemDrops(string levelId, string monsterId)
+        public Dictionary<string, double> BuildOfflineAverageItemDrops(string levelId, string monsterId)
         {
             var result = new Dictionary<string, double>();
             if (!_tryGetMonster(monsterId, out var monster) || !LevelConfigProvider.TryGetChildDictionary(monster, "drops", out var drops))

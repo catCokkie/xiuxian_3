@@ -6,12 +6,13 @@ public partial class BookTabsController
 {
     private Button? _bossReviewToggle, _bossReviewEquipment, _bossReviewPreparation;
     private VBoxContainer? _bossReviewDetails;
-    private Label? _bossReviewSummary, _bossReviewHeadline;
+    private Label? _bossReviewSummary, _bossReviewHeadline, _bossReviewComparison;
     private void BuildBossReviewUi(VBoxContainer parent)
     {
         _bossReviewHeadline = new() { Name = "BossReviewHeadline", Visible = false, AutowrapMode = TextServer.AutowrapMode.WordSmart }; parent.AddChild(_bossReviewHeadline);
         _bossReviewToggle = new() { Name = "BossReviewToggle", Text = "查看挑战回看", ToggleMode = true, Visible = false }; parent.AddChild(_bossReviewToggle);
         _bossReviewDetails = new() { Name = "BossReviewDetails", Visible = false }; parent.AddChild(_bossReviewDetails);
+        _bossReviewComparison = new() { Name = "BossReviewComparison", Visible = false, AutowrapMode = TextServer.AutowrapMode.WordSmart }; _bossReviewDetails.AddChild(_bossReviewComparison);
         _bossReviewSummary = new() { Name = "BossReviewSummary", AutowrapMode = TextServer.AutowrapMode.WordSmart }; _bossReviewDetails.AddChild(_bossReviewSummary);
         HFlowContainer actions = new() { Name = "BossReviewActions" }; actions.AddThemeConstantOverride("h_separation", 8); actions.AddThemeConstantOverride("v_separation", 8); _bossReviewDetails.AddChild(actions);
         _bossReviewEquipment = new() { Name = "BossReviewEquipment", Text = "比较装备与强化" }; actions.AddChild(_bossReviewEquipment);
@@ -54,6 +55,8 @@ public partial class BookTabsController
                 : "镇灵符" + RecipeUnlockRules.Requirements(ActivityRegistry.GetRecipe(RecipeUnlockRules.Zhenling)!));
         _bossReviewSummary!.Text = BossChallengeReportRules.Details(report) + (advice != "" ? "\n" + advice : "")
             + (relevant && report.Result != "victory" && _playerActionState?.ConsumablePolicy == "none" ? "\n自动消耗已关闭，可继续走装备路线。" : "");
+        _bossReviewComparison!.Text = BossChallengeReportRules.Comparison(report, _challengeGoalState?.PreviousBossReport);
+        _bossReviewComparison.Visible = _bossReviewComparison.Text != "";
         _bossReviewEquipment!.Visible = relevant && report.Result != "victory";
         _bossReviewPreparation!.Visible = relevant && report.Result != "victory";
     }

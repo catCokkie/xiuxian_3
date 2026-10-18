@@ -213,6 +213,7 @@ public partial class BookTabsController
         _cultivationTalismanStartButton.Hide();
         BuildProductionControls(activity);
         BuildMealUsageControls(activity);
+        BuildDungeonHuntUi(activity);
 
         VBoxContainer resources = HomeSection("资源与成长说明");
         _homeResources = new Label { AutowrapMode = TextServer.AutowrapMode.WordSmart }; resources.AddChild(_homeResources);
@@ -283,6 +284,7 @@ public partial class BookTabsController
         RefreshMealUsageControls();
         RefreshMaterialReserveControls();
         RefreshPreparationUi();
+        RefreshDungeonHuntUi();
         RefreshChapterUi();
     }
 

@@ -11,7 +11,7 @@ namespace Xiuxian.Scripts.Services
     /// </summary>
     public static class SaveMigrationRules
     {
-        public const int LatestVersion = 24;
+        public const int LatestVersion = 25;
 
         private const string DefaultLeftTab = "CultivationTab";
         private const string DefaultRightTab = "BugTab";
@@ -217,6 +217,10 @@ namespace Xiuxian.Scripts.Services
                         case 23:
                             MigrateV23ToV24(cfg);
                             version = 24;
+                            break;
+                        case 24:
+                            MigrateV24ToV25(cfg);
+                            version = 25;
                             break;
                         default:
                             version = LatestVersion;
@@ -804,6 +808,15 @@ namespace Xiuxian.Scripts.Services
             var equipped = EnsureDictionaryValue(cfg, "equipment", "equipped");
             equipped.TryAdd("__instances", new List<object>());
             cfg.SetValue("equipment", "equipped", equipped);
+        }
+        private static void MigrateV24ToV25(IMigrationStore cfg)
+        {
+            var action = EnsureDictionaryValue(cfg, "action", "mode");
+            action.TryAdd("dungeon_hunts", new Dictionary<string, object>());
+            cfg.SetValue("action", "mode", action);
+            var goal = EnsureDictionaryValue(cfg, "challenge_goal", "state");
+            goal.TryAdd("previous_boss_report", new Dictionary<string, object>());
+            cfg.SetValue("challenge_goal", "state", goal);
         }
 
         private static void MigrateV22ToV23(IMigrationStore cfg)

@@ -839,10 +839,18 @@ namespace Xiuxian.Scripts.Game
             if (_exploreProgress >= MaxProgress)
             {
                 RefreshBossChallengeButton();
-                return false;
+                if (string.IsNullOrEmpty(_levelConfigLoader?.HuntTarget())) return false;
+                // Explicit hunting may gather at BossReady without spending the earned challenge progress.
+                SyncLogicFromControllerState();
+                int huntFrames = MoveMonsterQueueByInputs(inputEvents);
+                _logic.RegisterTrackMovement(huntFrames, _battleTrackVisualizer.QueueMoveInputPending);
+                SyncControllerStateFromLogic();
+                RefreshMoveDebugLabel();
+                return true;
             }
             SyncLogicFromControllerState();
-            ExploreGameLogic.ExploreAdvanceResult result = _logic.AdvanceExploreByInput(inputEvents, (float)ProgressPerInput, MaxProgress);
+            ExploreGameLogic.ExploreAdvanceResult result = _logic.AdvanceExploreByInput(inputEvents,
+                (float)(ProgressPerInput * (_levelConfigLoader?.HuntExploreRate() ?? 1)), MaxProgress);
             _progressBar.Value = _exploreProgress;
             int frames = MoveMonsterQueueByInputs(inputEvents);
             _logic.RegisterTrackMovement(frames, _battleTrackVisualizer.QueueMoveInputPending);
@@ -938,7 +946,7 @@ namespace Xiuxian.Scripts.Game
 
         private void TryStartBattle()
         {
-            if (_exploreProgress >= MaxProgress) return;
+            if (_exploreProgress >= MaxProgress && string.IsNullOrEmpty(_levelConfigLoader?.HuntTarget())) return;
 
             BattleTrackVisualizer.FrontMonsterInfo front = _battleTrackVisualizer.GetFrontMonsterInfo();
             MonsterStatProfile? profile = null;
@@ -1016,7 +1024,7 @@ namespace Xiuxian.Scripts.Game
             _battleConsumableModifier = default;
             _consumedPotionsThisBattle.Clear();
             _battleTalismans.Clear();
-            _bossAttempt.Begin(_levelConfigLoader.ActiveLevelId, bossMonsterId);
+            _bossAttempt.Begin(_levelConfigLoader.ActiveLevelId, bossMonsterId, stats: GetPreparationStats(), hp: _playerHp, limit: MaxBossBattleRounds);
             ApplyAutoConsumables(isBattleStart: true);
             SyncLogicFromControllerState();
             _battleInfoLabel.Text = $"Boss 挑战 · {UiText.ZoneName(_levelConfigLoader.ActiveLevelId, _currentZone)}";

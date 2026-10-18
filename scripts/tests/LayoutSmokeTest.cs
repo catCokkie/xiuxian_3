@@ -92,6 +92,13 @@ public partial class LayoutSmokeTest : Node
                 { GetWindow().Size = size; await Settle(); await CheckGainPresentation(size); }
                 GD.Print($"FEEDBACK LAYOUT COMPLETE: {_checks} checks"); GetTree().Quit(0); return;
             }
+            if (OS.GetCmdlineUserArgs().Contains("--hunt-retry-layout"))
+            {
+                ServiceLocator.Instance!.PlayerProgressState!.FromDictionary(new() { ["realm_level"] = 5 });
+                foreach (var size in new[] { new Vector2I(1600, 900), new Vector2I(1280, 720), new Vector2I(1024, 768), new Vector2I(800, 600) })
+                { GetWindow().Size = size; await Settle(); await CheckHuntRetryPresentation(size); }
+                GD.Print($"HUNT RETRY LAYOUT COMPLETE: {_checks} checks"); GetTree().Quit(0); return;
+            }
             Check(!PageRoot("CultivationScroll").FindChild("MasteryDetails", true, false).Get("visible").AsBool(), "new player: detailed systems collapsed");
             Check(((OptionButton)_tabs.FindChild("HomeActivityPicker", true, false)).ItemCount == ProgressiveUnlockRules.GetUnlockedActionModes(1).Count, "new player: activity picker respects unlocks");
             await Capture("home_new");
@@ -159,6 +166,7 @@ public partial class LayoutSmokeTest : Node
                 string scenario = dimensions.ToString();
                 Check(Inside(GetViewport().GetVisibleRect(), _book.GetGlobalRect()), scenario + ": book fits viewport");
                 await CheckGainPresentation(dimensions);
+                await CheckHuntRetryPresentation(dimensions);
                 var basicGrowth = (Label)_tabs.FindChild("HomeBasicGrowth", true, false);
                 Check(basicGrowth.Text.Contains("线上线下共用") && basicGrowth.Size.X <= basicGrowth.GetParent<Control>().Size.X,
                     scenario + ": quiet growth explanation wraps within the existing home card");

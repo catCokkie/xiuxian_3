@@ -42,6 +42,14 @@ namespace Xiuxian.Scripts.Services
         private string _actionId = ActionDungeon;
         private string _actionTargetId = string.Empty;
         private string _actionVariant = string.Empty;
+        private readonly Godot.Collections.Dictionary<string, Variant> _dungeonHunts = new();
+        public string GetDungeonHuntTarget(string levelId) => _dungeonHunts.TryGetValue(levelId, out var id) ? id.AsString() : "";
+        internal void SetDungeonHuntTarget(string levelId, string monsterId)
+        {
+            if (GetDungeonHuntTarget(levelId) == monsterId) return;
+            if (monsterId == "") _dungeonHunts.Remove(levelId); else _dungeonHunts[levelId] = monsterId;
+            EmitSignal(SignalName.ActionChanged, _actionId, _actionTargetId, _actionVariant);
+        }
 
         public string ModeId => _actionId;
         public string ActionId => _actionId;
@@ -119,11 +127,17 @@ namespace Xiuxian.Scripts.Services
                 ["action_variant"] = _actionVariant,
                 ["consumable_policy"] = ConsumablePolicy,
                 ["work_mode"] = WorkMode,
+                ["dungeon_hunts"] = _dungeonHunts.Duplicate(),
             };
         }
 
         public void FromDictionary(Godot.Collections.Dictionary<string, Variant> data)
         {
+            _dungeonHunts.Clear();
+            if (data.TryGetValue("dungeon_hunts", out var hunts) && hunts.VariantType == Variant.Type.Dictionary)
+                foreach (var item in (Godot.Collections.Dictionary<string, Variant>)hunts)
+                    if (_dungeonHunts.Count < 64 && item.Key.Length is > 0 and <= 128 && item.Value.VariantType == Variant.Type.String
+                        && item.Value.AsString().Length is > 0 and <= 128) _dungeonHunts[item.Key] = item.Value;
             WorkMode = data.ContainsKey("work_mode") && data["work_mode"].AsBool();
             SetConsumablePolicy(data.ContainsKey("consumable_policy") ? data["consumable_policy"].AsString() : "boss_only");
             PlayerActionStateRules.PlayerActionStateData next = PlayerActionStateRules.FromDictionary(data);

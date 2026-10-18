@@ -18,6 +18,7 @@ public partial class BookTabsController
         public required Button DetailsToggle;
         public required Label Details;
         public required Button Help;
+        public Button? Hunt;
         public required Button Reserve;
         public ProductionCheck? Check;
         public string FixedSystem = "";
@@ -69,11 +70,17 @@ public partial class BookTabsController
         HFlowContainer helpRow = new() { Name = "ProductionRecovery" }; helpRow.AddThemeConstantOverride("h_separation", 8); helpRow.AddThemeConstantOverride("v_separation", 8); root.AddChild(helpRow);
         Button toggle = new() { Name = "ProductionDetailsToggle", Text = "查看生产条件", ToggleMode = true }; helpRow.AddChild(toggle);
         Button help = new() { Name = "ProductionHelp" }; helpRow.AddChild(help);
+        Button hunt = new() { Name = "ProductionHunt", Text = "本区讨伐补料", Visible = false }; helpRow.AddChild(hunt);
+        hunt.Pressed += () =>
+        {
+            var view = _productionViews.FirstOrDefault(x => x.Hunt == hunt);
+            if (RecoveryBlock(view?.Check) is { Kind: ProductionBlockKind.Material } block) OpenHuntForMaterial(block.ItemId);
+        };
         Button reserve = new() { Name = "ProductionReserve", Text = "修改此项保留" }; helpRow.AddChild(reserve);
         Label details = new() { Name = "ProductionDetails", Visible = false, AutowrapMode = TextServer.AutowrapMode.WordSmart }; root.AddChild(details);
         toggle.Toggled += shown => { details.Visible = shown; toggle.Text = shown ? "收起生产条件" : "查看生产条件"; };
         ProductionView view = new() { Root = root, Mode = mode, Rounds = rounds, Start = start, Stop = stop, Status = status, FixedSystem = fixedSystem,
-            DetailsToggle = toggle, Details = details, Help = help, Reserve = reserve };
+            DetailsToggle = toggle, Details = details, Help = help, Reserve = reserve, Hunt = hunt };
         _productionViews.Add(view);
         help.Pressed += () => ResolveProductionBlock(view);
         reserve.Pressed += () =>
@@ -157,6 +164,14 @@ public partial class BookTabsController
     private void RefreshProductionRecovery(ProductionView view)
     {
         var block = RecoveryBlock(view.Check);
+        if (view.Hunt != null)
+        {
+            string target = block?.Kind == ProductionBlockKind.Material ? _levelConfigLoader?.BestHuntForMaterial(block.ItemId) ?? "" : "";
+            view.Hunt.Visible = target != "" && (_playerProgressState?.RealmLevel ?? 1) >= 3;
+            view.Hunt.Disabled = _levelConfigLoader?.HuntUnlocked != true;
+            view.Hunt.TooltipText = view.Hunt.Disabled ? "首通幽泉外层后开放讨伐；常规副本和稳定采集来源仍可使用。"
+                : $"在当前区域按每次胜利的材料期望选择来源；不切区、不开始生产。探索速度80%，目标基础权重×2；敌人难度和掉落额度照旧。材料：{UiText.BackpackItemName(block?.ItemId ?? "")}";
+        }
         view.Help.Visible = block != null;
         view.Help.Disabled = false;
         view.Reserve.Visible = block?.Kind == ProductionBlockKind.Material && (_backpackState?.GetReservedCount(block.ItemId) ?? 0) > 0;

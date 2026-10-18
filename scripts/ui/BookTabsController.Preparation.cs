@@ -8,7 +8,7 @@ public partial class BookTabsController
 {
     private VBoxContainer? _preparationDetails;
     private Label? _preparationSummary;
-    private sealed record PreparationView(string Recipe, VBoxContainer Root, SpinBox Target, Label Detail, Button Arrange);
+    private sealed record PreparationView(string Recipe, VBoxContainer Root, SpinBox Target, Label Detail, Button Arrange, Button Hunt);
     private readonly List<PreparationView> _preparationViews = new();
     private VBoxContainer? _chapterPanel;
     private Label? _chapterSummary;
@@ -27,8 +27,14 @@ public partial class BookTabsController
             Label name = new() { Text = ActivityRegistry.GetRecipe(recipeId)!.DisplayName + "目标库存" }; row.AddChild(name);
             SpinBox target = new() { Name = "StockTarget", MinValue = 0, MaxValue = 99, Value = 1, Step = 1, Suffix = recipeId == "recipe_huiqi_dan" ? "颗" : "张", TooltipText = "0表示跳过本项准备；数量不作为挑战门槛。", CustomMinimumSize = new Vector2(105, 0) }; row.AddChild(target);
             Button arrange = new() { Name = "ArrangeProduction", Text = "安排制作" }; row.AddChild(arrange);
+            Button hunt = new() { Name = "PreparationHunt", Text = "本区讨伐补料", Visible = false }; row.AddChild(hunt);
             Label detail = new() { Name = "PreparationDetail", AutowrapMode = TextServer.AutowrapMode.WordSmart }; root.AddChild(detail);
-            var view = new PreparationView(recipeId, root, target, detail, arrange); _preparationViews.Add(view);
+            var view = new PreparationView(recipeId, root, target, detail, arrange, hunt); _preparationViews.Add(view);
+            hunt.Pressed += () =>
+            {
+                var missing = BuildRecommendation(view)?.Materials.FirstOrDefault(x => x.Missing > 0);
+                if (missing.HasValue) OpenHuntForMaterial(missing.Value.ItemId);
+            };
             target.ValueChanged += value => { if (_refreshingGoalTargets) return; _challengeGoalState?.SetTarget(recipeId, (int)value); RefreshPreparationUi(); };
             arrange.Pressed += () => ArrangePreparation(view);
         }
@@ -79,11 +85,16 @@ public partial class BookTabsController
         {
             var recipe = ActivityRegistry.GetRecipe(view.Recipe)!;
             bool unlocked = IsPreparationUnlocked(recipe);
+            view.Hunt.Visible = false;
             view.Root.Visible = hasBoss && consumes && (view.Recipe == "recipe_huiqi_dan" || view.Recipe == counter)
                 && (unlocked || _challengeGoalState?.Goal.HasGoal == true || view.Recipe == RecipeUnlockRules.Zhenling);
             if (!view.Root.Visible) continue;
             if (!unlocked) { view.Arrange.Disabled = true; view.Detail.Text = RecipeUnlockRules.Requirements(recipe) + "可将数量设为0跳过准备。"; continue; }
             var recommendation = BuildRecommendation(view)!;
+            var missingMaterial = recommendation.Materials.FirstOrDefault(x => x.Missing > 0);
+            view.Hunt.Visible = missingMaterial.Missing > 0 && _levelConfigLoader?.HuntUnlocked == true
+                && _levelConfigLoader.BestHuntForMaterial(missingMaterial.ItemId) != "";
+            view.Hunt.TooltipText = "针对当前首项缺料选择本区来源；保持挑战目标，不切区、不自动制作。讨伐探索速度80%，基础目标权重×2，掉落仍受原规则限制。";
             view.Arrange.Disabled = recommendation.Rounds == 0 || _challengeGoalState?.Goal.Completed == true;
             string unit = recipe.SystemId == "alchemy" ? "颗" : "张";
             view.Detail.Text = $"持有{recommendation.Owned}{unit}，保留{recommendation.Reserved}{unit}，可用{recommendation.Spendable}{unit}；目标{recommendation.Target}{unit}，缺{recommendation.Missing}{unit}。当前每轮{recommendation.PerBatch}{unit}，建议{recommendation.Rounds}轮。"

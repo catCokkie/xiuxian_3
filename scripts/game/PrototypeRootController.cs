@@ -934,7 +934,7 @@ namespace Xiuxian.Scripts.Game
             return DungeonOfflineSettlementRules.BuildDungeonOfflineSettlement(
                 actionTargetId: targetLevelId,
                 offlineInputBudget: offlineInputBudget,
-                dungeonProgressPerInput: _levelConfigLoader.ProgressPer100Inputs / 100.0,
+                dungeonProgressPerInput: _levelConfigLoader.ProgressPer100Inputs / 100.0 * _levelConfigLoader.HuntExploreRate(targetLevelId),
                 encounterProgressThreshold: _levelConfigLoader.EncounterCheckIntervalProgress,
                 playerStats: playerStats,
                 weightedMonsters: _levelConfigLoader.GetOfflineWeightedMonsters(targetLevelId),
